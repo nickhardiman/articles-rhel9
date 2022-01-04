@@ -1,0 +1,12 @@
+= Red Hat Enterprise Linux 9
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+
+I'm working on some pieces of writing.
+
+[NOTE]
+====
+These docs have nothing to do with any https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9-beta[official RHEL 9 docs].
+====

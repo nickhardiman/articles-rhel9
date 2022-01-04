@@ -1,0 +1,53 @@
+= Red Hat Enterprise Linux 9
+Nick Hardiman <nick@silvan.uk>
+:source-highlighter: highlight.js
+:revdate: 01-01-2021
+
+What fun can be had with RHEL 9?
+
+[NOTE]
+====
+These docs have nothing to do with the official https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8[Product Documentation for Red Hat Enterprise Linux 8].
+====
+
+== this site 
+
+components 
+
+* https://nickhardiman.netlify.app/fedora-on-rpi4/dev/index.html[Fedora on a Raspberry Pi 4]
+* https://nickhardiman.netlify.app/infrastructure-as-code/dev/index.html[Infrastructure as code]
+* https://nickhardiman.netlify.app/rhel8-on-pn50/dev/index.html[RHEL 8 on an ASUS PN50]
+* https://nickhardiman.netlify.app/ocp4-on-pn50/dev/index.html[OCP4 on an ASUS PN50]
+* https://nickhardiman.netlify.app/rhel9-on-pn50/dev/index.html[RHEL 9 on an ASUS PN50]
+
+== this component 
+
+Articles cover sysadmin tasks like these.  
+
+* Install RHEL 9 on a physical machine
+* Create a network of virtual machines.
+* Add containers to VMs. 
+* Set up developer environments. 
+
+All these articles have examples to run, so you can learn by doing. Hands on a keyboard. Break it and fix it. 
+
+
+== my test machine
+
+I did all the work in my home lab using this combination of hardware and software.  
+I did have to buy the hardware. 
+The software is all included with a free https://developers.redhat.com/[Developer Subscription].
+
+image::asus-pn50.jpeg[hardware,width=600,title="ASUS PN50"]
+
+* hardware - https://www.asus.com/Displays-Desktops/Mini-PCs/PN-PB-series/Mini-PC-PN50/[ASUS PN50, with 1TB SSD and 64GB pair of SODIMMS]
+* firmware - ASUS
+* OS software - https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux[Red Hat Enterprise Linux] 9
+* application software - all included with a https://developers.redhat.com/[Developer Subscription]
+
+
+== get in touch
+
+Something wrong? 
+https://github.com/nickhardiman/articles-rhel9/issues[Open an issue on GitHub].
+
