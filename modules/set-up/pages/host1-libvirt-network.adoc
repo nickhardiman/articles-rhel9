@@ -1,0 +1,176 @@
+= libvirt network 
+Nick Hardiman <nhardima@redhat.com>
+:source-highlighter: pygments
+:toc: 
+:revdate: 23-11-2020
+
+
+
+.libvirt networks and guests 
+[a2s,libvirt-test-network-4]
+....
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| pubbr1   |-----------------+-------------------+------------------+-------------------+-----------------+--------+
+|              |      |          |                 |                   |                  |                   |                 |
++--------------+      .----------.                 |                   |                  |                   |                 |
+                                                   |                   |                  |                   |                 |
+                                           +------------+      +------------+      +------------+      +------------+      +------------+
+                                           |            |      |            |      |            |      |            |      |            |
+                                           | satellite1 |      | ansiblet1  |      | dirs1      |      | rhel71     |      | rhel81     |
+                                           |            |      |            |      |            |      |            |      |            |
+                                           +------------+      +------------+      +------------+      +------------+      +------------+
+                                                   |                   |
+                                                   |                   |
+                      .----------.                 |                   |
+satellite provisions, |          |                 |                   |
+ansible configures    | privbr1  |-----------------+-------+-----------+-------+-------------------+-------------------+----------------+
+                      |          |                         |                   |                   |                   |         
+                      .----------.                         |                   |                   |                   |         
+                                                           |                   |                   |                   |           
+                                                   +------------+      +------------+      +------------+      +------------+   
+                                                   |            |      |            |      |            |      |            |   
+                                                   | capsule1   |      | isolatedn1 |      | dirs2      |      | satprov1   |  
+                                                   |            |      |            |      |            |      |            |   
+                                                   +------------+      +------------+      +------------+      +------------+   
+                      .----------.                         |                   |
+capsule provisions,   |          |                         |                   |
+isolated node conf.   | privbr2  |-----------------+-------+----------+--------+-----------+-------------------+------------------------+
+                      |          |                 |                  |                    |                   |              
+                      .----------.                 |                  |                    |                   |                 
+                                                   |                  |                    |                   |                    
+                                           +------------+       +------------+       +------------+      +------------+      
+                                           |            |       |            |       |            |      |            |    
+                                           | rhel72     |       | rhel82     |       | capprov1   |      | capprov2   |      
+                                           |            |       |            |       |            |      |            |     
+                                           +------------+       +------------+       +------------+      +------------+     
+....
+
+
+
+=== running many guests  
+
+The host machine can't handle all these machines at once. 
+Useful combinations  
+
+* everything on the default network, for a mix of RHEL 7 ahd RHEL 8 machines
+* Satellite1 and capsule1, for internal satellite comms tests.
+* Not satellite1 and capsule1. These are the resource-heavy machines.
+
+
+
+
+
+=== network interfaces 
+
+
+I'm trying to make predictable IP adresses and MAC addresses. 
+
+* network addresses end in 1
+* IP and MAC addresses end with the same number eg. 52:54:00:00:00:02 and 192.168.122.2
+
+Problems
+
+* Failing to convince Satellite to set MAC addresses. Satellite-provisioned hosts have a random MAC address (52:54:00:XX:XX:XX).
+* interface names are inconsistent. Some machines have *eth0*, Satellite-provisioned hosts have *ens3*. 
+
+
+.interfaces 
+[a2s,libvirt-test-network-5]
+....
+
+
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .------------------.
+|              |      |                  |
+| host1        |      |   pubbr0         |
+|              +------|           virbr? |---------+-------------------+-------------------+-------------------+-------------------+------+
+|              |      |24:4b:fe:c8:40:a9 |         |                   |                   |                   |                   |
++--------------+      |    192.168.1.195 |         |                   |                   |                   |                   |
+                      .------------------.         |                   |                   |                   |                   |
+                                           +------------------+ +------------------+ +------------------+ +------------------+ +------------------+
+                                           |     eth0         | |     eth0         | |     eth0         | |    eth0          | |    eth0          |
+                                           |52:54:00:00:00:02 | |52:54:00:00:00:03 | |52:54:00:00:00:04 | |52:54:00:00:00:05 | |52:54:00:00:00:06 |
+                                           | 192.168.122.2    | | 192.168.122.3    | | 192.168.122.4    | | 192.168.122.5    | | 192.168.122.6    |
+                                           |   satellite1     | |   ansiblet1      | |   dirs1          | |   rhel71         | |   rhel81         |
+                                           |     eth1         | |     eth1         | |                  | |                  | |                  |
+                                           |52:54:00:00:01:02 | |52:54:00:00:01:03 | |                  | |                  | |                  |
+                                           | 192.168.152.2    | | 192.168.152.3    | |                  | |                  | |                  |
+                                           +------------------+ +------------------+ +------------------+ +------------------+ +------------------+ 
+                      .------------------.         |                   |
+                      |                  |         |                   |
+                      |   private1       |         |                   |
+                      |           virbr1 |---------+-------+-----------+--------+--------------------+--------------------+---------------+
+                      |52:54:00:00:01:01 |                 |                    |                    |                    |
+                      |                  |                 |                    |                    |                    |
+                      .------------------.                 |                    |                    |                    |
+                                                   +------------------+ +------------------+ +------------------+ +------------------+
+                                                   |    eth0          | |    eth0          | |                  | |                  |
+                                                   |52:54:00:00:01:04 | |52:54:00:00:01:05 | |52:54:00:00:01:06 | |52:54:00:00:01:07 |
+                                                   | 192.168.152.4    | | 192.168.152.5    | | 192.168.152.6    | | 192.168.152.7    |
+                                                   |   capsule1       | |   isolatedn1     | |   dirs2          | |   satprov1       |
+                                                   |    eth1          | |    eth1          | |    eth1          | |    eth1          |
+                                                   |52:54:00:00:02:02 | |52:54:00:00:02:03 | |                  | |                  |
+                                                   | 192.168.162.2    | | 192.168.162.3    | |                  | |                  |
+                                                   +------------------+ +------------------+ +------------------+ +------------------+
+                      .------------------.                 |                    |
+                      |                  |                 |                    |
+                      |   private2       |                 |                    |
+                      |           virbr2 |---------+-------+------------+-------+------------+--------------------+-----------------------+
+                      |52:54:00:00:02:01 |         |                    |                    |                    |
+                      |                  |         |                    |                    |                    |
+                      .------------------.         |                    |                    |                    |
+                                           +------------------+ +------------------+ +------------------+ +------------------+
+                                           |     eth0         | |     eth0         | |     eth0         | |     eth0         | 
+                                           |52:54:00:00:02:04 | |52:54:00:00:02:05 | |52:54:00:00:02:06 | |52:54:00:00:02:07 | 
+                                           | 192.168.162.4    | | 192.168.162.5    | | 192.168.162.6    | | 192.168.162.7    |
+                                           |   rhel72         | |   rhel82         | |   capprov1       | |   capprov2       | 
+                                           |                  | |                  | |                  | |                  |
+                                           |                  | |                  | |                  | |                  |
+                                           |                  | |                  | |                  | |                  |
+                                           +------------------+ +------------------+ +------------------+ +------------------+
+....
+
+
+! Change 
+
+This table is out of date. 
+
+.guest interfaces and addresses
+[%header,format=csv]
+|===
+name,       interface, MAC, IP, domain
+*default*,       *virbr0*, 52:54:00:00:00:01, 192.168.122.1, lab.example.com
+satellite1,      eth0,   52:54:00:00:00:02, 192.168.122.2, lab.example.com
+ansiblet1,       eth0,   52:54:00:00:00:03, 192.168.122.3, lab.example.com
+guest1,          eth0,   52:54:00:00:00:04, 192.168.122.4, lab.example.com
+guest2,          eth0,   52:54:00:00:00:05, 192.168.122.5, lab.example.com
+guest3,          eth0,   52:54:00:00:00:06, 192.168.122.6, lab.example.com
+*private1*,      *virbr1*, 52:54:00:00:01:01, -, private.example.com
+satellite1,      eth1,   52:54:00:00:01:02, 192.168.152.2, private.example.com
+ansiblet1,       eth1,   52:54:00:00:01:03, 192.168.152.3, private.example.com
+capsule1,        eth0,   52:54:00:00:01:04, 192.168.152.4, private.example.com
+isolatedn1,      eth0,   52:54:00:00:01:05, 192.168.152.5, private.example.com
+*private2*,      *virbr2*, 52:54:00:00:02:01, -, private.example.com
+capsule1,        eth1,   52:54:00:00:02:02, 192.168.162.2, private.example.com
+isolatedn1,      eth1,   52:54:00:00:02:03, 192.168.162.3, private.example.com
+guest4,          eth0,   52:54:00:00:02:04, 192.168.162.4, private.example.com
+guest5,          eth0,   52:54:00:00:02:05, 192.168.162.5, private.example.com
+guest6,          eth0,   52:54:00:00:02:06, 192.168.162.6, private.example.com
+
+|===
+
+
+
+
+
+

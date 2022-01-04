@@ -1,2 +1,4 @@
 * xref:index.adoc[]
 ** xref:introduction.adoc[]
+** xref:ansible-rpm-install.adoc[]
+** xref:host1-libvirt-network.adoc[]

@@ -1,14 +1,9 @@
 = Red Hat Enterprise Linux 9
 Nick Hardiman <nick@silvan.uk>
 :source-highlighter: highlight.js
-:revdate: 01-01-2021
+:revdate: 05-01-2022
 
 What fun can be had with RHEL 9?
-
-[NOTE]
-====
-These docs have nothing to do with the official https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8[Product Documentation for Red Hat Enterprise Linux 8].
-====
 
 == this site 
 

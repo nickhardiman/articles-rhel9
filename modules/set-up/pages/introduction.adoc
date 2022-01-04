@@ -1,164 +1,21 @@
 = introduction  
 Nick Hardiman 
 :source-highlighter: highlight.js
-:revdate: 20-02-2021
-
-
-What fun can be had with a free developer subscription?
-
-Here are 100 things to try, plus some info on the pre-requisites.
-
-* Install on a physical machine
-* Create a network of virtual machines on a physical machine.
-* Add containers to VMs. 
-* Set up developer environments. 
-
-All these articles have examples to run, so you can learn by doing. Hands on a keyboard. Break it and fix it. 
+:revdate: 05-01-2022
 
 
 
-== the home network 
+== download 
 
-I'm assuming you start with a home network with at least two boxes.
+Downloads > Red Hat Enterprise Linux Product Software > Download Red Hat Enterprise Linux
 
-* the ISP's router, your gateway to the Internet, and 
-* your workstation
+https://access.redhat.com/downloads/content/486/ver=/rhel---9/9.0%20Beta/x86_64/product-software
 
-The workstation is whatever you work on - it might be a laptop running OS X or a gaming desktop running Windows.
-
-
-.home network with new RHEL 8 machine  
-....
-        +----------------------+
-        |                      | 
-.-------+-------.      .-------+-------.
-|               |      |               |
-|  router       |      |  workstation  | 
-|               |      |               |  
-.---------------.      .---------------.
-....
+rhel-baseos-9.0-beta-1-x86_64-dvd.iso
 
 
-The workstation's OS doesn't matter. 
-As long as it can run an SSH client, it's good enough. 
+== install
 
-The network setup isn't important either - the connection from router to workstation might be an ethernet cable or WIFI. 
-Maybe you have a network switch.
-As long as you can figure out how to plug a new machine into this network, that's all fine. 
+Copy to USB stick.
 
-
-== a new RHEL 8 machine for your the home lab 
-
-I'm also assuming you have the resources to add a new machine to your home network. 
-Maybe you have an old machine lying around, or maybe you have to go shopping.  
-Either way, the home lab page can help. 
-
-.home network with new RHEL 8 machine  
-....
-        +----------------------+----------------------+
-        |                      |                      |
-.-------+-------.      .-------+-------.      .-------+-------.
-|               |      |               |      |               |
-|  router       |      |  workstation  |      | RHEL 8 machine|  
-|               |      |               |      |   host1       |  
-|               |      |               |      |               |  
-.---------------.      .---------------.      .---------------.
-....
-
-
-
-There are probably also a whole load of smart devices on this home network, from phone to TV. 
-Let's ignore those.
-We only care about two machines. 
-
-* workstation 
-* RHEL 8 machine. In these examples, the name is _host1_ 
-
-
-== host1.lab.example.com
-
-It's a simple naming strategy - this machine will host some things, and it's the first machine in the home lab, so squash these facts together to get _host1_. This is a home lab machine. 
-It's there to experiment on and develop with. 
-Home labs should be kept private, with no access from the Internet. 
-This machine gets the full FQDN of host1.lab.example.com. 
-Example.com is an https://www.iana.org/domains/reserved[IANA-managed reserved domain] - it can't be used on the Internet.
-
-
-=== the CLI and SSH
-
-Most work is done on the CLI (Command Line Interface). 
-Use SSH (Secure SHell) to connect from your workstation to your new RHEL machine. 
-
-[source,shell]
-----
-workstation:~ nick$ ssh 10.0.1.4
-Activate the web console with: systemctl enable --now cockpit.socket
-
-This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
-To register this system, run: insights-client --register
-
-Last login: Thu May 14 17:29:53 2020 from 10.0.1.3
-[nick@host1 ~]$ 
-----
-
-
-
-== virtual networks and virtual machines 
-
-The home network and host1 are physical - you can touch the cables, hit the power switch, watch the blinking lights. 
-
-This site tells you how to set up a virtual network inside host1. 
-The virtual network is made up of bridges, machines, storage volumes and other resources.
-
-There are two virtual bridges, pubbr0 and privbr0.
-Pubbr0 (public bridge no.0) can be seen from the home network. 
-Privbr0 (private bridge no.0) can't be seen from the home network. 
-
-Machines host1 and guest1 are connected to pubbr0.  
-You can get to these machines from the workstation, to view web pages, send mail and so on. 
-IP addresses are assigned by the home network. 
-I have a home router provided by my ISP, which has a built-in DHCP server. 
-This DHCP server dishes out IPv4 addresses in the range 192.168.1.0/24.
-
-
-Two machines are only connected to privbr0 - guest2 and guest3. 
-These are protected.
-You can only SSH to these machines from host1 or guest1. 
-They can only get to the home network and Internet via guest1. 
-It's good for security, but bad for laziness because work is required to make these hidden machines useful. 
-The virtual machine guest1 is connected to both bridges pubbr0 and privbr0 - it acts as a gateway between the other guests and the outside world. 
-
-This virtual network is created using libvirt, NetworkManager, libguestfs and other software tools. 
-
-
-[source,shell]
-....
-+-------------------------------------------+
-|                               pubbr0      |
-|                            192.168.1.0/24 |
-|  host1.lab.example.com               |    |
-|                  192.168.1.195 +-----+----+---(home network) 
-|                                      |    |
-|  +-----------------------------+     |    |
-|  | guest1.lab.example.com      |     |    |
-|  |              192.168.1.217  +-----+    |   
-|  | guest1.private.example.com  |          |
-|  |              192.168.152.11 +--+       |
-|  +-----------------------------+  |       |
-|                                   |       |   
-|  +-----------------------------+  |       |
-|  |                             |  |       |
-|  | guest2.private.example.com  |  |       |
-|  |             192.168.152.100 +--+       |
-|  +-----------------------------+  |       |
-|                                   |       |
-|  +-----------------------------+  |       |
-|  |                             |  |       |
-|  | guest3.private.example.com  |  |       |
-|  |             192.168.152.101 +--+       |
-|  +-----------------------------+  |       |
-|                                   |       |
-|                              privbr0      |
-|                          192.168.152.0/24 |
-+-------------------------------------------+
-....
+Boot, graphical install.
