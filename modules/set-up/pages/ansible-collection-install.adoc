@@ -1,0 +1,53 @@
+= install the collection community.libvirt.virt
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+Install Red Hat Ansible Core.
+
+
+== install collection community.libvirt.virt 
+
+Check before. 
+
+[source,shell]
+----
+[root@host1 ~]# ansible-doc virt
+[WARNING]: module virt not found in: /root/.ansible/plugins/modules:/usr/share/
+ansible/plugins/modules:/usr/lib/python3.9/site-packages/ansible/modules
+[root@host1 ~]# 
+----
+
+Install. 
+
+[source,shell]
+----
+[nick@host1 ~]$ ansible-galaxy collection install community.libvirt
+Starting galaxy collection install process
+Process install dependency map
+Starting collection install process
+Downloading https://galaxy.ansible.com/download/community-libvirt-1.0.2.tar.gz to /home/nick/.ansible/tmp/ansible-local-39623ota9pv4p/tmp78ib9tet/community-libvirt-1.0.2-l9q4y25y
+Installing 'community.libvirt:1.0.2' to '/home/nick/.ansible/collections/ansible_collections/community/libvirt'
+community.libvirt:1.0.2 was installed successfully
+[nick@host1 ~]$ 
+----
+
+Check after. 
+
+[source,shell]
+----
+[nick@host1 ~]$ ansible-doc virt
+> COMMUNITY.LIBVIRT.VIRT    (/home/nick/.ansible/collections/ansible_collection>
+
+        Manages virtual machines supported by `libvirt'.
+
+OPTIONS (= is mandatory):
+...
+        returned: success
+        sample: success
+        type: str
+[nick@host1 ~]$  
+----
+
+
+
