@@ -1,0 +1,177 @@
+= install group Virtualization Host using Ansible
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+Install Red Hat libvirt packages.
+Many packages are available. The most useful ones are in an environment group named _Virtualization Host_.
+The _Virtualization Host_ group insstalls libguestfs, libvirt, qemu-kvm, virtio-win and about 80 supporting packages.
+
+
+== find the environment group 
+
+/Users/nhardima/Documents/red-hat/job/blog/github/articles-fedora-rpi4/modules/command-line/pages/dnf-group-view.adoc
+
+[source,shell]
+....
+[nick@host1 roles]$ sudo dnf group list
+[sudo] password for nick: 
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:01:22 ago on Wed 05 Jan 2022 21:05:48 GMT.
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+   Virtualization Host
+Installed Environment Groups:
+...
+   Smart Card Support
+   Console Internet Tools
+   Development Tools
+[nick@host1 roles]$ 
+....
+
+
+== create a directory  
+
+Create a new directory to hold files. 
+
+[source,shell]
+----
+[nick@host1 ~]$ mkdir ansible
+[nick@host1 ~]$ cd ansible
+[nick@host1 ansible]$ 
+----
+
+An environment group contains groups. 
+
+[source,shell]
+....
+[nick@host1 roles]$ dnf group info 'Virtualization Host'
+Not root, Subscription Management repositories not updated
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Red Hat Enterprise Linux 9 for x86_64 - BaseOS Beta (RPMs)                                          1.7 MB/s | 1.8 MB     00:01    
+Red Hat Enterprise Linux 9 for x86_64 - AppStream Beta (RPMs)                                       5.9 MB/s | 8.9 MB     00:01    
+Environment Group: Virtualization Host
+ Description: Minimal virtualization host.
+ Mandatory Groups:
+   Base
+   Core
+   Standard
+   Virtualization Hypervisor
+   Virtualization Tools
+ Optional Groups:
+   Debugging Tools
+   Network File System Client
+   Remote Management for Linux
+   Virtualization Platform
+[nick@host1 roles]$ 
+....
+
+== create the virtualization-host playbook 
+
+Add a playbook. 
+
+.ansible/virtualization-host.yaml
+[source,yaml]
+....
+---
+- name: set up virtualization-host 
+  hosts: localhost 
+  gather_facts: no
+  become: yes
+
+  roles:
+  - virtualization-host
+....
+
+The role virtualization-host does not exist yet. 
+
+
+== create the virtualization-host role 
+
+Create a directory to hold ansible roles. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ mkdir roles
+[nick@host1 ansible]$ cd roles
+[nick@host1 roles]$  
+....
+
+Create an ansible role called _virtualization-host_. 
+Use ``ansible-galaxy`` to create a new framework of directories and YAML files.
+
+[source,shell]
+....
+[nick@host1 roles]$ ansible-galaxy init virtualization-host
+- Role virtualization-host was created successfully
+[nick@host1 roles]$ 
+....
+
+The ``ansible-galaxy`` command adds many more that we either don't need yet or we will never need. 
+For instance, README.md is a useful document when the role is copied to GitHub. 
+
+[source,shell]
+....
+[nick@host1 roles]$ tree virtualization-host/
+virtualization-host/
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── README.md
+├── tasks
+│   └── main.yml
+├── templates
+├── tests
+│   ├── inventory
+│   └── test.yml
+└── vars
+    └── main.yml
+
+8 directories, 8 files
+[nick@host1 roles]$ 
+....
+
+
+
+== add tasks 
+
+Use the group ID, not the group name. 
+
+.~/ansible/roles/virtualization-host/tasks/main.yml
+[source,yaml]
+....
+---
+# tasks file for virtualization-host
+- name: Install the 'Virtualization Host' environment group
+  dnf:
+    name: '@Virtualization Host'
+    state: present
+....
+
+
+== run the playbook 
+
+
+[source,shell]
+----
+----
+
+Check after. 
+
+[source,shell]
+----
+----
+
+
+
+
+
