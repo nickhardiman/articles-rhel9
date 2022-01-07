@@ -71,11 +71,35 @@ Environment Group: Virtualization Host
 [nick@host1 roles]$ 
 ....
 
-== create the virtualization-host playbook 
 
-Add a playbook. 
+== the CLI command 
 
-.ansible/virtualization-host.yaml
+use Ansible to install the group, rather than manually installing by running commands on the CLI. 
+The manual install is easy - it's one command. 
+The automated install takes many more lines of code. 
+
+[source,shell]
+....
+sudo dnf group install "Virtualization Host"
+....
+
+
+
+== write the virtualization-host playbook 
+
+Create a playbook. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ vim virtualization-host.yml
+....
+
+This playbook doesn't do anything much. 
+It's the role _virtualization-host_ that does the work. 
+This role does not exist yet - we create that next. 
+
+
+.ansible/virtualization-host.yml
 [source,yaml]
 ....
 ---
@@ -88,8 +112,18 @@ Add a playbook.
   - virtualization-host
 ....
 
-The role virtualization-host does not exist yet. 
 
+That's the first file. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ tree
+.
+└── virtualization-host.yml
+
+0 directories, 1 file
+[nick@host1 ansible]$ 
+....
 
 == create the virtualization-host role 
 
@@ -142,7 +176,19 @@ virtualization-host/
 
 
 
-== add tasks 
+== add a task to the role
+
+The tasks file is empty, except for a YAML document start marker (three hyphens, ---) and a comment. 
+Add a task. 
+
+[source,shell]
+....
+[nick@host1 roles]$ cat virtualization-host/tasks/main.yml 
+---
+# tasks file for virtualization-host
+[nick@host1 roles]$ 
+[nick@host1 roles]$ vim virtualization-host/tasks/main.yml 
+....
 
 Use the group ID, not the group name. 
 
@@ -153,24 +199,74 @@ Use the group ID, not the group name.
 # tasks file for virtualization-host
 - name: Install the 'Virtualization Host' environment group
   dnf:
-    name: '@Virtualization Host'
+    name: '@virtualization-host-environment'
     state: present
 ....
 
 
 == run the playbook 
 
+Check before. 
 
 [source,shell]
 ----
+[nick@host1 ansible]$ dnf group list 
+...
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+   Virtualization Host
+Installed Environment Groups:
+   Server with GUI
+...
+[nick@host1 ansible]$ 
+[nick@host1 ansible]$ virsh --version
+bash: virsh: command not found...
+[nick@host1 ansible]$ 
+----
+
+[source,shell]
+----
+[nick@host1 ansible]$ ansible-playbook --ask-become-pass virtualization-host.yml 
+BECOME password: 
+[WARNING]: provided hosts list is empty, only localhost is available. Note that
+the implicit localhost does not match 'all'
+
+PLAY [set up virtualization-host] **********************************************
+
+TASK [virtualization-host : Install the 'Virtualization Host' environment group] ***
+changed: [localhost]
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[nick@host1 ansible]$ 
 ----
 
 Check after. 
 
 [source,shell]
 ----
+[nick@host1 ansible]$ dnf group list
+...
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+Installed Environment Groups:
+   Server with GUI
+   Virtualization Host
+...
+[nick@host1 ansible]$ 
+[nick@host1 ansible]$ virsh --version
+7.9.0
+[nick@host1 ansible]$ 
 ----
 
+Version v7.9.0 was released in https://libvirt.org/news.html[November 2021]. 
 
 
 

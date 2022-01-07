@@ -2,6 +2,7 @@
 ** xref:introduction.adoc[]
 ** xref:ansible-core-install.adoc[]
 ** xref:ansible-virtualization-host-install.adoc[]
+** xref:libvirt-daemon-start.adoc[]
 ** xref:ansible-collection-install.adoc[]
 ** xref:host1-libvirt-network.adoc[]
 ** xref:libvirt-bridge-public-create.adoc[]
