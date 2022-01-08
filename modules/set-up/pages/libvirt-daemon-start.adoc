@@ -84,6 +84,7 @@ The virtqemud daemon creates extra network interfaces when it starts, but this h
 ----
 [root@host1 ~]# ls /var/log/libvirt/qemu/
 [root@host1 ~]# 
+----
 
 
 == the daemon virtqemud
