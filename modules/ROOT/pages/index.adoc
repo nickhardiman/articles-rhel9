@@ -5,7 +5,7 @@ Nick Hardiman <nick@silvan.uk>
 
 What fun can be had with RHEL 9?
 
-== this site 
+== my articles 
 
 components 
 

@@ -1,0 +1,204 @@
+= view libvirt's modular daemons
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+looks like libvirtd is out. ???
+https://libvirt.org/daemons.html#switching-to-modular-daemons
+
+
+The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It ties together a few infrastructure building blocks like QEMU, bridge, DHCP and DNS.
+
+There is one libvirt service that handles VMs, many https://libvirt.org/daemons.html#switching-to-modular-daemons[libvirt daemons] that support this service, and many more sockets for communication. 
+All these daemons and sockets have systemd unit files.  
+
+== what was added by the libvirt install
+
+state of the system after install but before the daemons start
+
+=== network interfaces
+
+This machine has a loopback interface (lo), a wired ethernet interface (enp2s0f0) and a WiFi interface (wlp3s0).
+
+[source,shell]
+----
+[nick@host1 ansible]$ ip -brief addr show
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp2s0f0         UP             192.168.1.195/24 2a00:23a8:4b47:fc00:264b:feff:fec8:40a9/64 fdaa:bbcc:ddee:0:264b:feff:fec8:40a9/64 fe80::264b:feff:fec8:40a9/64 
+wlp3s0           DOWN           
+[nick@host1 ansible]$ 
+----
+
+The virtqemud daemon creates extra network interfaces when it starts, but this hasn't happened yet. 
+
+
+=== run files 
+
+[source,shell]
+----
+[root@host1 ~]# ls /var/run/libvirt/
+[root@host1 ~]# 
+----
+
+
+=== log files 
+
+[source,shell]
+----
+[root@host1 ~]# ls /var/log/libvirt/qemu/
+[root@host1 ~]# 
+----
+
+
+== the daemon virtqemud
+
+The virtqemud daemon is one of the new replacements for libvirtd. 
+
+The OS does not show any new network interfaces.
+
+=== systemd unit files for virtqemud
+
+Thesse are enabled. 
+That means the next time the computer boots, these services and sockets are started by systemd. 
+
+[source,shell]
+----
+[root@host1 ~]# systemctl list-unit-files | grep virtqemu
+virtqemud.service                          enabled         enabled
+virtqemud-admin.socket                     enabled         disabled
+virtqemud-ro.socket                        enabled         disabled
+virtqemud.socket                           enabled         disabled
+[root@host1 ~]# 
+----
+
+
+== libvirt services 
+
+The core service is virtqemud. 
+Plenty of services support the work of virtqemud. 
+Each service manages part of the system. 
+
+Each service name starts with virt (short for libvirt virtualization management system), and ends in d (for daemon), such as _virtqemud_.
+
+libvirt modular daemons 
+
+* virtqemud - QEMU virtual machines
+* virtnetworkd - virtual networks
+* virtnodedevd - host devices
+* virtnwfilterd - network filters
+* virtsecretd - secret data
+* virtstoraged - storage pools
+
+what about these ???
+
+* virtinterfaced - host network interfaces
+* virtlockd - resource locks
+* virtlogd - logs from VM consoles
+* virtproxyd - connections from remote hosts
+
+=== systemd unit files 
+
+[source,shell]
+----
+[root@host1 ~]# systemctl list-unit-files --type=service virt*
+UNIT FILE              STATE    VENDOR PRESET
+virtinterfaced.service disabled disabled     
+virtlockd.service      indirect disabled     
+virtlogd.service       indirect disabled     
+virtnetworkd.service   disabled disabled     
+virtnodedevd.service   disabled disabled     
+virtnwfilterd.service  disabled disabled     
+virtproxyd.service     disabled disabled     
+virtqemud.service      enabled  enabled      
+virtsecretd.service    disabled disabled     
+virtstoraged.service   disabled disabled     
+
+10 unit files listed.
+[root@host1 ~]# 
+----
+
+
+== libvirt sockets
+
+These services must be enabled to work ??? but the don't have to be running. 
+When a client sends a request to a socket, systemd starts the service. 
+
+Many of these sockets have an extra admin socket and a read-only socket. 
+In addition to virtinterfaced.socket, there is a virtinterfaced-admin.socket and a virtinterfaced-ro.socket.
+
+[source,shell]
+----
+[nick@host1 ~]$ systemctl list-unit-files --type=socket virt*
+UNIT FILE                   STATE    VENDOR PRESET
+virtinterfaced-admin.socket disabled disabled     
+virtinterfaced-ro.socket    disabled disabled     
+virtinterfaced.socket       enabled  enabled      
+virtlockd-admin.socket      disabled disabled     
+virtlockd.socket            disabled disabled     
+virtlogd-admin.socket       disabled disabled     
+virtlogd.socket             disabled enabled      
+virtnetworkd-admin.socket   disabled disabled     
+virtnetworkd-ro.socket      disabled disabled     
+virtnetworkd.socket         enabled  enabled      
+virtnodedevd-admin.socket   disabled disabled     
+virtnodedevd-ro.socket      disabled disabled     
+virtnodedevd.socket         enabled  enabled      
+virtnwfilterd-admin.socket  disabled disabled     
+virtnwfilterd-ro.socket     disabled disabled     
+virtnwfilterd.socket        enabled  enabled      
+virtproxyd-admin.socket     disabled disabled     
+virtproxyd-ro.socket        disabled disabled     
+virtproxyd-tcp.socket       disabled disabled     
+virtproxyd-tls.socket       disabled disabled     
+virtproxyd.socket           enabled  enabled      
+virtqemud-admin.socket      enabled  disabled     
+virtqemud-ro.socket         enabled  disabled     
+virtqemud.socket            enabled  disabled     
+virtsecretd-admin.socket    disabled disabled     
+virtsecretd-ro.socket       disabled disabled     
+virtsecretd.socket          enabled  enabled      
+virtstoraged-admin.socket   disabled disabled     
+virtstoraged-ro.socket      disabled disabled     
+virtstoraged.socket         enabled  enabled       
+
+30 unit files listed.
+[nick@host1 ~]$ 
+----
+
+== the old daemon libvirtd
+
+The libvirtd daemon used to manage virtualization. 
+It's still available, but disabled by default. 
+The docs call libvirtd the monolithic daemon.
+
+[source,shell]
+----
+[nick@host1 ansible]$ systemctl status libvirtd
+○ libvirtd.service - Virtualization daemon
+     Loaded: loaded (/usr/lib/systemd/system/libvirtd.service; disabled; vendor>
+     Active: inactive (dead)
+TriggeredBy: ○ libvirtd-tls.socket
+             ○ libvirtd-admin.socket
+             ○ libvirtd.socket
+             ○ libvirtd-tcp.socket
+             ○ libvirtd-ro.socket
+       Docs: man:libvirtd(8)
+             https://libvirt.org
+[nick@host1 ansible]$ 
+----
+
+Everything is disabled. 
+
+[source,shell]
+----
+[nick@host1 ansible]$ systemctl list-unit-files | grep libvirt
+libvirt-guests.service                     disabled        disabled
+libvirtd.service                           disabled        disabled
+libvirtd-admin.socket                      disabled        disabled
+libvirtd-ro.socket                         disabled        disabled
+libvirtd-tcp.socket                        disabled        disabled
+libvirtd-tls.socket                        disabled        disabled
+libvirtd.socket                            disabled        disabled
+[nick@host1 ansible]$ 
+----

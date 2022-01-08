@@ -1,0 +1,62 @@
+= add a vim syntax plugin, ansible-vim
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 08-01-2022
+
+Install the syntax plugin https://github.com/pearofducks/ansible-vim[ansible-vim].
+
+Plugins are installed using a package manager. 
+Vim has its own manager called pack, and there are many popular older package managers like Vundle, VimPlug and Pathogen. 
+
+
+== create a pack directory 
+
+Pack looks for a files in certain directories, but none of these directories exist. 
+
+Create a directory for auto-loading syntax packages. 
+
+[source,shell]
+----
+[nick@host1 ~]$ mkdir -p .vim/pack/syntax/start
+[nick@host1 ~]$ 
+----
+
+== download the plugin 
+
+Download https://github.com/pearofducks/ansible-vim[ansible-vim] from GitHub, for Ansible syntax highlighting.
+
+ansible-vim improves this highlighting by picking out Ansible keywords in more colors. 
+
+[source,shell]
+----
+[nick@host1 ~]$ cd .vim/pack/syntax/start
+[nick@host1 start]$ git clone https://github.com/pearofducks/ansible-vim.git
+Cloning into 'ansible-vim'...
+remote: Enumerating objects: 385, done.
+remote: Counting objects: 100% (39/39), done.
+remote: Compressing objects: 100% (31/31), done.
+remote: Total 385 (delta 15), reused 15 (delta 6), pack-reused 346
+Receiving objects: 100% (385/385), 94.02 KiB | 2.54 MiB/s, done.
+Resolving deltas: 100% (192/192), done.
+[nick@host1 start]$ 
+----
+
+Power users download many packages from vim. 
+They use `git submodule` to add them, rather than `git clone`.
+
+
+== configure the plugin 
+
+ansible-vim assumes files with certain names or in certain directories are Ansible files.
+But it doesn't assume a YAML file in a directory named _ansible_ is an Ansible file. 
+
+Tell vim that any YAML file in any directory named _ansible_ is an Ansible file. 
+
+[source,shell]
+----
+echo "au BufRead,BufNewFile */ansible/*.yml set filetype=yaml.ansible" >> ~/.vimrc
+----
+
+
+
+

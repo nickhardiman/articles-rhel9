@@ -1,0 +1,122 @@
+= view libvirt's system changes
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+
+
+Many files in /var/run/libvirt/
+
+Still no files in /var/log/libvirt/qemu/
+
+
+== a new network interface, virbr0
+
+ the bridge device virbr0
+
+A bridge is a kind of internal layer 2 switch that connects virtual machines to the physical network.
+
+virbr0 is a bridge. 
+
+
+[source,shell]
+----
+[root@host1 ~]# ip -brief addr show
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp2s0f0         UP             192.168.1.195/24 2a00:23a8:4b47:fc00:264b:feff:fec8:40a9/64 fdaa:bbcc:ddee:0:264b:feff:fec8:40a9/64 fe80::264b:feff:fec8:40a9/64 
+wlp3s0           DOWN           
+virbr0           DOWN           192.168.122.1/24 
+[root@host1 ~]# 
+----
+
+NetworkManager is configured to manage virbr0.
+
+[source,shell]
+----
+[root@host1 ~]# nmcli con show
+NAME      UUID                                  TYPE      DEVICE   
+enp2s0f0  7789c0b1-de1c-330f-ba1e-5badaf2c8215  ethernet  enp2s0f0 
+virbr0    395a2d99-26fe-4b4d-9f21-8949c129aaba  bridge    virbr0   
+[root@host1 ~]# 
+----
+
+
+
+== new DHCP and DNS services, provided by dnsmasq
+
+dnsmasq handles some infrastructure services for the virtual network. 
+
+[source,shell]
+----
+[root@host1 ~]# ps -C dnsmasq
+    PID TTY          TIME CMD
+  61504 ?        00:00:00 dnsmasq
+  61505 ?        00:00:00 dnsmasq
+[root@host1 ~]# 
+----
+
+
+== a new character device, kvm 
+
+The /dev/ directory has a character device named kvm. 
+You can tell this file is a character device because the long list starts with a "c".
+
+[source,shell]
+----
+[root@host1 ~]# ls -l /dev/kvm 
+crw-rw-rw-. 1 root kvm 10, 232 Jan  3 18:29 /dev/kvm
+[root@host1 ~]# 
+----
+
+
+
+== start the virtqemud daemon
+
+virtqemud doesn't run all the time. 
+Systemd starts libvirtd when there is work to do. 
+
+Use the virsh tool to list VMs (there aren't any yet).
+This starts virtqemud.
+It runs for couple minutes then stops. 
+
+If you skipped the section above where sockets are started, this command shows an error. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh list
+ Id   Name   State
+--------------------
+
+[root@host1 ~]# 
+....
+
+You can also start the virtqemud daemon manually, with systemctl. 
+
+[source,shell]
+----
+[root@host1 ~]# systemctl start virtqemud 
+[root@host1 ~]# 
+----
+
+The status display shows Started and Deactivated messages, two minutes apart. 
+
+[source,shell]
+----
+[root@host1 ~]# systemctl status --no-pager -l virtqemud
+○ virtqemud.service - Virtualization qemu daemon
+     Loaded: loaded (/usr/lib/systemd/system/virtqemud.service; enabled; vendor preset: enabled)
+     Active: inactive (dead) since Fri 2022-01-07 20:31:49 GMT; 18min ago
+TriggeredBy: ● virtqemud.socket
+             ● virtqemud-ro.socket
+             ● virtqemud-admin.socket
+       Docs: man:libvirtd(8)
+             https://libvirt.org
+   Main PID: 61281 (code=exited, status=0/SUCCESS)
+        CPU: 30ms
+
+Jan 07 20:29:49 host1.lab.example.com systemd[1]: Starting Virtualization qemu daemon...
+Jan 07 20:29:49 host1.lab.example.com systemd[1]: Started Virtualization qemu daemon.
+Jan 07 20:31:49 host1.lab.example.com systemd[1]: virtqemud.service: Deactivated successfully.
+[root@host1 ~]# 
+----
+
