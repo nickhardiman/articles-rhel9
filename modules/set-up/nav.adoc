@@ -1,6 +1,7 @@
 * xref:index.adoc[]
 ** xref:introduction.adoc[]
 ** xref:ansible-core-install.adoc[]
+** xref:editor-vim-use.adoc[]
 ** xref:ansible-virtualization-host-install.adoc[]
 ** xref:libvirt-daemon-start.adoc[]
 ** xref:ansible-collection-install.adoc[]

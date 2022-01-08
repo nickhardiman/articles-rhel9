@@ -53,7 +53,7 @@ isolated node conf.   | privbr2  |-----------------+-------+----------+--------+
 
 
 
-=== running many guests  
+== running many guests  
 
 The host machine can't handle all these machines at once. 
 Useful combinations  
@@ -66,7 +66,7 @@ Useful combinations
 
 
 
-=== network interfaces 
+== network interfaces 
 
 
 I'm trying to make predictable IP adresses and MAC addresses. 
