@@ -165,7 +165,7 @@ virtproxyd is only needed for requests from other hosts.
 ----
 [root@host1 ~]# for drv in qemu network nodedev nwfilter secret storage
   do
-    systemctl enable virt${drv}d.service
+    systemctl enable virt$+{drv}+d.service
   done
 Created symlink /etc/systemd/system/sockets.target.wants/virtlogd.socket → /usr/lib/systemd/system/virtlogd.socket.
 Created symlink /etc/systemd/system/sockets.target.wants/virtlockd.socket → /usr/lib/systemd/system/virtlockd.socket.
@@ -234,7 +234,7 @@ virtstoraged.socket         enabled  enabled
 ----
 [root@host1 ~]# for drv in qemu network nodedev nwfilter secret storage
   do
-    systemctl enable virt${drv}d{,-ro,-admin}.socket
+    systemctl enable virt$+{drv}+d{,-ro,-admin}.socket
   done
 Created symlink /etc/systemd/system/sockets.target.wants/virtnetworkd-ro.socket → /usr/lib/systemd/system/virtnetworkd-ro.socket.
 Created symlink /etc/systemd/system/sockets.target.wants/virtnetworkd-admin.socket → /usr/lib/systemd/system/virtnetworkd-admin.socket.
@@ -257,7 +257,7 @@ Created symlink /etc/systemd/system/sockets.target.wants/virtstoraged-admin.sock
 ----
 [root@host1 ~]# for drv in qemu network nodedev nwfilter secret storage
   do
-    systemctl start virt${drv}d{,-ro,-admin}.socket
+    systemctl start virt$+{drv}+d{,-ro,-admin}.socket
   done
 [root@host1 ~]# 
 ----
@@ -345,13 +345,13 @@ It runs for couple minutes then stops.
 If you skipped the section above where sockets are started, this command shows an error. 
 
 [source,shell]
-----
+....
 [root@host1 ~]# virsh list
  Id   Name   State
 --------------------
 
 [root@host1 ~]# 
-----
+....
 
 You can also start the virtqemud daemon manually, with systemctl. 
 
