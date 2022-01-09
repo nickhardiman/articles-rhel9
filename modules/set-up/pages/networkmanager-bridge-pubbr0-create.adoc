@@ -267,12 +267,38 @@ First task is package install.
 .main.yml
 [source,YAML]
 ....
-- name: Install RPM package
-  dnf:
-    name: rhel-system-roles
-    state: present
+---
+
+- include_tasks: libvirt-modular-daemons.yml
+- include_tasks: linux-bridge.yml
 ....
 
 
 == ansible bridge
 
+.linux-bridge.yml
+[source,YAML]
+....
+- name: use rhel-system-role network
+  vars:
+    network_connections:
+      #
+      # Create a bridge profile
+      - name: public-bridge
+        state: up
+        type: bridge
+        interface_name: pubbr0
+        ip:
+          dhcp4: no
+          auto6: no
+       #
+       # set an ethernet port to the bridge
+       - name: pubbr0-enp2s0f0
+         state: up
+         type: ethernet
+         interface_name: enp2s0f0
+         controller: public-bridge
+         port_type: bridge
+  include_role:
+    name: rhel-system-roles.network
+....
