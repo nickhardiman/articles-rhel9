@@ -1,0 +1,130 @@
+= create a public bridge
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 23-11-2020
+
+Add another network to libvirt's configuration.
+The config tells libvirt about bridge _pubbr0_.
+
+
+== create the libvirt network pubbr0  
+
+Add another network to libvirt's configuration.
+The config tells libvirt about bridge _pubbr0_.
+
+
+== check before 
+
+List networks. Libvirt comes with one defined network. 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-list --all
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+
+[root@host1 libvirt]# 
+....
+
+
+== write XML
+
+This XML file defines the new network.
+
+[source,XML]
+....
+<network>
+  <name>pubbr0</name>
+  <forward mode="bridge"/>
+  <bridge name="pubbr0" />
+</network>
+....
+
+Add the XML to a file. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vi net-pubbr0.xml 
+....
+
+
+== create 
+
+Tell libvirt about the new configuration.
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-define net-pubbr0.xml
+Network pubbr0 defined from net-pubbr0.xml
+
+[root@host1 libvirt]# 
+....
+
+Check with the _virsh net-list_ command. 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-list --all
+ Name      State      Autostart   Persistent
+----------------------------------------------
+ default   active     yes         yes
+ pubbr0    inactive   no          yes
+
+[root@host1 libvirt]# 
+....
+
+=== delete libvirt's pubbr0 
+
+If it's not right, remove the new config with _virsh net-undefine_.
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-undefine pubbr0
+Network pubbr0 has been undefined
+
+[root@host1 libvirt]# 
+....
+
+
+
+== start the libvirt network
+
+This is a temporary change. 
+The network stays active until the machine turns off. 
+After the next reboot, this will be inactive again. 
+
+OLD NAMING 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-start pubbr0
+Network br0 started
+
+[root@host1 libvirt]# 
+[root@host1 libvirt]# virsh net-list --all
+ Name         State    Autostart   Persistent
+-----------------------------------------------
+ default      active   yes         yes
+ pubbr0       active   no          yes
+
+[root@host1 libvirt]# 
+....
+
+Make the change permanent. 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-autostart pubbr0
+Network br0 marked as autostarted
+
+[root@host1 libvirt]# 
+[root@host1 libvirt]# virsh net-list --all
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+ pubbr0    active   yes         yes
+
+[root@host1 libvirt]# 
+....
+

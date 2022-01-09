@@ -1,0 +1,278 @@
+= create a public bridge using NetworkManager
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+pubbr0 is a public bridge that makes VMs part of the home lab network. 
+It is a virtual switch in a routed mode. 
+In the ISO model, this bridge is layer 3, network.
+
+The _host1_ computer has one physical network interface. 
+This will be connected to the new bridge. 
+
+* Create a bridge called *pubbr0*. 
+* Attach host1's physical interface to this new bridge. 
+* Add libvirt network configuration, also called *pubbr0*. 
+
+
+== all the bridges 
+
+* NAT bridge *virbr0*
+* public bridge *pubbr0*
+* private bridge *privbr0* 
+
+The default bridge _virbr0_ uses NAT. 
+This already exists.
+Libvirt set it up the first time the daemons ran. 
+
+Bridge privbr0 will be a bridge that works in isolated mode. 
+This bridge does not exist yet. 
+It will be used to connect VMs to each other, but not to the outside world. 
+
+
+== create the linux bridge pubbr0
+
+Add a new bridge. 
+
+[source,shell]
+....
+[root@host1 ~]# nmcli con add ifname pubbr0 type bridge con-name pubbr0
+Connection 'pubbr0' (82942e8c-d4cd-40e2-aebb-ccc948bc9c4b) successfully added.
+[root@host1 ~]# 
+....
+
+Check. 
+
+[source,shell]
+....
+[root@host1 ~]# nmcli connection show 
+NAME        UUID                                  TYPE      DEVICE   
+pubbr0      55f8ba23-10c4-4195-8aed-7acaf50f462c  bridge    pubbr0   
+enp2s0f0    f3604b81-5eaf-470b-a788-f1fee74543f1  ethernet  enp2s0f0 
+virbr0      c702daef-cb12-42eb-afa8-2d01857ce314  bridge    virbr0   
+[root@host1 ~]# 
+....
+
+A bridge is like a network switch that you can plug many computers into. 
+Plug in the physical interface. 
+
+[source,shell]
+....
+[root@host1 ~]# nmcli con add type bridge-slave ifname enp2s0f0 master pubbr0
+Connection 'bridge-slave-enp2s0f0' (8a7bae43-2c0d-4a9a-912a-55044966a328) successfully added.
+[root@host1 ~]# 
+....
+
+Check. 
+
+One more connection is defined. 
+
+[source,shell]
+....
+[root@host1 ~]# nmcli con
+NAME                   UUID                                  TYPE      DEVICE     
+pubbr0                 82942e8c-d4cd-40e2-aebb-ccc948bc9c4b  bridge    pubbr0        
+enp2s0f0               958ec5d3-b63b-4376-935d-74a0a9090a7f  ethernet  enp2s0f0   
+virbr0                 71702467-6535-4f4f-9f30-de28cb5215b2  bridge    virbr0     
+bridge-slave-enp2s0f0  8a7bae43-2c0d-4a9a-912a-55044966a328  ethernet  --         
+[root@host1 ~]#
+....
+
+The new entry_bridge-slave-enp2s0f0_ is there, but its DEVICE field is not set so this new device won't work. 
+Changes work after some stop-start action. 
+Afterwards, the field will show _enp2s0f0_.
+
+Use a script to avoid breaking the SSH connection. 
+
+This is the first file related to libvirt. 
+Create a directory to keep files related to libvirt.
+
+[source,shell]
+....
+[root@host1 ~]# mkdir libvirt 
+[root@host1 ~]# cd libvirt/
+[root@host1 libvirt]#
+[root@host1 libvirt]# vi pubbr0-up.sh 
+#!/bin/bash
+nmcli con down enp2s0f0
+nmcli con up pubbr0
+
+[root@host1 libvirt]#  chmod 754 pubbr0-up.sh 
+[root@host1 libvirt]# 
+....
+
+Bring up the new interface. 
+This pauses for a couple seconds. 
+[source,shell]
+....
+[root@host1 libvirt]# ./pubbr0-up.sh 
+Connection 'enp2s0f0' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/1)
+Connection successfully activated (master waiting for slaves) (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/11)
+[root@host1 libvirt]# 
+....
+
+Connection _enp2s0f0_ no longer has device _enp2s0f0_. 
+
+== nmcli connection show, nmcli device status and ip addr show
+
+Use the commands _nmcli connection show_, _nmcli device status_ and _ip addr show_ to see how the network is configured. 
+
+[source,shell]
+....
+[root@host1 libvirt]# nmcli con
+NAME                   UUID                                  TYPE      DEVICE   
+pubbr0                 55f8ba23-10c4-4195-8aed-7acaf50f462c  bridge    pubbr0   
+virbr0                 c702daef-cb12-42eb-afa8-2d01857ce314  bridge    virbr0   
+bridge-slave-enp2s0f0  40a0b1af-2e5c-4c64-8b82-624d341b68ab  ethernet  enp2s0f0 
+enp2s0f0               f3604b81-5eaf-470b-a788-f1fee74543f1  ethernet  --       
+[root@host1 libvirt]# 
+....
+
+Network Manager can also show a list of devices. 
+This is longer because it shows devices that are not currently active. 
+For instance, there is a wifi device but no wifi connection.
+
+[source,shell]
+....
+[root@host1 libvirt]# nmcli device status
+DEVICE          TYPE      STATE                   CONNECTION            
+pubbr0          bridge    connected               pubbr0                
+virbr0          bridge    connected (externally)  virbr0                
+enp2s0f0        ethernet  connected               bridge-slave-enp2s0f0 
+wlp3s0          wifi      disconnected            --                    
+p2p-dev-wlp3s0  wifi-p2p  disconnected            --                    
+lo              loopback  unmanaged               --                    
+virbr0-nic      tun       unmanaged               --                    
+[root@host1 libvirt]# 
+....
+
+The IP address list command _ip addr show_ has a lot more detail, so it can be harder to spot the same information. 
+This list no longer shows device _enp2s0f0_. 
+Its address _192.168.1.195_ now belongs to _pubbr0_.
+
+[source,shell]
+....
+[root@host1 libvirt]# ip addr show 
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp2s0f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel master pubbr0 state UP group default qlen 1000
+    link/ether 24:4b:fe:c8:40:a9 brd ff:ff:ff:ff:ff:ff
+3: wlp3s0: <BROADCAST,MULTICAST> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 1e:e6:fa:89:a5:1f brd ff:ff:ff:ff:ff:ff
+4: virbr0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 52:54:00:1c:9b:1c brd ff:ff:ff:ff:ff:ff
+    inet 192.168.122.1/24 brd 192.168.122.255 scope global virbr0
+       valid_lft forever preferred_lft forever
+5: virbr0-nic: <BROADCAST,MULTICAST> mtu 1500 qdisc fq_codel master virbr0 state DOWN group default qlen 1000
+    link/ether 52:54:00:1c:9b:1c brd ff:ff:ff:ff:ff:ff
+9: pubbr0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 24:4b:fe:c8:40:a9 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.195/24 brd 192.168.1.255 scope global dynamic noprefixroute pubbr0
+       valid_lft 86307sec preferred_lft 86307sec
+    inet6 2a00:23c8:1d05:1e00:d91c:e888:61c0:9f37/64 scope global dynamic noprefixroute 
+       valid_lft 315359998sec preferred_lft 315359998sec
+    inet6 fdaa:bbcc:ddee:0:92fd:59ee:e1f3:c59f/64 scope global noprefixroute 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f7d7:45df:937f:51a2/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+[root@host1 libvirt]# 
+....
+
+=== delete the new bridge 
+
+If something is wrong, back out with these _nmcli_ commands. 
+
+Create a script to do the work. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vi pubbr0-delete.sh
+....
+
+Add these lines. 
+
+[source,bash]
+....
+#!/bin/bash
+nmcli con down pubbr0
+nmcli connection delete bridge-slave-enp2s0f0 
+nmcli connection delete pubbr0 
+nmcli con up enp2s0f0
+....
+
+Run it. 
+
+[source,shell]
+....
+[root@host1 libvirt]# chmod 754 pubbr0-delete.sh 
+[root@host1 libvirt]# 
+[root@host1 libvirt]# ./pubbr0-delete.sh 
+Connection 'pubbr0' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/6)
+Connection 'bridge-slave-enp2s0f0' (0ae977d2-7c5c-490c-bad8-be647014886a) successfully deleted.
+Connection 'pubbr0' (a4d5ddf3-e0db-49f6-85c1-09b124537dd1) successfully deleted.
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/8)
+[root@host1 libvirt]# 
+....
+
+Check the slave is gone.
+
+[source,shell]
+....
+[root@host1 libvirt]# nmcli device
+DEVICE          TYPE      STATE                   CONNECTION 
+enp2s0f0        ethernet  connected               enp2s0f0   
+virbr0          bridge    connected (externally)  virbr0     
+wlp3s0          wifi      disconnected            --         
+p2p-dev-wlp3s0  wifi-p2p  disconnected            --         
+lo              loopback  unmanaged               --         
+virbr0-nic      tun       unmanaged               --         
+[root@host1 libvirt]# 
+....
+
+
+
+== ansible refactor 
+
+Refactor the role. 
+
+Firing up libvirt and making a linux bridge are two different jobs. 
+Place tasks in seperate files, and create a new main.yml that includes these files. 
+
+[source,shell]
+....
+[nick@host1 ~]$ cd ansible/roles/virtualization-host/tasks/
+[nick@host1 tasks]$ ls
+main.yml
+[nick@host1 tasks]$ 
+[nick@host1 tasks]$ mv main.yml libvirt-modular-daemons.yml
+[nick@host1 tasks]$ 
+[nick@host1 tasks]$ vim linux-bridge.yml
+....
+
+First task is package install. 
+
+.linux-bridge.yml
+[source,YAML]
+....
+- name: Install RPM package
+  dnf:
+    name: rhel-system-roles
+    state: present
+....
+
+.main.yml
+[source,YAML]
+....
+- name: Install RPM package
+  dnf:
+    name: rhel-system-roles
+    state: present
+....
+
+
+== ansible bridge
+

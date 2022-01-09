@@ -50,13 +50,28 @@ They use `git submodule` to add them, rather than `git clone`.
 ansible-vim assumes files with certain names or in certain directories are Ansible files.
 But it doesn't assume a YAML file in a directory named _ansible_ is an Ansible file. 
 
+Add a few lines to the bottom of the .vimrc config file. 
+Include a comment saying where this code came from. 
 Tell vim that any YAML file in any directory named _ansible_ is an Ansible file. 
+Highlight more keywords (the default is to highlight about 30 common keywords).
 
 [source,shell]
 ----
-echo "au BufRead,BufNewFile */ansible/*.yml set filetype=yaml.ansible" >> ~/.vimrc
+echo '" https://github.com/pearofducks/ansible-vim' >> ~/.vimrc
+echo 'au BufRead,BufNewFile */ansible/*.yml set filetype=yaml.ansible' >> ~/.vimrc
+echo 'let g:ansible_extra_keywords_highlight = 1' >> ~/.vimrc
 ----
 
+That _au_ keyword is short for _autocmd_, which tells vim to run commands for any file matching a pattern. 
+Keywords like _au_, _let_ and _set_ are described in vim's help.
+Start vim and type `:help au`.
+Unfortunately vim's help is not beginner-friendly, but does help once you reach the intermediate stage of vim competence. 
+
+
+== remove ansible-vim
+
+uninstall 
+delete
 
 
 

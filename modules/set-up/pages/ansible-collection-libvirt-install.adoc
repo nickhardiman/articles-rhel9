@@ -1,4 +1,4 @@
-= install the collection community.libvirt.virt
+= install the collection community.libvirt
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 05-01-2022
@@ -6,7 +6,7 @@ Nick Hardiman
 Install Red Hat Ansible Core.
 
 
-== install collection community.libvirt.virt 
+== install collection community.libvirt 
 
 Check before. 
 
@@ -39,7 +39,7 @@ Check after.
 [nick@host1 ~]$ ansible-doc virt
 > COMMUNITY.LIBVIRT.VIRT    (/home/nick/.ansible/collections/ansible_collection>
 
-        Manages virtual machines supported by `libvirt'.
+        Manages virtual machines supported by 'libvirt'.
 
 OPTIONS (= is mandatory):
 ...
@@ -51,3 +51,7 @@ OPTIONS (= is mandatory):
 
 
 
+== remove community.libvirt.virt 
+
+uninstall 
+delete

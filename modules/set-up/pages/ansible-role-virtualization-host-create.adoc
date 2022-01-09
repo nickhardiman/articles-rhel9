@@ -1,0 +1,95 @@
+= create role virtualization-host
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+
+
+== create a directory  
+
+Create a new directory to hold files. 
+
+[source,shell]
+----
+[nick@host1 ~]$ mkdir ansible
+[nick@host1 ~]$ cd ansible
+[nick@host1 ansible]$ 
+----
+
+
+
+
+== create the virtualization-host role 
+
+Create a directory to hold ansible roles. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ mkdir roles
+[nick@host1 ansible]$ cd roles
+[nick@host1 roles]$  
+....
+
+Create an ansible role called _virtualization-host_. 
+Use ``ansible-galaxy`` to create a new framework of directories and YAML files.
+
+[source,shell]
+....
+[nick@host1 roles]$ ansible-galaxy init virtualization-host
+- Role virtualization-host was created successfully
+[nick@host1 roles]$ 
+....
+
+The ``ansible-galaxy`` command adds many more that we either don't need yet or we will never need. 
+For instance, README.md is a useful document when the role is copied to GitHub. 
+
+[source,shell]
+....
+[nick@host1 roles]$ tree virtualization-host/
+virtualization-host/
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── README.md
+├── tasks
+│   └── main.yml
+├── templates
+├── tests
+│   ├── inventory
+│   └── test.yml
+└── vars
+    └── main.yml
+
+8 directories, 8 files
+[nick@host1 roles]$ 
+....
+
+
+
+The tasks file is empty, except for a YAML document start marker (three hyphens, ---) and a comment. 
+
+[source,shell]
+....
+[nick@host1 roles]$ cat virtualization-host/tasks/main.yml 
+---
+# tasks file for virtualization-host
+[nick@host1 roles]$ 
+[nick@host1 roles]$ vim virtualization-host/tasks/main.yml 
+....
+
+
+== test the role 
+
+[source,shell]
+....
+[nick@host1 roles]$ cat virtualization-host/tasks/main.yml 
+---
+[nick@host1 ~]$ cd ansible/roles/
+[nick@host1 roles]$ sudo ansible-playbook virtualization-host/tests/test.yml
+....
+
+

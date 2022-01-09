@@ -1,0 +1,114 @@
+= create playbook virtualization-host
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+
+
+
+== write the virtualization-host playbook 
+
+Create a playbook. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ vim virtualization-host.yml
+....
+
+This playbook doesn't do anything much. 
+It's the role _virtualization-host_ that does the work. 
+This role does not exist yet - we create that next. 
+
+
+.ansible/virtualization-host.yml
+[source,yaml]
+....
+---
+- name: set up virtualization-host 
+  hosts: localhost 
+  gather_facts: no
+  become: yes
+
+  roles:
+  - virtualization-host
+....
+
+
+That's the first file. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ tree
+.
+└── virtualization-host.yml
+
+0 directories, 1 file
+[nick@host1 ansible]$ 
+....
+
+
+== run the playbook 
+
+Check before. 
+
+[source,shell]
+----
+[nick@host1 ansible]$ dnf group list 
+...
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+   Virtualization Host
+Installed Environment Groups:
+   Server with GUI
+...
+[nick@host1 ansible]$ 
+[nick@host1 ansible]$ virsh --version
+bash: virsh: command not found...
+[nick@host1 ansible]$ 
+----
+
+[source,shell]
+----
+[nick@host1 ansible]$ ansible-playbook --ask-become-pass virtualization-host.yml 
+BECOME password: 
+[WARNING]: provided hosts list is empty, only localhost is available. Note that
+the implicit localhost does not match 'all'
+
+PLAY [set up virtualization-host] **********************************************
+
+TASK [virtualization-host : Install the 'Virtualization Host' environment group] ***
+changed: [localhost]
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[nick@host1 ansible]$ 
+----
+
+Check after. 
+
+[source,shell]
+----
+[nick@host1 ansible]$ dnf group list
+...
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+Installed Environment Groups:
+   Server with GUI
+   Virtualization Host
+...
+[nick@host1 ansible]$ 
+[nick@host1 ansible]$ virsh --version
+7.9.0
+[nick@host1 ansible]$ 
+----
+
+Version v7.9.0 was released in https://libvirt.org/news.html[November 2021]. 
+
+

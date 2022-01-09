@@ -121,3 +121,8 @@ Older versions of Ansible installed a vast number of files - over 17,000.
 ----
 
 
+
+== remove ansible-core
+
+uninstall 
+delete

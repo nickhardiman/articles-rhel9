@@ -1,0 +1,89 @@
+= view the NAT bridge virbr0
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+A bridge is like a network switch that you can plug many computers into. 
+
+* Linux bridge device virbr0
+* libvirt network default
+
+
+== a new network interface, virbr0
+
+A bridge is a kind of internal layer 2 switch that connects virtual machines to the physical network.
+
+virbr0 is a bridge. 
+
+https://wiki.libvirt.org/page/VirtualNetworking
+
+[source,shell]
+----
+[root@host1 ~]# ip -brief addr show
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp2s0f0         UP             192.168.1.195/24 2a00:23a8:4b47:fc00:264b:feff:fec8:40a9/64 fdaa:bbcc:ddee:0:264b:feff:fec8:40a9/64 fe80::264b:feff:fec8:40a9/64 
+wlp3s0           DOWN           
+virbr0           DOWN           192.168.122.1/24 
+[root@host1 ~]# 
+----
+
+NetworkManager is configured to manage virbr0.
+
+[source,shell]
+----
+[root@host1 ~]# nmcli con show
+NAME      UUID                                  TYPE      DEVICE   
+enp2s0f0  7789c0b1-de1c-330f-ba1e-5badaf2c8215  ethernet  enp2s0f0 
+virbr0    395a2d99-26fe-4b4d-9f21-8949c129aaba  bridge    virbr0   
+[root@host1 ~]# 
+----
+
+
+
+== libvirt's default network
+
+Libvirt has network configuration named _default_.
+This tells libvirt about the _virbr0_ NAT bridge.
+
+[source,shell]
+....
+[root@host1 ~]# virsh net-list
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+
+[root@host1 ~]# 
+....
+
+The _default_ configuration contains the XML tag _forward_. 
+The _mode_ attribute is set to 'nat', which means it's easy for virtual machines using this bridge to send requests to the workstation on the home network and to the Internet, but impossible for the workstation to send requests to these virtual machines. 
+
+The virsh net-dumpxml command displays libvirt's network config. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh net-dumpxml default 
+....
+
+This is how the default network is configured. 
+
+[source,XML]
+....
+<network>
+  <name>default</name>
+  <uuid>beb06c88-f2a8-47b6-b82a-d07f7170bacd</uuid>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:1c:9b:1c'/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+    </dhcp>
+  </ip>
+</network>
+....
+

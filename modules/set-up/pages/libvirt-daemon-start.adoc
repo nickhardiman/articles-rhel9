@@ -180,3 +180,28 @@ Add tasks.
     - virtstoraged.socket
 ----
 
+
+== run 
+
+[source,shell]
+----
+[nick@host1 ansible]$ ansible-playbook --ask-become-pass virtualization-host.yml 
+BECOME password: 
+[WARNING]: provided hosts list is empty, only localhost is available. Note that
+the implicit localhost does not match 'all'
+
+PLAY [set up virtualization-host] **********************************************
+
+TASK [virtualization-host : Install the 'Virtualization Host' environment group] ***
+ok: [localhost]
+
+TASK [virtualization-host : enable libvirt's systemd socket files] *************
+ok: [localhost] => (item=virtnetworkd-admin.socket)
+ok: [localhost] => (item=virtnetworkd-ro.socket)
+ok: [localhost] => (item=virtnetworkd.socket)
+...
+PLAY RECAP *********************************************************************
+localhost                  : ok=4    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[nick@host1 ansible]$ 
+----
