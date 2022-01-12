@@ -30,7 +30,7 @@ This bridge does not exist yet.
 It will be used to connect VMs to each other, but not to the outside world. 
 
 
-== create the linux bridge pubbr0
+== manually create the linux bridge pubbr0
 
 Add a new bridge. 
 
@@ -274,31 +274,75 @@ First task is package install.
 ....
 
 
-== ansible bridge
+== use ansible to create the bridge
+
+Create new NetworkManager connection configurations named pubbr0 and pubbr0-enp2s0f0.
 
 .linux-bridge.yml
 [source,YAML]
 ....
+---
+# /usr/share/doc/rhel-system-roles/network/example-bridge_with_vlan-playbook.yml 
+- name: Install RPM package
+  dnf:
+    name: rhel-system-roles
+    state: present
+
 - name: use rhel-system-role network
   vars:
     network_connections:
       #
       # Create a bridge profile
-      - name: public-bridge
+      - name: pubbr0
         state: up
         type: bridge
-        interface_name: pubbr0
+        #interface_name: pubbr0 # defaults to the connection name
         ip:
-          dhcp4: no
-          auto6: no
-       #
-       # set an ethernet port to the bridge
-       - name: pubbr0-enp2s0f0
-         state: up
-         type: ethernet
-         interface_name: enp2s0f0
-         controller: public-bridge
-         port_type: bridge
+          dhcp4: yes
+          auto6: yes
+      #
+      # set an ethernet port to the bridge
+      - name: pubbr0-enp2s0f0
+        state: up
+        type: ethernet
+        interface_name: enp2s0f0
+        controller: pubbr0
+        #controller: public-bridge
+        port_type: bridge
   include_role:
     name: rhel-system-roles.network
+....
+
+Run. 
+
+[source,shell]
+....
+cd ~/ansible/roles/
+sudo ansible-playbook virtualization-host/tests/test.yml
+....
+
+Check. 
+
+[source,shell]
+....
+[nick@host1 tasks]$ nmcli connection show 
+NAME             UUID                                  TYPE      DEVICE   
+pubbr0           8ff2090f-3488-4a80-a083-396c78f6b832  bridge    pubbr0   
+virbr0           395a2d99-26fe-4b4d-9f21-8949c129aaba  bridge    virbr0   
+pubbr0-enp2s0f0  61adfe3a-5350-4e53-89df-ac0caf79b7b9  ethernet  enp2s0f0 
+enp2s0f0         7789c0b1-de1c-330f-ba1e-5badaf2c8215  ethernet  --       
+[nick@host1 tasks]$ 
+....
+
+The pubbr0 interface uses SLAAC to add IPv6 addresses. 
+
+[source,shell]
+....
+[nick@host1 tasks]$ ip -brief addr
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp2s0f0         UP             
+wlp3s0           DOWN           
+virbr0           DOWN           192.168.122.1/24 
+pubbr0           UP             192.168.1.195/24 2a00:23a8:4b47:fc00:338f:347a:2b99:25c9/64 fdaa:bbcc:ddee:0:6197:f7bf:9fc1:6bf2/64 fe80::418d:9854:5a1a:1435/64 
+[nick@host1 tasks]$ 
 ....

@@ -6,6 +6,21 @@ Nick Hardiman
 Add another network to libvirt's configuration.
 The config tells libvirt about bridge _pubbr0_.
 
+== the default network 
+
+
+List networks. Libvirt comes with one defined network. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-list
+[sudo] password for nick: 
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+
+[nick@host1 ~]$ 
+....
 
 == create the libvirt network pubbr0  
 
@@ -13,19 +28,6 @@ Add another network to libvirt's configuration.
 The config tells libvirt about bridge _pubbr0_.
 
 
-== check before 
-
-List networks. Libvirt comes with one defined network. 
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh net-list --all
- Name      State    Autostart   Persistent
---------------------------------------------
- default   active   yes         yes
-
-[root@host1 libvirt]# 
-....
 
 
 == write XML
@@ -41,15 +43,26 @@ This XML file defines the new network.
 </network>
 ....
 
+
+The files directory holds the new XML file. 
+
+[source,XML]
+....
+[nick@host1 ~]$ cd  ~/ansible/roles/virtualization-host/files
+[nick@host1 files]$ 
+....
+
 Add the XML to a file. 
 
 [source,shell]
 ....
-[root@host1 libvirt]# vi net-pubbr0.xml 
+[nick@host1 files]$ vim net-pubbr0.xml 
 ....
 
 
-== create 
+
+== manually create the libvirt network
+
 
 Tell libvirt about the new configuration.
 
@@ -74,17 +87,6 @@ Check with the _virsh net-list_ command.
 [root@host1 libvirt]# 
 ....
 
-=== delete libvirt's pubbr0 
-
-If it's not right, remove the new config with _virsh net-undefine_.
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh net-undefine pubbr0
-Network pubbr0 has been undefined
-
-[root@host1 libvirt]# 
-....
 
 
 
@@ -119,6 +121,12 @@ Make the change permanent.
 Network br0 marked as autostarted
 
 [root@host1 libvirt]# 
+....
+
+Check. 
+
+[source,shell]
+....
 [root@host1 libvirt]# virsh net-list --all
  Name      State    Autostart   Persistent
 --------------------------------------------
@@ -128,3 +136,76 @@ Network br0 marked as autostarted
 [root@host1 libvirt]# 
 ....
 
+
+== use ansible to create the pubbr0 network 
+
+
+[source,shell]
+....
+vim ~/ansible/roles/virtualization-host/tasks/linux-bridge.yml
+....
+
+Add more tasks. 
+
+[source,YAML]
+....
+# https://docs.ansible.com/ansible/latest/collections/community/libvirt/virt_net_module.html
+#
+
+- name: install RPM packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - python3-libvirt
+    - python3-lxml
+
+# Define a new network
+- community.libvirt.virt_net:
+    command: define
+    name: pubbr0
+    xml: '{{ lookup("file", "net-pubbr0.xml") }}'
+
+# Start a network
+- community.libvirt.virt_net:
+    command: create
+    name: pubbr0
+
+# Ensure that a network is active (needs to be defined and built first)
+- community.libvirt.virt_net:
+    state: active
+    name: pubbr0
+
+# Ensure that a given network will be started at boot
+- community.libvirt.virt_net:
+    autostart: yes
+    name: pubbr0
+....
+
+
+Check. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ sudo virsh net-list --all
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+ pubbr0    active   yes         yes
+
+[nick@host1 ansible]$ 
+....
+
+
+
+== delete libvirt's pubbr0 
+
+If it's not right, remove the new config with _virsh net-undefine_.
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-undefine pubbr0
+Network pubbr0 has been undefined
+
+[root@host1 libvirt]# 
+....
