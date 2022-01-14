@@ -45,7 +45,7 @@ For instance, README.md is a useful document when the role is copied to GitHub.
 
 [source,shell]
 ....
-[nick@host1 roles]$ tree virtualization-host/
+[nick@host1 roles]$ tree -a virtualization-host/
 virtualization-host/
 ├── defaults
 │   └── main.yml
@@ -61,6 +61,7 @@ virtualization-host/
 ├── tests
 │   ├── inventory
 │   └── test.yml
+├── .travis.yml
 └── vars
     └── main.yml
 

@@ -14,4 +14,5 @@
 ** xref:libvirt-network-default-view.adoc[]
 ** xref:networkmanager-bridge-pubbr0-create.adoc[]
 ** xref:libvirt-network-pubbr0-create.adoc[]
-
+** xref:libvirt-pool-images-create.adoc[]
+** xref:libvirt-storage-volume-rhel8-iso.adoc[]

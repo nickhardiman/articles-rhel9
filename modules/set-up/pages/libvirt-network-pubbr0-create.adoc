@@ -48,15 +48,15 @@ The files directory holds the new XML file.
 
 [source,XML]
 ....
-[nick@host1 ~]$ cd  ~/ansible/roles/virtualization-host/files
-[nick@host1 files]$ 
+[nick@host1 ~]$ cd  libvirt
+[nick@host1 libvirt]$ 
 ....
 
 Add the XML to a file. 
 
 [source,shell]
 ....
-[nick@host1 files]$ vim net-pubbr0.xml 
+[nick@host1 libvirt]$ vim net-pubbr0.xml 
 ....
 
 
@@ -139,6 +139,37 @@ Check.
 
 == use ansible to create the pubbr0 network 
 
+=== write XML
+
+This XML file defines the new network.
+
+[source,XML]
+....
+<network>
+  <name>pubbr0</name>
+  <forward mode="bridge"/>
+  <bridge name="pubbr0" />
+</network>
+....
+
+
+The files directory holds the new XML file. 
+
+[source,XML]
+....
+[nick@host1 ~]$ cd  ~/ansible/roles/virtualization-host/files
+[nick@host1 files]$ 
+....
+
+Add the XML to a file. 
+
+[source,shell]
+....
+[nick@host1 files]$ vim net-pubbr0.xml 
+....
+
+
+=== add tasks 
 
 [source,shell]
 ....
@@ -182,6 +213,7 @@ Add more tasks.
     name: pubbr0
 ....
 
+Run. 
 
 Check. 
 
