@@ -4,8 +4,15 @@ Nick Hardiman
 :revdate: 11-01-2021
 
 We can use a *fresh install* process to build a new virtual machine and install the OS. 
-But before we start, we need an install ISO. 
-The ISO file acts like a DVD in an optical disk drive. 
+But before we start, we need an https://en.wikipedia.org/wiki/ISO_9660[ISO]. 
+An ISO is a file system designed for old CDs. 
+The age of the CD is gone, but the ISO lives on as a good way to deliver a huge cache of files,
+ especially files required to install an OS. 
+ The ISO file acts like a CD in an optical disk drive. 
+
+ The size of an ISO is usually restricted to something that can be copied to a DVD, so less than 8GiB. 
+ That's not enough for the entire library of RPM packages, but it's enough to pack in the core OS packages plus plenty of optional extras.
+
 For more information on Red Hat's ISO files, check out the https://access.redhat.com/solutions/104063[Understanding the various RHEL .iso files] page. 
 
 Download the installer https://en.wikipedia.org/wiki/ISO_9660[ISO] file and add it to libvirt's _images_ storage pool. 
@@ -16,6 +23,8 @@ The customer portal has documentation on https://access.redhat.com/documentation
 
 
 == download the RHEL 8 installer ISO
+
+Download one of the older ISOs, RHEL 8.2.
 
 * Use a web browser. 
 * Sign into the https://access.redhat.com/[customer portal]. 
@@ -33,6 +42,7 @@ Right-click the _Download Now_ button and copy the link address.
 It's a URL containing long strings of nonsense, along the lines of this one.  __https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-8.2-x86_64-dvd.iso?user=1234&_auth_=1234__.
 Some of this nonsense is authorization tokens embedded in the URL. 
 
+Use curl to download the ISO. 
 The download link is only valid for a few minutes, so this is a bad time for a coffee break. 
 If using _curl_, like this example does, the link must be put in quotes so the ampersand *&* does not fool Bash into starting a background job. 
 
@@ -53,7 +63,8 @@ This is a good time for a coffee break.
 If the file was downloaded somewhere else and moved, it may well have a different SELinux file context. 
 
 This file was downloaded to a user's home dir first, then moved. 
-It has a SELinux file type of __user_home_t__ (__admin_home_t__ belongs to root's home directory).
+It has a SELinux file type of __user_home_t__.
+Root's home dir is special: type __admin_home_t__ belongs to root's home directory.
 
 [source,shell]
 ....

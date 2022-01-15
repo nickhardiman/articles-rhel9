@@ -73,6 +73,15 @@ The automated install takes many more lines of code.
 sudo dnf group install "Virtualization Host"
 ....
 
+We need another package, virt-install. 
+This is not included in the group "Virtualization Host".
+This package is used in the development stage, not in the operation stage. 
+The group lists packages for running machines, not packages for developing machines. 
+
+[source,shell]
+....
+sudo dnf install virt-install
+....
 
 
 
@@ -86,9 +95,11 @@ Use the group ID, not the group name.
 ....
 ---
 # tasks file for virtualization-host
-- name: Install the 'Virtualization Host' environment group
+- name: Install 'Virtualization Host' environment group, plus virt-install
   dnf:
-    name: '@virtualization-host-environment'
+    name: 
+    - '@virtualization-host-environment'
+    - virt-install
     state: present
 ....
 

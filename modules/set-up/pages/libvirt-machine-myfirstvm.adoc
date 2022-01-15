@@ -1,0 +1,188 @@
+= create a virtual machine, then delete it
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+Create a VM, then destroy it. 
+This new virtual machine exists inside the physical host machine. 
+It can talk to the Internet via the host's ethernet interface. 
+
+Use the golden image method of installation. 
+Instead of installing packages and configuring the system using a kickstart file, copy the KVM file. 
+
+
+.physical machine and virtual machine 
+....
+.--------------------.
+|                    |
+|  host1             |
+|                    |   
+|   +------------+   |    
+|   |            |   |  
+|   |  myfirstvm |---+--> Internet
+|   |            |   |   
+|   +------------+   |  
+.--------------------.  
+....
+
+
+
+== create a storage volume 
+
+A qcow2 file was downloaded from Red Hat's portal. 
+Copy this to use for our new VM. 
+
+[source,shell]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# ls
+rhel-8.2-x86_64-kvm.qcow2   rhel-8.3-x86_64-dvd.iso
+[root@host1 images]# 
+[root@host1 images]# cp rhel-8.2-x86_64-kvm.qcow2 myfirstvm.qcow2
+[root@host1 images]# 
+----
+
+
+== create a virtual machine 
+
+Create a VM using a ready-made disk image (guest-images/myfirstvm.qcow2). This is not the same as using an install ISO - the OS is already installed. 
+
+A new VM can be created using a command like ``virsh define myfirstvm.xml``, 
+similar to the way a storage pool can be created using ``virsh pool-define storage-pool.xml``.
+But the XML configuration that defines a virtual machine is complicated. 
+It's easier to use the ``virt-install`` command to do the hard work. 
+
+This ``virt-install`` command creates a virtual machine.
+The ``--os-variant`` option sets some values, including 2 CPUs and 1536 MB memory.
+
+[source,shell]
+----
+virt-install \
+  --name myfirstvm \
+  --disk vol=images/myfirstvm.qcow2  \
+  --os-variant rhel8.2 \
+  --noautoconsole  \
+  --import
+----
+
+This command creates a _guest domain_. In https://libvirt.org/goals.html[libvirt terminology], this command creates a domain on the node, which translates as a new guest machine running on the host machine.  
+ 
+
+[source,shell]
+----
+[root@host1 ~]# virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2   --os-variant rhel8.2   --noautoconsole    --import
+Using rhel8.2 default --memory 1536
+
+Starting install...
+Domain creation completed.
+[root@host1 ~]#
+----
+
+
+== use the console 
+
+Connect to the console with the command ``virsh console myfirstvm``.
+
+It may take a few seconds for boot-up to finish. 
+The login prompt may not appear until you hit the ``Enter`` key. 
+
+The hostname is _localhost_. 
+The ``--name`` option in the virt-install command doesn't change the hostname, or indeed anything in the KVM image. 
+
+[source,shell]
+----
+[root@host1 ~]$ virsh console myfirstvm
+Connected to domain myfirstvm
+Escape character is ^]
+(Enter)
+Red Hat Enterprise Linux 8.2 (Ootpa)
+Kernel 4.18.0-193.el8.x86_64 on an x86_64
+
+Activate the web console with: systemctl enable --now cockpit.socket
+
+localhost login: 
+----
+
+We can't log in, because no root password is set. 
+
+Disconnect from the console with this key combination. 
+kbd:[Ctrl + ++]++ ] 
+
+[source,shell]
+----
+myfirstvm login:  ^]
+[root@host1 ~]$ 
+----
+
+
+== stop the VM
+
+Stop the new VM with the command ``virsh shutdown myfirstvm``. 
+This is a graceful shutdown, like running ``systemctl poweroff``.
+
+If you want to pull the plug, use ``virsh destroy myfirstvm``.
+
+[source,shell]
+....
+[root@host1 ~]$ virsh shutdown myfirstvm
+Domain myfirstvm is being shutdown
+
+[root@host1 ~]$ 
+[root@host1 ~]$ virsh list --all
+ Id    Name                           State
+----------------------------------------------------
+ -     myfirstvm                      shut off
+
+[root@host1 ~]$ 
+....
+
+
+== restart the VM
+
+Restart the new VM with the command ``virsh start myfirstvm``.
+
+This ``virsh start`` command runs a huge ``qemu-kvm`` command with dozens of options. 
+You can see it by running ``ps -fwwwC qemu-kvm``.
+
+[source,shell]
+....
+[root@host1 ~]$ virsh start myfirstvm
+Domain myfirstvm started
+
+[root@host1 ~]$ 
+[root@host1 ~]$ virsh list
+ Id    Name                           State
+----------------------------------------------------
+ 1     myfirstvm                      running
+
+[root@host1 ~]$ 
+....
+
+
+
+
+== delete the VM
+
+Delete the new VM with the command  ``virsh destroy myfirstvm``.
+
+Power off the machine and remove its configuration. 
+
+[source,shell]
+....
+[root@host1 ~]$ virsh destroy myfirstvm
+Domain myfirstvm destroyed
+
+[root@host1 ~]$ 
+[root@host1 ~]# virsh undefine --remove-all-storage myfirstvm
+Domain myfirstvm has been undefined
+Volume 'vda'(/var/lib/libvirt/images/myfirstvm.qcow2) removed.
+
+[root@host1 ~]# 
+[root@host1 ~]$ virsh list --all
+ Id    Name                           State
+----------------------------------------------------
+
+[root@host1 ~]$ 
+....
+
+

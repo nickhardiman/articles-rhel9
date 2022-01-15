@@ -1,0 +1,131 @@
+= add a RHEL 8 qcow2 image to the images pool
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 15-01-2022
+
+
+Download a ready-made KVM guest image. 
+This is a qcow2 file.
+Add it to libvirt's _images_ storage pool. 
+
+Downloading the file requires access to Red Hat's customer portal and CDN. 
+Use your developer account to log into the portal. 
+The customer portal has documentation on https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_virtualization/getting-started-with-virtualization-in-rhel-8_configuring-and-managing-virtualization#assembly_creating-virtual-machines_virt-getting-started[Creating virtual machines].
+
+
+
+== download the RHEL 8 qcow2 image
+
+Download one of the older images, RHEL 8.2.
+
+* Use a web browser. 
+* Sign into the https://access.redhat.com/[customer portal]. 
+* Find the [Download Red Hat Enterprise Linux] page. Downloads > Infrastructure Management > Red Hat Enterprise Linux 8
+* Change the version from the latest to 8.2.
+* Have a look at what's on offer. The https://access.redhat.com/downloads/content/479/ver=/rhel---8/8.2/x86_64/product-software[download page for RHEL 8] lists many installers (including a small ISO and a big DVD) and a ready-made KVM guest image. 
+* Find the entry titled  _Red Hat Enterprise Linux 8.2 KVM Guest Image_.
+* Download the file from the customer portal to the images directory. More gory details on how to do this are below.
+
+Downloading the ISO requires a little jumping around between the web browser interface and the command line interface. 
+You could use the web browser to download, then copy from your workstation to _host1_. 
+But this method get tricky with the URL and the _curl_ command.
+
+Right-click the _Download Now_ button and copy the link address. 
+It's a URL containing long strings of nonsense, along the lines of this one.  __https://access.cdn.redhat.com/content/origin/files/sha256/12/3456/rhel-8.2-x86_64-kvm.qcow2?user=7890&_auth_=abcd__.
+Some of this nonsense is authorization tokens embedded in the URL. 
+
+Use curl to download the ISO. 
+The download link is only valid for a few minutes, so this is a bad time for a coffee break. 
+If using _curl_, like this example does, the link must be put in quotes so the ampersand *&* does not fool Bash into starting a background job. 
+The size of this file is about 1GiB. 
+
+[source,shell]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# 
+[root@host1 images]# curl --output rhel-8.2-x86_64-kvm.qcow2 --location 'https://access.cdn.redhat.com/content/origin/files/sha256/12/3456/rhel-8.2-x86_64-kvm.qcow2?user=7890&_auth_=abcd__'
+----
+
+
+
+== check the SELinux context 
+
+Is hte SELinux file type _virt_image_t_?
+
+If the file was downloaded somewhere else and moved, it may well have a different SELinux  context. 
+
+context ???
+
+For instance, if this file was downloaded to a user's home dir first then moved, 
+it has a SELinux file type of __user_home_t__.
+Root's home dir is special: type __admin_home_t__ belongs to root's home directory.
+
+[source,shell]
+....
+[root@host1 images]# pwd
+/var/lib/libvirt/images
+[root@host1 images]# 
+[root@host1 images]# ls -lZ *.qcow2
+-rw-r--r--. 1 root root unconfined_u:object_r:virt_image_t:s0 1159135232 Jan 15 12:56 rhel-8.2-x86_64-kvm.qcow2
+[root@host1 images]#  
+[root@host1 images]# cd
+[root@host1 ~]#
+....
+
+Fix the file type. 
+
+[source,shell]
+....
+[root@host1 ~]# restorecon -Rv /var/lib/libvirt/images/
+Relabeled /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2 from unconfined_u:object_r:user_home_t:s0 to unconfined_u:object_r:virt_image_t:s0
+[root@host1 ~]# 
+....
+
+
+
+== refresh the libvirt pool 
+
+Sometimes, Libvirt doesn't notice the new ISO file.
+When ???
+
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name   Path
+--------------
+
+[root@host1 ~]# 
+....
+
+Refresh the pool. 
+This tells libvirt to take another look at what's stored in _images_. 
+
+[source,shell]
+....
+[root@host1 ~]# 
+[root@host1 ~]# virsh pool-refresh images
+Pool images refreshed
+
+[root@host1 ~]# 
+....
+
+The new file is now listed. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name                        Path
+------------------------------------------------------------------------------
+ rhel-8.2-x86_64-kvm.qcow2   /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2
+[root@host1 ~]# 
+[root@host1 ~]# virsh vol-info rhel-8.2-x86_64-kvm.qcow2 images
+Name:           rhel-8.2-x86_64-kvm.qcow2
+Type:           file
+Capacity:       10.00 GiB
+Allocation:     1.08 GiB
+
+[root@host1 ~]# 
+....
+
+
