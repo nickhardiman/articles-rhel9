@@ -85,7 +85,7 @@ Relabeled /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2 from unconfined_u:ob
 
 == refresh the libvirt pool 
 
-Sometimes, Libvirt doesn't notice the new ISO file.
+Libvirt may not notice new volumes in the pool.
 When ???
 
 

@@ -165,7 +165,8 @@ Domain myfirstvm started
 
 Delete the new VM with the command  ``virsh destroy myfirstvm``.
 
-Power off the machine and remove its configuration. 
+Power off the machine. 
+Don't bother to shut it down gracefully. 
 
 [source,shell]
 ....
@@ -173,6 +174,15 @@ Power off the machine and remove its configuration.
 Domain myfirstvm destroyed
 
 [root@host1 ~]$ 
+....
+
+
+Delete the new machine. 
+The opposite of define is undefine. 
+Remove its configuration and the new volume file. 
+
+[source,shell]
+....
 [root@host1 ~]# virsh undefine --remove-all-storage myfirstvm
 Domain myfirstvm has been undefined
 Volume 'vda'(/var/lib/libvirt/images/myfirstvm.qcow2) removed.
@@ -183,6 +193,165 @@ Volume 'vda'(/var/lib/libvirt/images/myfirstvm.qcow2) removed.
 ----------------------------------------------------
 
 [root@host1 ~]$ 
+....
+
+
+== use ansible to create the VM 
+
+Run the virt-install command again, this time with the extra option --print-xml. 
+
+This XML describes everything libvirt needs to create a VM. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2    --os-variant rhel8.2   --noautoconsole    --import --print-xml
+[sudo] password for nick: 
+<domain type="kvm">
+  <name>myfirstvm</name>
+  <uuid>d170b87b-9324-4cc4-a197-dc9f9080ef7b</uuid>
+...
+    </rng>
+  </devices>
+</domain>
+
+[nick@host1 ~]$ 
+....
+
+Copy the XML to a file. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2    --os-variant rhel8.2   --noautoconsole    --import --print-xml > ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.xml
+[nick@host1 ~]$ 
+....
+
+Add tasks. 
+This is a test of everything done so far. 
+Create another playbook in the tests directory. 
+
+[source,shell]
+....
+[nick@host1 ~]$ vim ansible/roles/virtualization-host/tests/myfirstvm.yml
+....
+
+Write the playbook. 
+
+[source,YAML]
+....
+---
+- name: set up virtualization-host 
+  hosts: localhost 
+  gather_facts: no
+  become: yes
+
+  tasks: 
+  # defining and launching an LXC guest
+  - name: define vm
+    community.libvirt.virt:
+      command: define
+      xml: "{{ lookup('file', 'vm-myfirstvm.xml') }}"
+
+  - name: start vm
+    community.libvirt.virt:
+      name: myfirstvm
+      state: running
+....
+
+Run. 
+
+
+[source,shell]
+....
+[nick@host1 ansible]$  ansible-playbook --ask-become-pass roles/virtualization-host/tests/myfirstvm.yml
+BECOME password: 
+[WARNING]: provided hosts list is empty, only localhost is available. Note that
+the implicit localhost does not match 'all'
+
+PLAY [set up virtualization-host] ***********************************************
+
+TASK [define vm] ****************************************************************
+changed: [localhost]
+
+TASK [start vm] *****************************************************************
+changed: [localhost]
+
+PLAY RECAP **********************************************************************
+localhost                  : ok=2    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[nick@host1 ansible]$ 
+....
+
+This is idempotent. 
+Run the playbook again and that _start vm_ task says _OK_, not changed. 
+
+Check.
+
+[source,shell]
+....
+[nick@host1 ansible]$ sudo virsh list --all
+[sudo] password for nick: 
+ Id   Name        State
+---------------------------
+ 1    myfirstvm   running
+
+[nick@host1 ansible]$ 
+....
+
+
+
+== delete using ansible 
+
+
+[source,shell]
+....
+[nick@host1 ansible]$ vim roles/virtualization-host/tests/myfirstvm.yml
+....
+
+Add more tasks to the playbook. 
+
+There is no "deleted" state. 
+Use "command" instead. 
+
+[source,YAML]
+....
+  - name: pull the plug
+    community.libvirt.virt:
+      name: myfirstvm
+      state: destroyed
+
+  - name: delete
+    community.libvirt.virt:
+      name: myfirstvm
+      command: undefine
+....
+
+Run. 
+
+[source,shell]
+....
+[nick@host1 ansible]$  ansible-playbook --ask-become-pass roles/virtualization-host/tests/myfirstvm.yml
+BECOME password: 
+[WARNING]: provided hosts list is empty, only localhost is available. Note that
+the implicit localhost does not match 'all'
+
+PLAY [set up virtualization-host] ***********************************************
+
+TASK [define vm] ****************************************************************
+ok: [localhost]
+
+TASK [start vm] *****************************************************************
+ok: [localhost]
+
+TASK [pull the plug] ************************************************************
+changed: [localhost]
+
+TASK [delete] *******************************************************************
+ok: [localhost]
+
+PLAY RECAP **********************************************************************
+localhost                  : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[nick@host1 ansible]$ 
 ....
 
 

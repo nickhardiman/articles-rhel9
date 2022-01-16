@@ -92,7 +92,8 @@ Relabeled /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso from unconfined_u:obje
 
 == refresh the libvirt pool 
 
-Libvirt doesn't notice the new ISO file.
+Libvirt may not notice new volumes in the pool.
+When ???
 
 [source,shell]
 ....
