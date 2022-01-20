@@ -231,7 +231,7 @@ Create another playbook in the tests directory.
 
 [source,shell]
 ....
-[nick@host1 ~]$ vim ansible/roles/virtualization-host/tests/myfirstvm.yml
+[nick@host1 ~]$ vim ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.yml
 ....
 
 Write the playbook. 
@@ -239,13 +239,13 @@ Write the playbook.
 [source,YAML]
 ....
 ---
-- name: set up virtualization-host 
+- name: a new guest virtual machine 
   hosts: localhost 
   gather_facts: no
   become: yes
 
   tasks: 
-  # defining and launching an LXC guest
+  # define and launch the guest
   - name: define vm
     community.libvirt.virt:
       command: define
@@ -353,5 +353,6 @@ localhost                  : ok=4    changed=2    unreachable=0    failed=0    s
 
 [nick@host1 ansible]$ 
 ....
+
 
 
