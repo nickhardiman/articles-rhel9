@@ -262,7 +262,7 @@ Create a new playbook in the tests directory.
 [nick@host1 ~]$ vim ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.yml
 ....
 
-Write the playbook. 
+Start a new playbook. 
 
 [source,YAML]
 ....
@@ -281,7 +281,12 @@ Write the playbook.
   become: yes
 
   tasks: 
+....
 
+Add tasks for a new storage volume. 
+
+[source,YAML]
+....
   - name: copy the downloaded KVM image file
     ansible.builtin.copy:
       src: /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2
@@ -301,8 +306,13 @@ Write the playbook.
   - name: display 
     debug:
       var: r_vol_info['stdout_lines']
+....
 
 
+Add tasks to start a VM.
+
+[source,YAML]
+....
   # define and launch the guest
   - name: define vm
     community.libvirt.virt:
@@ -323,8 +333,13 @@ Write the playbook.
   - name: display domain info
     debug:
       var: r_domain_info['myfirstvm']
+....
 
 
+Add tasks to clean up.
+
+[source,YAML]
+....
   # clean up
   - name: pull the plug
     community.libvirt.virt:
@@ -342,36 +357,90 @@ Write the playbook.
       cmd: virsh vol-delete myfirstvm.qcow2 images
 ....
 
-Run. 
 
+== run the playbook 
 
 [source,shell]
 ....
 [nick@host1 ~]$ cd ~/ansible/
 [nick@host1 ansible]$ 
-[nick@host1 ansible]$  ansible-playbook --ask-become-pass roles/virtualization-host/tests/myfirstvm.yml
+[nick@host1 ansible]$ ansible-playbook --ask-become-pass roles/virtualization-host/tests/vm-myfirstvm.yml
 BECOME password: 
 [WARNING]: provided hosts list is empty, only localhost is available. Note that
 the implicit localhost does not match 'all'
 
-PLAY [set up virtualization-host] ***********************************************
+PLAY [a new guest virtual machine] *********************************************
 
-TASK [define vm] ****************************************************************
+TASK [copy the downloaded KVM image file] **************************************
 changed: [localhost]
 
-TASK [start vm] *****************************************************************
+TASK [update pool catalog] *****************************************************
+ok: [localhost]
+
+TASK [check] *******************************************************************
 changed: [localhost]
 
-PLAY RECAP **********************************************************************
-localhost                  : ok=2    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+TASK [display] *****************************************************************
+ok: [localhost] => {
+    "r_vol_info['stdout_lines']": [
+        "Name:           myfirstvm.qcow2",
+        "Type:           file",
+        "Capacity:       10.00 GiB",
+        "Allocation:     1.08 GiB"
+    ]
+}
+
+TASK [define vm] ***************************************************************
+changed: [localhost]
+
+TASK [start vm] ****************************************************************
+changed: [localhost]
+
+TASK [get domain info] *********************************************************
+ok: [localhost]
+
+TASK [display domain info] *****************************************************
+ok: [localhost] => {
+    "r_domain_info['myfirstvm']": {
+        "autostart": 0,
+        "cpuTime": "1580000000",
+        "maxMem": "1572864",
+        "memory": "1572864",
+        "nrVirtCpu": 2,
+        "state": "running"
+    }
+}
+
+TASK [pull the plug] ***********************************************************
+changed: [localhost]
+
+TASK [delete libvirt's domain] *************************************************
+ok: [localhost]
+
+TASK [delete libvirt's volume] *************************************************
+changed: [localhost]
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=11   changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
 [nick@host1 ansible]$ 
 ....
 
-This is idempotent. 
-Run the playbook again and that _start vm_ task says _OK_, not changed. 
 
-Check.
+== check your work 
+
+Make sure the VM is gone. 
+
+[source,shell]
+....
+[nick@host1 ansible]$ sudo virsh list --all
+ Id   Name   State
+--------------------
+
+[nick@host1 ansible]$ 
+....
+
+If the reply looks like this, the clean-up part is missing. 
 
 [source,shell]
 ....
@@ -384,60 +453,11 @@ Check.
 [nick@host1 ansible]$ 
 ....
 
-
-
-== delete using ansible 
-
+Make sure the storage volume is gone. 
 
 [source,shell]
 ....
-[nick@host1 ansible]$ vim roles/virtualization-host/tests/myfirstvm.yml
-....
-
-Add more tasks to the playbook. 
-
-There is no "deleted" state. 
-Use "command" instead. 
-
-[source,YAML]
-....
-  - name: pull the plug
-    community.libvirt.virt:
-      name: myfirstvm
-      state: destroyed
-
-  - name: delete
-    community.libvirt.virt:
-      name: myfirstvm
-      command: undefine
-....
-
-Run. 
-
-[source,shell]
-....
-[nick@host1 ansible]$  ansible-playbook --ask-become-pass roles/virtualization-host/tests/myfirstvm.yml
-BECOME password: 
-[WARNING]: provided hosts list is empty, only localhost is available. Note that
-the implicit localhost does not match 'all'
-
-PLAY [set up virtualization-host] ***********************************************
-
-TASK [define vm] ****************************************************************
-ok: [localhost]
-
-TASK [start vm] *****************************************************************
-ok: [localhost]
-
-TASK [pull the plug] ************************************************************
-changed: [localhost]
-
-TASK [delete] *******************************************************************
-ok: [localhost]
-
-PLAY RECAP **********************************************************************
-localhost                  : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-
+[nick@host1 ansible]$ sudo virsh vol-list images | grep myfirstvm
 [nick@host1 ansible]$ 
 ....
 
