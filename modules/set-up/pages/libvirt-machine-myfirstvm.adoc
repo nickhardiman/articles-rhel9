@@ -34,14 +34,22 @@ Copy this to use for our new VM.
 
 [source,shell]
 ----
-[root@host1 ~]# cd /var/lib/libvirt/images/
-[root@host1 images]# ls
-rhel-8.2-x86_64-kvm.qcow2   rhel-8.3-x86_64-dvd.iso
-[root@host1 images]# 
-[root@host1 images]# cp rhel-8.2-x86_64-kvm.qcow2 myfirstvm.qcow2
-[root@host1 images]# 
+[nick@host1 ~]$ sudo cp /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2 /var/lib/libvirt/images/myfirstvm.qcow2
+[nick@host1 ~]$ 
 ----
 
+== refresh the images pool
+
+Sometimes libvirt takes its time picking up on new files. 
+Make sure libvirt notices the new volume by refreshing the pool.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo virsh pool-refresh images
+Pool images refreshed
+
+[nick@host1 ~]$ 
+----
 
 == create a virtual machine 
 
@@ -57,7 +65,7 @@ The ``--os-variant`` option sets some values, including 2 CPUs and 1536 MB memor
 
 [source,shell]
 ----
-virt-install \
+sudo virt-install \
   --name myfirstvm \
   --disk vol=images/myfirstvm.qcow2  \
   --os-variant rhel8.2 \
@@ -70,12 +78,12 @@ This command creates a _guest domain_. In https://libvirt.org/goals.html[libvirt
 
 [source,shell]
 ----
-[root@host1 ~]# virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2   --os-variant rhel8.2   --noautoconsole    --import
+[nick@host1 ~]# sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2   --os-variant rhel8.2   --noautoconsole    --import
 Using rhel8.2 default --memory 1536
 
 Starting install...
 Domain creation completed.
-[root@host1 ~]#
+[nick@host1 ~]#
 ----
 
 
@@ -183,7 +191,7 @@ Remove its configuration and the new volume file.
 
 [source,shell]
 ....
-[root@host1 ~]# virsh undefine --remove-all-storage myfirstvm
+[root@host1 ~]# virsh undefine myfirstvm
 Domain myfirstvm has been undefined
 Volume 'vda'(/var/lib/libvirt/images/myfirstvm.qcow2) removed.
 
@@ -195,17 +203,42 @@ Volume 'vda'(/var/lib/libvirt/images/myfirstvm.qcow2) removed.
 [root@host1 ~]$ 
 ....
 
+This command does not delete the volume file. 
+We could use the option --remove-all-storage to clean up this file, but we need the file for creating an XML file. 
 
-== use ansible to create the VM 
+== create an XML configuration file
 
 Run the virt-install command again, this time with the extra option --print-xml. 
 
+[source,shell]
+----
+sudo virt-install \
+  --name myfirstvm \
+  --disk vol=images/myfirstvm.qcow2  \
+  --os-variant rhel8.2 \
+  --noautoconsole  \
+  --import  \
+  --print-xml  \
+   > ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.xml
+----
+
+Instead of configuring a new VM, this command now displays configuration. 
+The configuration is in an XML document.
+
+Copy the XML to a file, ready for ansible to use. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2    --os-variant rhel8.2   --noautoconsole    --import    --print-xml    > ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.xml
+[nick@host1 ~]$ 
+----
+
+View the XML. 
 This XML describes everything libvirt needs to create a VM. 
 
 [source,shell]
 ....
-[nick@host1 ~]$ sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2    --os-variant rhel8.2   --noautoconsole    --import --print-xml
-[sudo] password for nick: 
+[nick@host1 ~]$ cat ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.xml
 <domain type="kvm">
   <name>myfirstvm</name>
   <uuid>d170b87b-9324-4cc4-a197-dc9f9080ef7b</uuid>
@@ -217,17 +250,12 @@ This XML describes everything libvirt needs to create a VM.
 [nick@host1 ~]$ 
 ....
 
-Copy the XML to a file. 
 
-[source,shell]
-....
-[nick@host1 ~]$ sudo virt-install   --name myfirstvm   --disk vol=images/myfirstvm.qcow2    --os-variant rhel8.2   --noautoconsole    --import --print-xml > ~/ansible/roles/virtualization-host/tests/vm-myfirstvm.xml
-[nick@host1 ~]$ 
-....
 
-Add tasks. 
-This is a test of everything done so far. 
-Create another playbook in the tests directory. 
+== use ansible to create the VM 
+
+This is a test of everything done so far.
+Create a new playbook in the tests directory.
 
 [source,shell]
 ....
@@ -239,12 +267,42 @@ Write the playbook.
 [source,YAML]
 ....
 ---
+# This playbook expects these two files to already exist. 
+# rhel-8.2-x86_64-kvm.qcow2 - storage volume file downloaded from Red Hat
+# vm-myfirstvm.xml - configuration for the virtual machine
+#
+# The playbook creates these resources, then deletes them.
+# myfirstvm - a libvirt domain
+# myfirstvm.qcow2 - a copy of the rhel file
+#
 - name: a new guest virtual machine 
   hosts: localhost 
   gather_facts: no
   become: yes
 
   tasks: 
+
+  - name: copy the downloaded KVM image file
+    ansible.builtin.copy:
+      src: /var/lib/libvirt/images/rhel-8.2-x86_64-kvm.qcow2
+      dest: /var/lib/libvirt/images/myfirstvm.qcow2
+
+  - name: update pool catalog
+    community.libvirt.virt_pool:
+      name: images
+      command: refresh
+
+  # return code is 1 if the volume is missing
+  - name: check
+    ansible.builtin.command: 
+      cmd: virsh vol-info myfirstvm.qcow2 images
+    register: r_vol_info
+
+  - name: display 
+    debug:
+      var: r_vol_info['stdout_lines']
+
+
   # define and launch the guest
   - name: define vm
     community.libvirt.virt:
@@ -255,6 +313,33 @@ Write the playbook.
     community.libvirt.virt:
       name: myfirstvm
       state: running
+
+  - name: get domain info
+    community.libvirt.virt:
+      name: myfirstvm
+      command: info
+    register: r_domain_info
+
+  - name: display domain info
+    debug:
+      var: r_domain_info['myfirstvm']
+
+
+  # clean up
+  - name: pull the plug
+    community.libvirt.virt:
+      name: myfirstvm
+      state: destroyed
+
+  - name: delete libvirt's domain
+    community.libvirt.virt:
+      name: myfirstvm
+      command: undefine
+
+  #https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_deployment_and_administration_guide/sect-storage_volume_commands-deleting_storage_volumes
+  - name: delete libvirt's volume
+    command: 
+      cmd: virsh vol-delete myfirstvm.qcow2 images
 ....
 
 Run. 
@@ -262,6 +347,8 @@ Run.
 
 [source,shell]
 ....
+[nick@host1 ~]$ cd ~/ansible/
+[nick@host1 ansible]$ 
 [nick@host1 ansible]$  ansible-playbook --ask-become-pass roles/virtualization-host/tests/myfirstvm.yml
 BECOME password: 
 [WARNING]: provided hosts list is empty, only localhost is available. Note that
