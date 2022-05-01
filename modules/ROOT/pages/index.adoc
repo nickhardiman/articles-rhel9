@@ -9,11 +9,11 @@ What fun can be had with RHEL 9?
 
 components 
 
-* https://nickhardiman.netlify.app/fedora-on-rpi4/dev/index.html[Fedora on a Raspberry Pi 4]
-* https://nickhardiman.netlify.app/infrastructure-as-code/dev/index.html[Infrastructure as code]
-* https://nickhardiman.netlify.app/rhel8-on-pn50/dev/index.html[RHEL 8 on an ASUS PN50]
-* https://nickhardiman.netlify.app/ocp4-on-pn50/dev/index.html[OCP4 on an ASUS PN50]
-* https://nickhardiman.netlify.app/rhel9-on-pn50/dev/index.html[RHEL 9 on an ASUS PN50]
+* https://hardiman.consulting/fedora-on-rpi4/dev/index.html[Fedora on a Raspberry Pi 4]
+* https://hardiman.consulting/infrastructure-as-code/dev/index.html[Infrastructure as code]
+* https://hardiman.consulting/rhel8-on-pn50/dev/index.html[RHEL 8 on an ASUS PN50]
+* https://hardiman.consulting/ocp4-on-pn50/dev/index.html[OCP4 on an ASUS PN50]
+* https://hardiman.consulting/rhel9-on-pn50/dev/index.html[RHEL 9 on an ASUS PN50]
 
 == this component 
 
