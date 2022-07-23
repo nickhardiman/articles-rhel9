@@ -3,9 +3,9 @@
 # The value can contain letters, numbers, underscores (_), hyphens (-), and periods (.). 
 # The value cannot contain a space, a forward slash (/), or HTML special characters (&, <, or >). 
 # The value cannot be empty.
-name: rhel9-on-pn50
+name: rhel
 
-title: RHEL 9 on an ASUS PN50
+title: Red Hat Enterprise Linux
 
 # https://docs.antora.org/antora/2.3/component-name-and-version/#version-key
 # version:
@@ -15,7 +15,7 @@ title: RHEL 9 on an ASUS PN50
 # The value cannot contain a space, a forward slash (/), or HTML special characters (&, <, or >). 
 # The value cannot be empty.
 # To ensure portability between host platforms, letters used in the version value should be lowercase.
-version: 'dev'
+version: '9'
 
 start_page: ROOT:index.adoc
 
