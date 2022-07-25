@@ -1,0 +1,39 @@
+= hardware
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 13-02-2022
+
+Hardware includes a PC, a network switch, a USB stick and everything else you can get your hands on. Pretty much any computing hardware can be emulated by software, but here we mean physical hardware. That means you can sense it. You can see it with your eyes. Remote data center hardware must be pictured in the mind.
+
+== home lab hardware 
+
+A home lab contains a workstation for the hacker and at least one server for playing with RHEL. These are hooked up to the home network, with a path out to the Internet via the ISP's router. 
+
+.home lab hardware  
+....
+        +----------------------+----------------------+
+        |                      |                      |
+.-------+-------.      .-------+-------.      .-------+-------.
+|               |      |               |      |               |
+|  server       |      |  workstation  |      | router        |---------> Internet  
+|               |      |               |      |               |  
+.---------------.      .---------------.      .---------------.
+....
+
+
+* workstation. Mine is an Apple Macbook.
+* server. The PC running RHEL.
+* router. the ISP's router, your gateway to the Internet
+
+
+== some hardware adjectives
+
+Here are some other marketing adjectives for describing hardware.
+* virtual. Virtual usually means a PC that is virtualized on the organization's hypervisor platform, or on a cloud compute platform.
+* on-premise. On-premise hardware resides in on the premises of your organization.  
+* off-premise, the opposite of "on-premise". This means, more or less, on the premises of a different organization. An off-premise PC could be in an ISP's rack, a government equipment room or in a cloud provider's data center. 
+* in the cloud. The machine is provided by the big three service providers  AWS, GCP and Azure, and other cloud providers.
+* hybrid
+* local.  A geographical description hardware you are close to, like "this PC", or "the machine I am working on".
+* remote, the opposite of local. "that PC".
+
