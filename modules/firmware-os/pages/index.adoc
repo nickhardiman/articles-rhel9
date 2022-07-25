@@ -1,0 +1,24 @@
+= firmware and OS
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+When a user turns on a computer - a physical computer - there is plenty of hardware and software action in the few seconds before Linux starts. The software that controls these early stages is called firmware. 
+
+== firmware 
+
+A boot loader is a collection of programs to get a system ready. Boot loaders are split into two groups.
+
+* The first stage boot loader gets hardware ready.
+* The second stage boot loader launches the OS.
+
+The more sophisticated the server, the more firmware runs. Boot loader programs form a chain from power-on to OS. The first firmware program to run is tiny and lives in https://en.wikipedia.org/wiki/Nonvolatile_BIOS_memory[ROM]. It handles jobs like https://en.wikipedia.org/wiki/Power-on_self-test[POST (Power On Self Test)], finding the next boot  program and pointing the CPU at it to start execution. The next boot program's job may be to find the UEFI system and start that running. UEFI starts GRUB, and GRUB gets ready to start Linux. This chain of increasingly sophisticated programs are all called firmware.
+
+== OS
+
+The operating system is another collection of programs, split into three groups. 
+
+* The kernel manages the machine, and supervises scheduling of user programs. 
+* A shell handles communication between user and system. 
+* Many utility programs help with tasks. All the commands in /usr/bin/ are utility programs. 
+

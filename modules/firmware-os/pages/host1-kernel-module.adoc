@@ -1,0 +1,242 @@
+= make a kernel module  
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+Create a simple kernel module that does nothing more than log messages to the kernel's ring buffer. 
+The module uses printk to do the work. 
+
+This is based on 
+https://tldp.org/LDP/lkmpg/2.6/lkmpg.pdf[The Linux Kernel Module Programming Guide] and 
+ this 2013 article 
+https://www.thegeekstuff.com/2013/07/write-linux-kernel-module/[How to Write Your Own Linux Kernel Module with a Simple Example].
+
+
+
+== install packages  
+
+The things needed to compile a module are not included.
+Security people don't like to leave tools on servers where hackers could possibly use them for evil deeds. 
+
+This is a dangling symlink
+
+[source,shell]
+----
+ls -la  /lib/modules/$(uname -r)/build
+# install development package for building kernel modules
+dnf install kernel-devel
+# install libraries to for handling ELF object files.
+dnf install elfutils-libelf-devel
+#
+mkdir -p /root/printk/module
+cd /root/printk/module
+----
+
+Install the development package for building kernel modules, and libraries for handling ELF object files.
+
+[source,shell]
+----
+dnf install kernel-devel
+dnf install elfutils-libelf-devel
+----
+
+
+== write source code 
+
+Make a directory to hold your files. 
+
+[source,shell]
+----
+mkdir -p /root/printk/module
+cd /root/printk/module
+----
+
+Edit the new source file.
+
+[source,shell]
+----
+vi hello-1.c
+----
+
+Add this C code. 
+
+[source,C]
+----
+/*
+ * hello−1.c − The simplest kernel module. 
+ * Based on the "hello, world" examples in https://tldp.org/LDP/lkmpg/2.6/lkmpg.pdf
+ * and https://www.thegeekstuff.com/2013/07/write-linux-kernel-module/
+ *
+ * build with make. 
+ * watch messages with dmesg.
+ * load with insmod.
+ * unload with rmmod.
+ */
+#include <linux/module.h>    // included for all kernel modules
+#include <linux/kernel.h>    // included for KERN_INFO and KERN_ERR
+#include <linux/init.h>      // included for __init and __exit macros
+
+MODULE_LICENSE("GPL");
+
+static int __init hello_init(void) {
+	printk(KERN_INFO "Hello world 1. My priority is info, level 6.\n");
+	printk(KERN_ERR "Hello world 2. My priority is error, level 3.\n");
+	return 0;
+}
+
+static void __exit hello_cleanup(void) {
+	printk(KERN_INFO "Goodbye, World!\n");
+}
+
+module_init(hello_init);
+module_exit(hello_cleanup);
+----
+
+Create a Makefile. 
+
+[source,shell]
+----
+vi Makefile 
+----
+
+Use tabs, not spaces, to indent those _make_ and _clean_ lines.  
+
+[source,shell]
+----
+obj-m += hello-1.o
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+----
+
+Now you have two files. 
+
+
+== create the module 
+
+Run _make_ or _make all_ (these do the same thing).
+
+[source,shell]
+----
+[root@host1 module]# make
+make -C /lib/modules/4.18.0-240.10.1.el8_3.x86_64/build M=/root/printk/module modules
+make[1]: Entering directory '/usr/src/kernels/4.18.0-240.10.1.el8_3.x86_64'
+  CC [M]  /root/printk/module/hello-1.o
+  Building modules, stage 2.
+  MODPOST 1 modules
+  CC      /root/printk/module/hello-1.mod.o
+  LD [M]  /root/printk/module/hello-1.ko
+make[1]: Leaving directory '/usr/src/kernels/4.18.0-240.10.1.el8_3.x86_64'
+[root@host1 module]# 
+----
+
+Now you six more files. 
+These are created by the build process. 
+If you want to remove these and start again, run _make clean_.
+
+Check the new module file. 
+
+[source,shell]
+----
+[root@host1 module]# file hello-1.ko 
+hello-1.ko: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), BuildID[sha1]=6815bd01fd8870239e59ba3c08057a6a9840e65e, with debug_info, not stripped
+[root@host1 module]# 
+----
+
+
+== test the module 
+
+Open a second terminal. 
+Watch the console.
+
+The commands _journalctl --dmesg --follow_ and _dmesg --ctime --follow_ do pretty much the same thing. 
+And you can get similar results with commands _cat  /proc/kmsg_, _cat /dev/kmsg_, and _dd if=/dev/kmsg iflag=nonblock_.
+
+
+[source,shell]
+----
+[nick@host1 ~]$ journalctl --dmesg --follow
+-- Logs begin at Fri 2021-01-08 10:27:33 GMT. --
+Jan 08 14:48:13 host1.silvan.uk kernel: IPv6: ADDRCONF(NETDEV_UP): wlp3s0: link is not ready
+...
+----
+
+Return to the first terminal.
+Insert the new module. 
+
+[source,shell]
+----
+[root@host1 module]# insmod hello-1.ko 
+[root@host1 module]# 
+----
+
+Kernel messages appear. 
+
+[source,shell]
+----
+[18199.795667] Hello world 1. My priority is info, level 6.
+[18199.795668] Hello world 2. My priority is error, level 3.
+----
+
+List kernel modules.
+There's the new module, listed along with many others. 
+
+[source,shell]
+----
+[root@host1 module2]# lsmod 
+Module                  Size  Used by
+hello_1                16384  0
+rfcomm                 86016  4
+...
+----
+
+
+== remove the new module
+
+
+[source,shell]
+----
+[root@host1 module]# rmmod hello-1.ko 
+[root@host1 module]# 
+----
+
+Another kernel message appears. 
+
+[source,shell]
+----
+Jan 08 15:37:28 host1.silvan.uk kernel: Goodbye, World!
+----
+
+
+== console messages 
+
+If you do watch the console, you won't see that "My priority is info, level 6" message. 
+Only priority 4 and less are displayed. 
+
+These are the priorities, along with the constants (you can see KERN_INFO and KERN_ERR in the source code).
+High priority messages have low numbers, which can be a little confusing. 
+
+[start=0]
+. KERN_EMERG   - System is unusable
+. KERN_ALERT   - Action must be taken immediately
+. KERN_CRIT    - Critical conditions
+. KERN_ERR     - Error conditions
+. KERN_WARNING - Warning conditions
+. KERN_NOTICE  - Normal but significant condition
+. KERN_INFO    - Informational
+. KERN_DEBUG   - Debug-level messages
+
+Console shows message priorities at or below a certain number.
+The first number here is the current level, set by adding _quiet_ to the Linux command line. 
+
+[source,shell]
+----
+[root@host1 module]# sysctl kernel.printk
+kernel.printk = 4	4	1	7
+[root@host1 module]# 
+----
+
+You can set this all the way up to 8 using dmesg. 
+Commands _echo 8 > /proc/sys/kernel/printk_ and _sysctl -w kernel.printk=8_ do the same thing. 
+

@@ -1,0 +1,192 @@
+= examine the shell 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 15-01-2021
+
+
+When you use the CLI of a Linux machine, the system gives you a shell. 
+It's one of the three big pieces of an OS - the kernel, the shell and all the utility programs.
+The _shell_ name comes from a nut or seed analogy - shell on the outside, kernel on the inside. 
+
+The shell is a pillar of developer and sysadmin worlds, up there with the toolchain, the source code repository and the IDE.  A shell is a command interpreter that waits for your commands, ready to run its https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop[REPL (Read-Eval-Print Loop)] until you stop the program. 
+
+
+
+== GNU Bash 
+
+After logging in, you find yourself using GNU Bash, version 5. 
+
+[source,shell]
+----
+[nick@host1 ~]$ ps
+    PID TTY          TIME CMD
+   1486 pts/0    00:00:00 bash
+   1696 pts/0    00:00:00 ps
+[nick@host1 ~]$ 
+[nick@host1 ~]$ bash --version
+GNU bash, version 5.0.17(1)-release (aarch64-redhat-linux-gnu)
+Copyright (C) 2019 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+This is free software; you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+[nick@host1 ~]$ 
+----
+
+Ths interactive command line shell is nowhere near as friendly as a GUI. 
+No-one is born knowing what '. ./.bashrc' means. 
+But there's no avoiding it - the shell has been around forever (in IT terms) and is everywhere. For instance, if the Linux startup process goes wrong, you may find yourself in the https://fedoramagazine.org/initramfs-dracut-and-the-dracut-emergency-shell/[dracut emergency shell].
+When you log into the system console, or SSH to a machine, or run tmux, you get your own copy of the _bash_ shell. 
+
+Plenty of Bash configuration has been done for you by resource files. 
+You've got plenty of environment variables (run _env_), shell options (run _shopt_), aliases (_alias_), a umask (_umask_) and a fancy prompt.
+
+
+
+== the Bash back story 
+
+In the 1980s, Unix systems included a shell written by Dr. Stephen Bourne, called the https://en.wikipedia.org/wiki/Bourne_shell[Bourne shell]. 
+When the GNU project created their shell, they based much of it on this https://en.wikipedia.org/wiki/Bourne_shell[Bourne shell] and called it the https://en.wikipedia.org/wiki/Bash_(Unix_shell)[Bourne again shell] (see what they did there?). The old Bourne shell executable was named _sh_. You can't get your hands on this old program - the Bourne shell isn't available for Fedora. 
+There is a file _/bin/sh_, but it's a symlink to _bash_. 
+
+The new _bash_ does most things that _sh_ did. 
+Dr. Bourne wrote an article for Byte magazine way back in 1983, called https://archive.org/stream/byte-magazine-1983-10/1983_10_BYTE_08-10_UNIX#page/n187/mode/2up[The Unix Shell], to explain how to use his shell. 
+The article contains many instantly recognizable commands. And - bonus - this article is sandwiched between stunning retro-ads for long-dead hardware and software - 64K RAM upgrade kit, anyone?  
+
+OS distributions that include GNU software often use bash as the default shell. That's true for Fedora, other Linux distributions, and even Apple OS X. Bash isn't the default everywhere - it's available for FreeBSD, but the default is _sh_. 
+
+Bash, like sh, is written in C. You can get the https://git.savannah.gnu.org/cgit/bash.git[source code] from https://savannah.gnu.org/[Savannah], Gnu's software site.
+
+
+
+== resource files 
+
+The home directory contains five configuration files. 
+They are also known as dotfiles, or hidden files - they start with "." and Bash doesn't display them.
+Four of these are used by Bash.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ ls -a
+.  ..  .bash_history  .bash_logout  .bash_profile  .bashrc  .ssh
+[nick@host1 ~]$ 
+----
+
+* .bash_history  - a list of all the commands you have run so far. To see the maximum number of commands this stores, run _echo $HISTSIZE_.
+* .bash_logout  - When Bash exits, any commands in here are run. Usually, no-one bothers adding any. 
+* .bash_profile  - This is the traditional place for a user to add their own customized settings. There's a similar file (/etc/profile) that defines settings everyone gets. 
+* .bashrc  - functions and aliases. You also get everything in /etc/bashrc.
+* .ssh - This one's actually a directory used by SSH, not Bash.
+
+If you want to know more about dotfiles, read this great https://fedoramagazine.org/customizing-bash/[Customizing Bash] article.
+
+
+
+== interactive shell vs. non-interactive shell 
+
+An https://www.gnu.org/software/bash/manual/bash.html#Interactive-Shells[interactive shell] is connected to a user terminal - it reads from the keyboard and writes to the screen. 
+
+The shell knows whether it is interactive.
+It behaves differently frorm a non-interactive shell. 
+To see the interactiive option, use the variable *$-* to display a list of shell options.
+The option _i_ means interactive.
+If you want to know what the other letters mean, run _man bash_ and look for _set_ in the _BASH BUILTIN COMMANDS_ section.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ echo $-
+himBHs
+[nick@host1 ~]$ 
+----
+
+Also, if it's got a prompt, it's an interactive shell.
+
+
+
+== login shell vs. non-login shell
+
+A Bash login shell is for use by a person. 
+A non-login shell is for use by a program. 
+
+run only /etc/profile
+
+Bash non-login shells run only /etc/bashrc
+
+One of the shell options describes whether the bash shell is a login shell. 
+When you login, you get a login shell.
+When a script runs, it gets its own shell but there is no login. 
+
+If a bash shell runs a command and exits, it doesn't need to be a login shell.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ shopt login_shell
+login_shell    	on
+[nick@host1 ~]$ 
+[nick@host1 ~]$ bash -c 'shopt login_shell'
+login_shell    	off
+[nick@host1 ~]$ 
+----
+
+Another sign of a login shell - a peculiar one - is a hyphen added to the name.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ echo $0
+-bash
+[nick@host1 ~]$ 
+[nick@host1 ~]$ bash -c 'echo $0'
+bash
+[nick@host1 ~]$ 
+----
+
+
+
+== getting to grips with Bash 
+
+Bash knowledge is not shared out equally. 
+Some knowledge is universal - you can't use Bash for five minutes without running _ls_. 
+And some knowledge is arcane, like job control.
+If you really want to find out what Bash is capable of, read the https://www.gnu.org/software/bash/manual/bash.html[manual]. 
+
+
+If you just want some simple gratification, play around with these. 
+
+
+=== prompt 
+
+[source,shell]
+---- 
+[nick@host1 ~]$ 
+----
+
+A special set of symbols define how the prompt looks. 
+
+[source,shell]
+---- 
+[nick@host1 ~]$ echo $PS1
+[\u@\h \W]\$
+[nick@host1 ~]$ 
+----
+
+To play around with the prompt layout, look at the man page (_man bash_) and search for _PROMPTING_. 
+It has a big list of these backslash-escaped special characters.
+
+
+=== tab completion 
+
+Typing long commands is annoying. 
+That's why the GNU project added  https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html[programmable completion].
+The easiest completion is typing the first few characters of a command (three usually does it) and hitting the tab key (⇥). 
+
+It's not good for all commands. 
+If you want to type _hostnamectl_, then _hos⇥_ gets you _host_. 
+Another tab displays three commands that all start with _host_.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ host⇥
+hostid       hostname     hostnamectl  
+[nick@host1 ~]$ host
+----
+

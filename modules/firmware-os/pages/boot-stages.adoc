@@ -1,0 +1,99 @@
+= watch boot stages
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-07-2020
+
+
+This is what happens when booting _host1_, from power on to login prompt.
+
+A lot of messages are displayed on the monitor as the hardware and software do their work.
+If the machine is headless, these aren't visible. 
+
+== hardware powers up 
+
+When a user turns on a computer -  a physical computer - there is plenty of hardware and software action in the few seconds before the grub2 menu appears. 
+The process is something like this. 
+
+* a user pushes a power button. 
+* The power button talks to the 
+https://en.wikipedia.org/wiki/Switched-mode_power_supply[SMPS (Switched-Mode Power Supply)].
+* The SMPS talks to the motherboard.
+* The motherboard holds the first of the boot loader programs in ROM. This starts initializing hardware. 
+
+
+== software stages 
+
+Plenty of software runs before any user application runs. 
+
+. xref:unsorted:boot-devices.adoc[] - firmware initializes hardware
+. xref:unsorted:boot-first-stage.adoc[] - UEFI (The default libvirt machine setup defaults to the older BIOS system)
+. xref:unsorted:boot-grub.adoc[] 
+. xref:unsorted:boot-kernel.adoc[] 
+. xref:unsorted:boot-systemd.adoc[] 
+
+
+=== firmware initializes hardware 
+
+The host machine is made up of many physical devices, like memory, network interface and communication bus. 
+Many of these are driven by firmware. 
+Firmware is low-level software that controls hardware. 
+
+
+=== fist stage boot - BIOS or UEFI
+
+The physical host machine probably uses UEFI, unless its several years old. 
+
+Guest virtual machines get an open source product called https://seabios.org/SeaBIOS[SeaBIOS] by default. 
+The QEMU hypervisor includes this BIOS. 
+
+Usually there's a chain of boot loader programs to run. The first program is often tiny, and does little more than figure out how to load the next much bigger program.
+
+* The CPU runs the first of the boot loader programs.
+* The first boot loader does its work, loads the next program from storage, and finishes. 
+* The next program does its work, and hands over to another program in the chain.
+
+
+
+=== second stage boot - GRUB
+
+These chain-loaded programs are firmware - low-level device management software. 
+BIOS starts GRUB. 
+
+There are a few GRUB programs, run in this sequence.
+
+* The BIOS loads a tiny 
+https://www.gnu.org/software/grub/manual/grub/html_node/Images.html[boot.img] file from the MBR (the very start of the disk). This boot image is a program that does nothing except kick off the next GRUB program. There isn't enough room in the MBR to store anything interesting. 
+* The second program is a much bigger *core image*. This provides the framework to search for the _/boot/grub2_ directory and load the rest of GRUB from there. The core.img file is built from kernel module code by a utility called grub2-mkimage. 
+* The _/boot/grub2_ directory contains a lot of code and configuration files. The core.img program runs the _/boot/grub2/i386-pc/normal.mod_ module, and that sets up everything required to complete the booting process. These modules display the boot menu, handle interaction, load kernel files into memory, and start the kernel stage. 
+
+
+
+=== OS - the kernel takes over
+
+The /boot/ directory contains the current kernel and a few older ones, in case the new kernel has issues. 
+
+Each kernel version has a few files. 
+* https://en.wikipedia.org/wiki/Vmlinux[vmlinuz], the kernel.
+* https://en.wikipedia.org/wiki/Initial_ramdisk[initrd (initial ramdisk)]. This contains drivers and other files the kernel needs.
+* https://en.wikipedia.org/wiki/System.map[System.map], a look-up table that maps symbols to memory locations.
+* config, the configuration file used to build the kernel. 
+
+
+
+=== OS - systemd prepares for work
+
+After setting up the system, the kernel runs one program named _/sbin/init_. 
+This used to be a script that start the SysV init system. 
+Now it's a symlink to a compiled systemd program.
+
+
+== the difference between physical and virtual machines 
+
+The boot-up process is surprisingly similar. 
+In fact, most of the boot stages work the same on a virtual machine and a physical machine. 
+
+Some parts of the boot process doesn't apply to virtual machines. 
+For instance, there is no power switch. 
+Well, not a real one. 
+A graphical system can display a power button to turn on a VM, and an https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface[ACPI] command can turn off a VM. 
+
