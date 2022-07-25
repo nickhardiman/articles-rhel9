@@ -23,5 +23,6 @@ start_page: ROOT:index.adoc
 # nav:
 # Each value is a path to an individual navigation file, relative to the location of the antora.yml file.
 nav:
+- modules/why/nav.adoc 
 - modules/set-up/nav.adoc 
 

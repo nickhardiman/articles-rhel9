@@ -1,0 +1,27 @@
+= why
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+I'm in the process of experimenting with a free developer subscription and RHEL 9 on an Asus PN50  mini-PC in my home lab. 
+I'm writing about my experiments here. 
+
+== why RHEL? 
+
+RHEL is a Linux distribution designed to help commercial customers. 
+The focus of RHEL 8 is to be stable in production, and the RHEL subscription provides expert help.
+
+== why a developer subscription? 
+
+A Red Hat subscription provides expert help. 
+That includes bug fixes, security fixes, product upgrades, helpdesk support, documentation and software downloads. 
+
+The Developer Subscription is a self-service account for individuals.
+
+It's everything except the helpdesk support so it's aimed at development work, not production work. 
+If you break your platform, you fix it with the help of the community rather than with the help of Red Hat support teams. 
+
+== why a home lab? 
+
+When you run your own home lab, the entire technology stack is under your control. That’s a good thing, because you’ve got the freedom to tear anything down. And it’s a bad thing, because the responsibility to make it work again rests only on you. Expect both reward and frustration.
+

@@ -1,0 +1,44 @@
+= why RHEL
+Nick Hardiman
+:source-highlighter: highlight.js
+
+Red Hat 
+https://www.redhat.com/en/blog/red-hat-leading-enterprise-linux-server-market[leads the enterprise server market].
+
+
+
+== why install RHEL
+
+RHEL is a Linux distribution designed to help commercial customers. 
+The focus of RHEL 8 is to be stable in production, and the RHEL subscription provides expert help.
+
+Enterprise-grade scalability.
+A lot of updates are produced. Bugs are fixed, vulnerabilities are removed, and features are enhanced. 
+Major versions stay put. Minor version upgrades are checked to make sure they don't break anything. 
+A lot of security work is done, like compiling more securely and certifying against security standards. 
+
+A serious home lab deserves a serious software stack. 
+
+You want to ...
+
+* check out what's changed in the latest major version (RHEL 7, 8 and 9 are major versions). 
+* uninstall and reinstall services without annoying your colleagues. 
+* put in some R&D time with virtual machines and containers.
+* practice your sysadmin skills with the world's leading enterprise platform. 
+* litter your workspace with developer tools.
+
+
+== why not use Fedora instead
+
+https://www.redhat.com/en/topics/linux/fedora-vs-red-hat-enterprise-linux
+
+
+Fedora is good for individuals, rather than large organizations. Since a home lab is the work of an individual, Fedora does fit here. 
+
+Fedora has more recent software. 
+
+There is no paid support, which is fine for Linux enthusiasts who build features and debug issues by relying on the community and their own skills. It's not fine when a broken system costs money and annoys customers. 
+
+RHEL is the platform for commercial customers. 
+If the aim of the home lab is not to experiment with the latest and greatest features, but rather experiment with ideas for work, then RHEL is the better platform. 
+

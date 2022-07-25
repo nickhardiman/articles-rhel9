@@ -1,0 +1,156 @@
+
+= why sign up for a Red Hat Developer Subscription
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 31-12-2020
+
+https://www.redhat.com/en/about/value-of-subscription
+
+A Red Hat subscription provides expert help. 
+Bug fixes, security fixes, product upgrades, helpdesk support, documentation and software downloads. 
+
+The Developer Subscription is a self-service account for individuals.
+It's aimed at development work, not production work. 
+
+
+Red Hat 
+https://www.redhat.com/en/blog/red-hat-leading-enterprise-linux-server-market[leads the enterprise server market].
+Red Hat is a source of enterprise software and sells support subscriptions. 
+It also has a free tier. 
+You can use some Red Hat software and services for free with a Developer Subscription. 
+
+If you don’t have a paid Red Hat subscription, you can use some Red Hat services for free by signing up for a Developer Subscription. 
+It's free. 
+Surely every student of GNU/Linux and enterprise applications should have one. 
+
+== a Red Hat Developer Subscription
+
+This subscription gives you access to the RHEL OS, a truck-load of other Red Hat software, and some of their services. 
+
+Red Hat is not in the hardware business. Unless you count swag. 
+RHEL 8 runs on many different types of computer, but it's down to you to provide a home lab for your experiments. 
+
+If you don’t have a paid Red Hat subscription, you can use some Red Hat services for free with a Developer Subscription. 
+
+On the software side, the developer subscription provides access to RHEL, developer tools and a mix of applications.  
+The developer subscription does not provide access to the complete tech stack of Red Hat's software, which is basically a huge library of operating systems and applications. 
+
+
+== why install RHEL 8
+
+A serious home lab deserves a serious software stack. 
+
+You want to ...
+
+* check out what's changed between RHEL 7 and RHEL 8. 
+* uninstall and reinstall services without annoying your colleagues. 
+* put in some R&D time with virtual machines and containers.
+* practice your sysadmin skills with the world's leading enterprise platform. 
+* litter your workspace with developer tools.
+
+
+== why not use Fedora instead
+
+https://www.redhat.com/en/topics/linux/fedora-vs-red-hat-enterprise-linux
+
+The focus of RHEL 8 is to be stable in production. 
+Enterprise-grade scalability.
+A lot of updates are produced. Bugs are fixed, vulnerabilities are removed, and features are enhanced. 
+Major versions stay put. Minor version upgrades are checked to make sure they don't break anything. 
+A lot of security work is done, like compiling more securely and certifying against security standards. 
+
+
+
+
+== free RHEL 8 stuff    
+
+For more information, see the https://developers.redhat.com/articles/faqs-no-cost-red-hat-enterprise-linux/[FAQs for no-cost Red Hat Enterprise Linux
+machine entitlements]. 
+
+=== machine registration
+
+* one physical machine
+* unlimited VMs (Virtual Machines) on your physical machine.
+* development machine only. Don't use this in production. 
+* valid for 12 months. You can renew.
+
+=== software  
+
+* The full enterprise-grade RHEL OS. That includes the current version 8 and previous versions. 
+* errata from the Red Hat CDN (Content Delivery Network). The Red Hat CDN is a global proxy network that handles security, performance and scalability. Customer systems regularly download errata (bug fixes, security patches and enhancements) from the CDN.
+* developer software
+
+=== support 
+
+The subscription is officially _Self-Support_. But there is some limited support from Red Hat. You can create a support case if you have trouble with registration or yum updates. 
+
+
+=== new RHEL Beta releases
+
+A developer is also entitled to download each new RHEL Beta release, 
+although it's not included in the Developer Subscription.
+A Beta release is good for early exposure, but there are no seatbelts. 
+A Beta release is not supported in any way, and there's no way to upgrade to to the GA (General Availability) release when it appears. 
+
+
+== more free stuff     
+
+Your new developer account includes a developer subscription. 
+This gets you up and running with RHEL 8, with a year of Red Hat support.
+It also gets you access to sites, products and knowledge.
+
+Access to the Subscriber-only content on the Red Hat Customer Portal, access.redhat.com.
+
+
+=== applications  
+
+* customer portal, https://access.redhat.com/. This is the gateway for support - instruction videos, community discussions, software downloads, and so on. 
+* SaaS site for Red Hat's cloud offerings, https://cloud.redhat.com/. Many tools for administering your Red Hat estate are located here, including Red Hat Insights, Subscription Watch, and Migration Analytics.
+* developers site https://developers.redhat.com/. This is the home of the Red Hat Developers Program. It contains many articles, tutorials and software downloads for learning developers and experienced developers. 
+* Eclipse Che, the online IDE at https://che.openshift.io/. 
+* code. https://developers.redhat.com/products/  RHEL, OpenJDK, CodeReady Containers
+
+You can use https://developers.redhat.com/blog/2019/03/11/eclipse-che-overview/[Eclipse Che] to fire up a working example on Openshift. For example, if you want to develop a NodeJS Angular application, one click pulls a container from https://quay.io/repository/eclipse/, code from  
+https://github.com/gothinkster/angular-realworld-example-app, and fires up containers in your new workspace.
+
+
+https://summit.redhat.com/conference/sessions/details/c9b83f5e-cc9f-40d9-8b7b-dc72350d75ff?sb=false&p1=eyJzcGVha2VyIjpbXSwidGltZXNsb3QiOltdLCJkYXkiOltdLCJyb29tIjpbXSwibG9jYXRpb24iOltdLCJzb3J0b3JkZXIiOiJkYXRlIiwic3RhcnQiOiIiLCJmaW5pc2giOiIiLCJwYWdlbnVtYmVyIjoxLCJzaGFyZWlkIjoiIiwiY2F0ZWdvcmllcyI6eyJ0cmFjayI6WyI5N2NhNGEwNS0wZTVhLTQ1OWEtOTM5Ny03YjYwYjk3ZjM4NzkiXX0sImtleXdvcmQiOiIifQ==
+
+* Red Hat CodeReady Workspaces & Eclipse Che.
+* Red Hat CodeReady Containers.
+* odo.
+* Red Hat OpenShift developer console.
+* OpenShift Pipelines and Tekton for CI/CD.
+* OpenShift Serverless and Knative.
+* VS Code / IntelliJ.
+* Red Hat CodeReady analytics.
+* Red Hat CodeReady toolchain.
+
+
+Many enterprise features are not included with the developer subscription. 
+For instance, Red Hat’s automation suite includes Red Hat Ansible Engine and Ansible Tower. With a developer subscription you can download Ansible Engine, but you can't download Ansible Tower. For that, you need a Red Hat Ansible Automation Platform subscription.
+You can https://www.redhat.com/en/technologies/management/ansible/try-it[sign up for a 60 day trial subscription] for free.
+
+
+
+
+=== knowledge 
+
+* knowledgebase with thousands of articles that cover configuration, deployment, troubleshooting, and security.
+* blog articles
+* tutorials 
+* videos 
+* incident resolution 
+* ebook. https://developers.redhat.com/ebooks/
+
+
+=== containers and openshift
+
+* CodeReady Containers, a single node OpenShift 4 cluster 
+
+https://developers.redhat.com/blog/2019/09/05/red-hat-openshift-4-on-your-laptop-introducing-red-hat-codeready-containers/
+https://access.redhat.com/documentation/en-us/red_hat_codeready_containers/1.10/html-single/getting_started_guide/index
+
+
+
+
