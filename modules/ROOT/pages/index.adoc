@@ -28,12 +28,11 @@ The _Here_ option above, up top in the navbar, can take you to my other document
 Here's my wishlist of things to document. 
 
 *  Fedora on a Raspberry Pi 4 
-*  RHEL 8 on an ASUS PN50 
-*  RHEL 9 on an ASUS PN51
-*  OCP4 on an ASUS PN50 
-*  Ansible
+*  RHEL on an ASUS PN50 
+*  OCP4 on an ASUS PN51 
 *  Satellite 6 on an HPE Proliant Gen10 Microserver
 *  VMware Vsphere 7 on an Intel NUC
+*  Ansible to tie it all together
 
 
 == this section 
