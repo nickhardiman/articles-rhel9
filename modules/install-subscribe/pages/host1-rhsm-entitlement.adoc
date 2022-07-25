@@ -1,0 +1,98 @@
+= use RHSM (Red Hat Subscription Manager) to entitle a machine
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+Use RHSM (Red Hat Subscription Manager) to https://access.redhat.com/solutions/253273[register and subscribe] your new machine.
+
+A new machine's status is usually unknown. 
+
+Open a terminal.
+Use the root account. 
+
+Elevate privilege.
+
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: ;fd]r]4F
+[root@host1 ~]# 
+----
+
+There are two ways to entitle a host to use Red Hat repositories. 
+This page describes the traditional way, by attaching a pool.
+There is also a newer cloud-friendly way called Simple Content Access. 
+
+== subscribe 
+
+The machine is not yet entitled to updates. 
+Use the _subscription-manager_ command to manage subscriptions for products.
+
+
+=== find a suitable subscription 
+
+With a developer subscription, there is only one. 
+
+[source,shell]
+----
+subscription-manager list --available 
+----
+
+=== attach your system to your subscription 
+
+[source,shell]
+----
+subscription-manager attach --pool=1234567890abcdef1234567890abcdef
+----
+
+=== check  
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager list
++-------------------------------------------+
+    Installed Product Status
++-------------------------------------------+
+Product Name:   Red Hat Enterprise Linux for x86_64
+Product ID:     479
+Version:        9.0
+Arch:           x86_64
+Status:         Subscribed
+Status Details: 
+Starts:         15/03/17
+Ends:           01/01/22
+
+[root@host1 ~]# 
+[root@host1 ~]# subscription-manager status
++-------------------------------------------+
+   System Status Details
++-------------------------------------------+
+Overall Status: Current
+
+System Purpose Status: Not Specified
+
+[root@host1 ~]# 
+....
+
+
+
+== check identity 
+
+[source,shell]
+----
+[root@host1 ~]# subscription-manager identity
+system identity: 12345678-d547-4e7b-8ca1-a6a03dfd692d
+name: host1.lab.example.com
+org name: 12345678
+org ID: 12345678
+[root@host1 ~]#
+----
+
+
+
+== view the portal 
+
+https://access.redhat.com/management/subscriptions
+
+image::portal-subscriptions.png[title="Subscription Inventory",float="right",width=400]

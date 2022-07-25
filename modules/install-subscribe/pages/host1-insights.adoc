@@ -1,0 +1,232 @@
+= register with Red Hat Insights 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-01-2021
+:link_with_underscores: https://github.com/RedHatInsights/insights-client/blob/master/src/insights_client/__init__.py
+
+Get advice from Insights 
+
+Register the workstation with https://www.redhat.com/en/technologies/management/insights[Red Hat Insights]. Can be configured at install time?
+
+https://access.redhat.com/documentation/en-us/red_hat_insights/2020-04/html/client_configuration_guide_for_red_hat_insights/index
+
+https://www.redhat.com/en/blog/redefining-rhel-introduction-red-hat-insights
+
+https://www.redhat.com/en/blog/expanding-management-operational-and-security-risks-new-red-hat-insights
+
+Insights is distributed. There's the on-premise client, and the off-premise service that Red Hat runs in the cloud. 
+The local client collects data and sends it to the remote Red Hat service, which analyzes it and delivers results. 
+
+[.right]
+.Insights at the Red Hat Cloud
+image::insights-dashboard.png[dashboard,width=400,height=249,title="Insights at the Red Hat Cloud"]
+
+Red Hat provides a management web interface at https://cloud.redhat.com/insights/.
+When the insights client is run, it displays a URL to make it easy to find the machine's results on this Red Hat Cloud site. 
+The local cockpit web console also provides a link to the cloud site. 
+
+When you SSH to your fresh RHEL 8 install, you see this MOTD (Message Of The Day).
+If you're on the Gnome desktop, you can only see these messages by looking at their files - ``cat /etc/motd.d/*``.
+
+[source,shell]
+----
+workstation:~ nick$ ssh 10.0.1.4
+Activate the web console with: systemctl enable --now cockpit.socket
+
+This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
+To register this system, run: insights-client --register
+
+Last login: Thu May 14 17:29:53 2020 from 10.0.1.3
+[nick@host1 ~]$ 
+----
+
+That Insights message is defined here, in the config directory.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo cat /etc/insights-client/insights-client.motd 
+This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
+To register this system, run: insights-client --register
+
+[nick@host1 ~]$ 
+----
+
+
+
+== insights-client
+
+Manage Insights on your local machine with the _insights-client_ application.
+
+Register.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo insights-client --register
+[sudo] password for nick: 
+Successfully registered host host1.lab.example.com
+Automatic scheduling for Insights has been enabled.
+Starting to collect Insights data for host1.lab.example.com
+----
+
+After a few seconds, Insights is done.
+
+[source,shell]
+----
+Uploading Insights data.
+Successfully uploaded report from host1.lab.example.com to account 1234567.
+View the Red Hat Insights console at https://cloud.redhat.com/insights/
+[nick@host1 ~]$ 
+----
+
+
+
+Check. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo insights-client --status
+System is registered locally via .registered file. Registered at 2022-06-01T18:17:53.296845
+Insights API confirms registration.
+[nick@host1 ~]$ 
+----
+
+== view insights
+
+Ask the remote Red Hat Insights service for results. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo insights-client --check-results 
+[nick@host1 ~]$ 
+----
+
+Display what the Red Hat Insights service found. 
+The reply is a JSON list. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo insights-client --show-results
+[
+ {
+  "rule": {
+   "rule_id": "hardening_unencrypted_avahi|HARDENING_UNENC_AVAHI",
+...
+   "has_playbook": true
+  }
+ }
+]
+[nick@host1 ~]$ 
+----
+
+
+== insight-client components 
+
+* engine: python code, _/usr/bin/insights-client_, _/usr/lib/python3.6/site-packages/insights_client/_, _/etc/insights-client/rpm.egg_
+* log: current log and up to three older logs, _/var/log/insights-client/insights-client.log*_
+* configuration: many files in _/etc/insights-client/_
+* systemd: unit files, _/usr/lib/systemd/system/insights-*_
+
+
+=== engine 
+
+The insights client is written in Python, and can be https://github.com/RedHatInsights/insights-client[viewed on Github]. 
+The core code is distributed in a https://packaging.python.org/glossary/#term-Egg[Python egg] at _/etc/insights-client/rpm.egg_.
+
+
+=== log 
+
+After registering with the Insights service, a new log file appears: /var/log/insights-client/insights-client.log.
+
+Insights handles its own log rotation -  it doesn't use _logrotate_.
+The insights client https://access.redhat.com/solutions/3035091[rotates the log after a successful upload], and keeps three copies.  
+It doesn't check size. 
+
+For developers, you can see the Python logging class  
+https://docs.python.org/3/library/logging.handlers.html#rotatingfilehandler[RotatingFileHandler]
+and method 
+https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler.doRollover[doRollover] 
+in the code {link_with_underscores}[+__init__.py+].
+
+
+
+=== configuration 
+
+The /etc/insights-client/ directory contains many files, including some hidden ones. 
+For a description, run _man insights-client.conf_. 
+
+The insights-client creates a https://access.redhat.com/solutions/2462091[UUID].
+
+[source,shell]
+----
+[nick@host1 ~]$ cat /etc/insights-client/machine-id
+12345678-c063-43c7-a891-3f9a24c4dfb9[nick@host1 ~]$ 
+[nick@host1 ~]$ 
+----
+
+=== systemd 
+
+Insights uses a systemd timer. 
+The service runs once a day. 
+This is  configured in the unit file _/usr/lib/systemd/system/insights-client.timer_.
+
+There's also a service that can be run (/usr/lib/systemd/system/insights-client.service).
+It's disabled by default.
+The unit's process type is _simple_ - it kicks off _/usr/bin/insights-client_ and exits. 
+
+
+
+== web console on cloud.redhat.com
+
+View the web site.
+https://cloud.redhat.com/insights/
+
+Log in with your developer account. 
+
+Take the tour.
+
+=== Optimize IT performance
+
+Insights can help you avoid unplanned downtime and easily track usage and configuration.
+
+*Advisor* formerly "Insights"
+
+Respond to configuration recommendations and take necessary action at scale.
+
+*Drift* formerly "Drift Analysis"
+
+Track RHEL system configuration over time and compare differences to standard baselines and other systems.
+
+*Subscription Watch* New
+
+Efficiently monitor your Red Hat subscription usage - with confidence.
+
+=== Manage your security and compliance
+
+Secure your infrastructure by managing vulnerabilities, tracking cybersecurity regulatory compliance, and creating custom policies.
+
+*Vulnerability* New
+
+View and triage CVEs that Insights identifies your systems may be exposed to.
+
+*Compliance* New
+
+For regulated industries, keep your systems compliant with standard security policies by triaging, remediating, and reporting issues.
+
+*Policies* New
+
+Use self-defined policies to monitor your RHEL configurations with instant or daily alerts.
+
+=== Resolve operational issues quickly
+
+Fix issues and patch systems from Insights with Ansible Playbooks.
+
+*Remediations*
+
+Create remediation playbooks for issues you choose.
+
+Red Hat Smart Management with Satellite subscribers can run playbooks directly from Insights.
+
+*Patch* New
+
+Keep your RHEL configurations standardized by patching consistently - regardless of what footprints your systems are in.
+

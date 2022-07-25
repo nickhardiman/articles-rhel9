@@ -1,0 +1,85 @@
+= use RHSM (Red Hat Subscription Manager) to register a machine
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+Use RHSM (Red Hat Subscription Manager) to https://access.redhat.com/solutions/253273[register and subscribe] your new machine.
+
+A new machine's status is usually unknown. 
+
+Open a terminal.
+Use the root account. 
+
+Elevate privilege.
+
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: ;fd]r]4F
+[root@host1 ~]# 
+----
+
+
+[source,shell]
+----
+[root@host1 ~]# subscription-manager status
++-------------------------------------------+
+   System Status Details
++-------------------------------------------+
+Overall Status: Unknown
+
+System Purpose Status: Unknown
+
+[root@host1 ~]#
+----
+
+The first time subscription-manager runs, it displays a warning about enabling a few plugins.
+
+[source,shell]
+----
+WARNING
+
+The yum/dnf plugins: /etc/dnf/plugins/subscription-manager.conf, /etc/dnf/plugins/product-id.conf were automatically enabled for the benefit of Red Hat Subscription Management. If not desired, use "subscription-manager config --rhsm.auto_enable_yum_plugins=0" to block this behavior.
+----
+
+== register 
+
+Add the machine to your account in the customer portal. 
+
+The command takes a few options. 
+
+[source,shell]
+----
+subscription-manager register \
+  --username <username> \
+  --password <password>
+----
+
+Run.
+
+[source,shell]
+----
+[root@host1 ~]# sudo subscription-manager register --username nick --password ';1!eB9-aW'
+Registering to: subscription.rhsm.redhat.com:443/subscription
+The system has been registered with ID: 12345678-2d45-41e7-a269-e71180cc5e5a
+The registered system name is: host1.lab.example.com
+[root@host1 ~]# 
+----
+
+
+=== check the portal 
+
+
+
+== unregister 
+
+Remove this registration to start again. 
+
+[source,shell]
+----
+[root@host1 ~]# sudo subscription-manager unregister
+Unregistering from: subscription.rhsm.redhat.com:443/subscription
+System has been unregistered.
+[root@host1 ~]# 
+----

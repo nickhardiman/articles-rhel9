@@ -1,0 +1,13 @@
+= install, subscribe and update
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+. Sign up for a Red Hat developer subscription.
+. Download the RHEL install ISO file. 
+. Install RHEL on the physical machine. More RHEL installs come later, on virtual machines. 
+. Register the new machine with Red Hat using RHSM (Red Hat Subscription Manager).
+. Subscribe for updates. 
+
+
+

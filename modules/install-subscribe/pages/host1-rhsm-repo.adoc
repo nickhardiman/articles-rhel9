@@ -1,0 +1,83 @@
+= use RHSM to manage repositories
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+Red Hat stores a lot of software packages in a lot of repos.  
+A developer subscription adds 149 repos.
+These are configured in the file _/etc/yum.repos.d/redhat.repo_.
+All but two are disabled (see the _Enabled: 0_ line).
+Types of repo include source, debug and binary RPM repositories.
+
+== view all repos 
+
+Open a terminal. 
+Use the root account. 
+
+[source,shell]
+----
+[root@host1 ~]# subscription-manager repos --list
++----------------------------------------------------------+
+    Available Repositories in /etc/yum.repos.d/redhat.repo
++----------------------------------------------------------+
+Repo ID:   rhel-9-for-x86_64-sap-solutions-e4s-rhui-rpms
+Repo Name: Red Hat Enterprise Linux 9 for x86_64 - SAP Solutions - Update Services for SAP Solutions from RHUI (RPMs)
+Repo URL:  https://cdn.redhat.com/content/e4s/rhel9/rhui/$releasever/x86_64/sap-solutions/os
+Enabled:   0
+
+...(many more)...
+
+Repo ID:   openstack-17-for-rhel-9-x86_64-rpms
+Repo Name: Red Hat OpenStack Platform 17 for RHEL 9 x86_64 (RPMs)
+Repo URL:  https://cdn.redhat.com/content/dist/layered/rhel9/x86_64/openstack/17/os
+Enabled:   0
+
+[root@host1 ~]# 
+----
+
+Only these two are enabled. 
+
+* rhel-9-for-x86_64-appstream-rpms
+* rhel-9-for-x86_64-baseos-rpms
+
+
+== view enabled repos 
+
+[source,shell]
+----
+[root@host1 ~]# subscription-manager repos --list-enabled
++----------------------------------------------------------+
+    Available Repositories in /etc/yum.repos.d/redhat.repo
++----------------------------------------------------------+
+Repo ID:   rhel-9-for-x86_64-baseos-rpms
+Repo Name: Red Hat Enterprise Linux 9 for x86_64 - BaseOS (RPMs)
+Repo URL:  https://cdn.redhat.com/content/dist/rhel9/$releasever/x86_64/baseos/os
+Enabled:   1
+
+Repo ID:   rhel-9-for-x86_64-appstream-rpms
+Repo Name: Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)
+Repo URL:  https://cdn.redhat.com/content/dist/rhel9/$releasever/x86_64/appstream/os
+Enabled:   1
+
+[root@host1 ~]# 
+----
+
+== disable all repos 
+
+[source,shell]
+----
+subscription-manager repos --disable "*"
+----
+
+== enable a few repos 
+
+re-enable the two default repos. 
+
+[source,shell]
+----
+subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms 
+subscription-manager repos --enable=rhel-9-for-x86_64-appstream-rpms 
+----
+
+
+

@@ -1,0 +1,77 @@
+= install RHEL (Red Hat Enterprise Linux)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-12-2020
+
+Install RHEL on your workstation for free. 
+It's a lot easier to install RHEL with KVM (Keyboard, Video and Mouse) attached. 
+There are other ways, but they are tricky.
+
+
+== download the RHEL ISO file
+
+* https://developers.redhat.com/products/rhel/download[Download Red Hat Enterprise Linux Server].
+
+
+== install the OS
+
+docs 
+
+* enitlement: https://developers.redhat.com/articles/faqs-no-cost-red-hat-enterprise-linux/ one (1) physical system with up to eight processor sockets.  an unlimited number of guest virtual machines (VMs).
+* summary: https://developers.redhat.com/articles/getting-red-hat-developer-subscription-what-rhel-users-need-know/
+
+Define some values. 
+
+* software selection. Mine is server with GUI.
+* root password. Pick something random and store it in a password manager. 
+* admin user. Mine is nick.
+* admin user password. 
+* host name. Mine is host1.lab.example.com. 
+* time zone. Mine is Europe/London.
+
+Use a guide like https://www.tecmint.com/download-install-rhel-9-free/. 
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/performing_a_standard_rhel_9_installation/index[Install]. 
+
+
+
+Encrypt the disk.
+
+
+
+
+== check out the desktop
+
+If you've only used RHEL servers, you've probably only seen the command line.
+You may not have a clue what RHEL's desktop looks like. 
+Think Fedora from a couple years ago.  RHEL 8 was based on Fedora 28 and RHEL 9 is based on Fedora 34.
+
+The Fedora and RHEL distributions are years apart because they have different reasons for being. 
+Fedora gets the latest and greatest updates, while RHEL provides a stable platform.
+
+
+
+== check SSH
+
+Use your workstation. 
+
+Find the IP address. 
+
+Log in over SSH. 
+
+When you SSH to your fresh install, you see this MOTD (Message Of The Day).
+If you're on the Gnome desktop, you can only see these messages by looking at their files - ``cat /etc/motd.d/*``.
+
+[source,shell]
+----
+workstation:~ nick$ ssh 10.0.1.4
+Activate the web console with: systemctl enable --now cockpit.socket
+
+This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
+To register this system, run: insights-client --register
+
+Last login: Thu May 14 17:29:53 2020 from 10.0.1.3
+[nick@rhel8 ~]$ 
+----
+
+

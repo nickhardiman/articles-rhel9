@@ -1,0 +1,277 @@
+= use RHSM to set system purpose 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-07-2020
+
+Use syspurpose to help subscription-manager automatically find the right subscription.
+
+Using syspurpose is useful for organizations with more than one subscription. It helps subscription-manager automatically pick the right subscription.
+
+* One of the spokes of Anaconda is system purpose, so it can be set manually during install. 
+* Kickstart has a syspurpose configuration.  
+* The CLI tool ``syspurpose`` can be used any time. 
+
+Setting system purpose before subscribing a machine should make the ``--auto-attach`` option more accurate. 
+
+Syspurpose can be used with a developer subscription, but it makes no difference. 
+There is only one sub to choose. 
+Also, the "Roles" and "Usage" fields are empty in a developer subscription. 
+Filling in the equivalent syspurpose fields is fine, but they won't match.
+
+For more information, see https://access.redhat.com/articles/system-purpose[Subscription-Manager for the former RHN user, part 13: System Purpose].
+
+
+== set system purpose with syspurpose
+
+Use the
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/performing_an_advanced_rhel_installation/configuring-system-purpose-advanced_installing-rhel-as-an-experienced-user[syspurpose] 
+command to describe what this machine is used for. 
+
+Open a terminal. 
+Use your admin user.
+Prefix commands with sudo. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo syspurpose set role 'Red Hat Enterprise Linux Workstation'
+role set to "Red Hat Enterprise Linux Workstation".
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo syspurpose set sla Self-Support
+service_level_agreement set to "Self-Support".
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo syspurpose set usage Development/Test
+usage set to "Development/Test".
+[nick@host1 ~]$ 
+----
+
+To remove these, run ``sudo syspurpose unset role``,  ``sudo syspurpose unset sla`` and ``sudo syspurpose unset usage``.
+
+Check. The output is JSON.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo syspurpose show
+{
+  "role": "Red Hat Enterprise Linux Workstation",
+  "service_level_agreement": "Self-Support",
+  "usage": "Development/Test"
+}
+[nick@host1 ~]$ 
+----
+
+
+== use auto-attach 
+
+Use RHSM (Red Hat Subscription Manager) to https://access.redhat.com/solutions/253273[register and subscribe] your new machine.
+
+[source,shell]
+----
+subscription-manager register --username <username> --password <password> --auto-attach
+----
+
+The first time subscription-manager runs, it displays a warning about enabling a few plugins.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo subscription-manager register --username nicktastic --password ';1!eB9-aW' --auto-attach
+[sudo] password for nick: 
+Registering to: subscription.rhsm.redhat.com:443/subscription
+The system has been registered with ID: faa0b03b-2d45-41e7-a269-e71180cc5e5a
+The registered system name is: rhel8.lab.example.com
+Installed Product Current Status:
+Product Name: Red Hat Enterprise Linux for x86_64
+Status:       Subscribed
+
+
+WARNING
+
+The yum/dnf plugins: /etc/dnf/plugins/subscription-manager.conf, /etc/dnf/plugins/product-id.conf were automatically enabled for the benefit of Red Hat Subscription Management. If not desired, use "subscription-manager config --rhsm.auto_enable_yum_plugins=0" to block this behavior.
+
+[nick@host1 ~]$ 
+----
+
+Remove this registration with the command ``sudo subscription-manager unregister``.
+
+
+== System Purpose Status: Mismatched  
+
+Check subscription status. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo subscription-manager status 
++-------------------------------------------+
+   System Status Details
++-------------------------------------------+
+Overall Status: Current
+
+System Purpose Status: Mismatched
+- The requested usage preference "Development/Test" is not provided by a currently consumed subscription.
+- The requested role "Red Hat Enterprise Linux Workstation" is not provided by a currently consumed subscription.
+
+[nick@host1 ~]$ 
+----
+
+Subscription-manager now complains that syspurpose values are "not provided by a currently consumed subscription". 
+
+What's gone wrong? 
+Nothing, these messages are harmless. 
+But it does take some explaining. 
+
+Subscription manager compares syspurpose fields with the consumed subscription fields. 
+
+The syspurpose fields "role", "service_level_agreement" and "usage" are compared to these subscription-manager fields. 
+
+[source,shell]
+----
+[root@host1 ~]# subscription-manager list --consumed
++-------------------------------------------+
+   Consumed Subscriptions
++-------------------------------------------+
+Subscription Name:   Red Hat Developer Subscription
+...
+Roles:               
+Service Level:       Self-Support
+Usage:               
+...
+----
+
+The "Roles" and "Usage" fields are empty in a developer subscription, so the syspurpose values don't match.
+
+Unsetting those two syspurpose values removes those _mismatched_ messages and resets ``System Purpose Status`` to ``Not Specified``.
+
+[source,shell]
+----
+sudo syspurpose unset role
+sudo syspurpose unset usage
+sudo subscription-manager status
+----
+
+For more information, see https://access.redhat.com/solutions/3939071[Troubleshooting System Purpose Mismatches]
+
+
+== set system purpose with subscription-manager
+
+Subscription manager can set other values, like service level and usage.  
+Setting these value helps with tasks like auto-attaching the right subscription from a list. 
+Subscription-manager attempts to match fields in the available subscriptions. 
+
+Subscription  manager tries to match fields in each subscription record. 
+
+Open a terminal. 
+Use the root account. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager list --consumed
++-------------------------------------------+
+   Consumed Subscriptions
++-------------------------------------------+
+Subscription Name:   Employee SKU
+...
+Service Level:       Self-Support
+Usage:               Development/Test
+...
+[root@host1 ~]# 
+....
+
+=== set service level 
+
+Setting service level changes the line 'System Purpose Status: Not Specified' to 'System Purpose Status: Matched'.
+
+
+No value is set. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager service-level --show
+Service level preference not set
+[root@host1 ~]#
+....
+
+List choices.
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager service-level --list
++-------------------------------------------+
+           Available Service Levels
++-------------------------------------------+
+Premium
+Self-Support
+Standard
+[root@host1 ~]# 
+....
+
+Pick a value. 
+
+This subscription is _Self-Support_.
+If the wrong value is entered, remove the value with _subscription-manager service-level --unset_. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager service-level --set=Self-Support
+service_level_agreement set to "Self-Support".
+[root@host1 ~]# 
+....
+
+Check. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager status
++-------------------------------------------+
+   System Status Details
++-------------------------------------------+
+Overall Status: Current
+
+System Purpose Status: Matched
+
+[root@host1 ~]# 
+....
+
+=== set usage 
+
+The usage field is similar. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager usage --list
++-------------------------------------------+
+               Available usage
++-------------------------------------------+
+ - Development/Test
+ - Production
+[root@host1 ~]# 
+....
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager usage --set Development/Test
+usage set to "Development/Test".
+[root@host1 ~]# 
+....
+
+Setting this to something the machine is not entitled to shows a warning. 
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager usage --set Production
+usage set to "Production".
+[root@host1 ~]# 
+....
+
+[source,shell]
+....
+[root@host1 ~]# subscription-manager status
++-------------------------------------------+
+   System Status Details
++-------------------------------------------+
+Overall Status: Current
+
+System Purpose Status: Mismatched
+- The requested usage preference "Production" is not provided by a currently consumed subscription.
+
+[root@host1 ~]# 
+....
+
