@@ -5,7 +5,7 @@ Nick Hardiman <nick@silvan.uk>
 
 
 
-image::nick-headshot-2019-small.jpg[title="Nick Hardiman",float="right"]
+image::nick-headshot-2019-small.jpg[title="Nick Hardiman",float="right",width=200]
 
 I'm Nick, an infrastructure consultant at Red Hat.
 "Infrastructure" means I work on platforms, automation and containers in the IT world. If you know Red Hat products, think 
