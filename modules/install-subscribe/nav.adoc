@@ -1,6 +1,6 @@
 * xref:index.adoc[]
 ** xref:developer-subscription-sign-up.adoc[] 
-** xref:host1-rhel8-install.adoc[]
+** xref:host1-rhel-install.adoc[]
 ** xref:host1-rhsm-register.adoc[]
 ** xref:host1-rhsm-entitlement.adoc[]
 ** xref:host1-rhsm-syspurpose.adoc[]
