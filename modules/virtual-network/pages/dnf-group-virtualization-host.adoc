@@ -8,7 +8,7 @@ Nick Hardiman
 
 == the DNF environment group Virtualization Host  
 
-After install, the word Available changes to Installed.
+After install, the word _Available_ changes to _Installed_.
 
 [source,shell]
 ....

@@ -1,0 +1,296 @@
+= enable libvirt's systemd units
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-01-2021
+
+
+
+The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It ties together a few infrastructure building blocks like QEMU, bridge, DHCP and DNS.
+
+Various libvirt socket listeners and modular daemons  manage  virtualization. 
+
+ https://libvirt.org/daemons.html
+
+
+== enable libvirt socket units
+
+Enable these sockets. 
+
+*  virtnetworkd-admin.socket
+*  virtnetworkd-ro.socket
+*  virtnetworkd.socket
+*  virtnodedevd-admin.socket
+*  virtnodedevd-ro.socket
+*  virtnodedevd.socket
+*  virtnwfilterd-admin.socket
+*  virtnwfilterd-ro.socket
+*  virtnwfilterd.socket
+*  virtqemud-admin.socket
+*  virtqemud-ro.socket
+*  virtqemud.socket
+*  virtsecretd-admin.socket
+*  virtsecretd-ro.socket
+*  virtsecretd.socket
+*  virtstoraged-admin.socket
+*  virtstoraged-ro.socket
+*  virtstoraged.socket
+
+Use the root account. 
+
+Create a new directory to hold libvirt scripts. 
+
+Create a new script to hold the systemctl commands. 
+
+[source,shell]
+----
+[root@host2 ~]# mkdir libvirt
+[root@host2 ~]# cd libvirt/
+[root@host2 libvirt]# vim libvirt-socket-enable.sh
+----
+
+Add content. 
+
+[source,shell]
+----
+for UNIT in \
+  virtnetworkd-admin.socket  \
+  virtnetworkd-ro.socket  \
+  virtnetworkd.socket  \
+  virtnodedevd-admin.socket  \
+  virtnodedevd-ro.socket  \
+  virtnodedevd.socket  \
+  virtnwfilterd-admin.socket  \
+  virtnwfilterd-ro.socket  \
+  virtnwfilterd.socket  \
+  virtqemud-admin.socket  \
+  virtqemud-ro.socket  \
+  virtqemud.socket  \
+  virtsecretd-admin.socket  \
+  virtsecretd-ro.socket  \
+  virtsecretd.socket  \
+  virtstoraged-admin.socket  \
+  virtstoraged-ro.socket  \
+  virtstoraged.socket
+do
+  systemctl enable $UNIT
+done
+----
+
+Run. 
+
+[source,shell]
+----
+[root@host2 libvirt]# chmod 754 libvirt-socket-enable.sh 
+[root@host2 libvirt]# 
+[root@host2 libvirt]# ./libvirt-socket-enable.sh 
+Created symlink /etc/systemd/system/sockets.target.wants/virtnetworkd-admin.socket → /usr/lib/systemd/system/virtnetworkd-admin.socket.
+Created symlink /etc/systemd/system/sockets.target.wants/virtnetworkd-ro.socket → /usr/lib/systemd/system/virtnetworkd-ro.socket.
+Created symlink /etc/systemd/system/sockets.target.wants/virtnodedevd-admin.socket → /usr/lib/systemd/system/virtnodedevd-admin.socket.
+...
+[root@host2 libvirt]# 
+----
+
+== enable libvirt service units
+
+Create another script. 
+
+[source,shell]
+----
+[root@host2 libvirt]# vim libvirt-service-enable.sh
+----
+
+Add content. 
+
+[source,shell]
+----
+for UNIT in \
+  virtnetworkd.service   \
+  virtnodedevd.service   \
+  virtnwfilterd.service  \
+  virtqemud.service      \
+  virtsecretd.service    \
+  virtstoraged.service
+do
+  systemctl enable $UNIT
+done
+----
+
+
+Run. 
+
+[source,shell]
+----
+[root@host2 libvirt]# chmod 754 libvirt-service-enable.sh 
+[root@host2 libvirt]# 
+[root@host2 libvirt]# ./libvirt-service-enable.sh 
+Created symlink /etc/systemd/system/multi-user.target.wants/virtnetworkd.service → /usr/lib/systemd/system/virtnetworkd.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/virtnodedevd.service → /usr/lib/systemd/system/virtnodedevd.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/virtnwfilterd.service → /usr/lib/systemd/system/virtnwfilterd.service.
+...
+[root@host2 libvirt]# 
+----
+
+
+
+== start libvirt's systemd socket files
+Create a new script to hold the systemctl commands. 
+
+[source,shell]
+----
+[root@host2 libvirt]# vim libvirt-socket-start.sh
+----
+
+Add content. 
+
+[source,shell]
+----
+for UNIT in \
+  virtnetworkd-admin.socket  \
+  virtnetworkd-ro.socket  \
+  virtnetworkd.socket  \
+  virtnodedevd-admin.socket  \
+  virtnodedevd-ro.socket  \
+  virtnodedevd.socket  \
+  virtnwfilterd-admin.socket  \
+  virtnwfilterd-ro.socket  \
+  virtnwfilterd.socket  \
+  virtqemud-admin.socket  \
+  virtqemud-ro.socket  \
+  virtqemud.socket  \
+  virtsecretd-admin.socket  \
+  virtsecretd-ro.socket  \
+  virtsecretd.socket  \
+  virtstoraged-admin.socket  \
+  virtstoraged-ro.socket  \
+  virtstoraged.socket
+do
+  systemctl start $UNIT
+done
+----
+
+Run. 
+
+[source,shell]
+----
+[root@host2 libvirt]# chmod 754 libvirt-socket-start.sh 
+[root@host2 libvirt]# 
+[root@host2 libvirt]# ./libvirt-socket-start.sh 
+[root@host2 libvirt]# 
+----
+
+== check.
+
+Create a new script to hold the systemctl commands. 
+
+[source,shell]
+----
+[root@host2 libvirt]# vim libvirt-socket-check.sh
+----
+
+Add content. 
+
+[source,shell]
+----
+for UNIT in \
+  virtnetworkd-admin.socket  \
+  virtnetworkd-ro.socket  \
+  virtnetworkd.socket  \
+  virtnodedevd-admin.socket  \
+  virtnodedevd-ro.socket  \
+  virtnodedevd.socket  \
+  virtnwfilterd-admin.socket  \
+  virtnwfilterd-ro.socket  \
+  virtnwfilterd.socket  \
+  virtqemud-admin.socket  \
+  virtqemud-ro.socket  \
+  virtqemud.socket  \
+  virtsecretd-admin.socket  \
+  virtsecretd-ro.socket  \
+  virtsecretd.socket  \
+  virtstoraged-admin.socket  \
+  virtstoraged-ro.socket  \
+  virtstoraged.socket
+do
+  echo $UNIT $(systemctl is-enabled $UNIT) $(systemctl is-active $UNIT) 
+done  | column -t
+----
+
+Run. 
+
+[source,shell]
+----
+[root@host2 libvirt]# chmod 754 libvirt-socket-check.sh 
+[root@host2 libvirt]# 
+[root@host2 libvirt]# ./libvirt-socket-check.sh 
+virtnetworkd-admin.socket   enabled  active
+virtnetworkd-ro.socket      enabled  active
+virtnetworkd.socket         enabled  active
+...
+[root@host2 libvirt]# 
+----
+
+
+
+
+
+== the new bridge device virbr0
+
+A bridge is a kind of internal layer 2 switch that connects virtual machines to the physical network.
+
+virbr0 is a bridge. 
+
+[source,shell]
+----
+[nick@rpi4 ~]$ nmcli device status
+DEVICE        TYPE      STATE                   CONNECTION   
+enabcm6e4ei0  ethernet  connected               enabcm6e4ei0 
+virbr0        bridge    connected (externally)  virbr0       
+wlan0         wifi      unavailable             --           
+lo            loopback  unmanaged               --           
+virbr0-nic    tun       unmanaged               --           
+[nick@rpi4 ~]$ 
+----
+
+NetworkManager is configured to manage virbr0.
+
+[source,shell]
+----
+[nick@rpi4 ~]$ nmcli con show
+NAME                UUID                                  TYPE      DEVICE 
+Wired connection 1  b8265e30-441b-3ee9-a547-9d675b065fe9  ethernet  eth0   
+virbr0              2c3ccfd7-882c-4ddb-84b1-4b594955fb1e  bridge    virbr0 
+enp1s0              83d67bc4-4398-454c-8bf8-602edb3bb501  ethernet  --     
+[nick@rpi4 ~]$ 
+----
+
+
+
+
+== the DHCP and DNS service dnsmasq
+
+dnsmasq handles some infrastructure services for the virtual network. 
+
+[source,shell]
+----
+[nick@rpi4 ~]$ ps -C dnsmasq
+    PID TTY          TIME CMD
+   1224 ?        00:00:00 dnsmasq
+   1225 ?        00:00:00 dnsmasq
+[nick@rpi4 ~]$ 
+----
+
+
+== the new character device kvm 
+
+The /dev/ directory has a character device named kvm. 
+You can tell this file is a character device because the long list starts with a "c".
+
+[source,shell]
+----
+[nick@rpi4 ~]$ ls -l /dev/kvm 
+crw-rw-rw-. 1 root kvm 10, 232 Sep 30 01:00 /dev/kvm
+[nick@rpi4 ~]$ 
+----
+
+
