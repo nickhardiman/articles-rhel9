@@ -1,0 +1,21 @@
+= Bash tab completion
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 26-07-2022
+
+
+Typing long commands is annoying. 
+That's why the GNU project added  https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html[programmable completion].
+The easiest completion is typing the first few characters of a command (three usually does it) and hitting the tab key (⇥). 
+
+It's not good for all commands. 
+If you want to type _hostnamectl_, then _hos⇥_ gets you _host_. 
+Another tab displays three commands that all start with _host_.
+
+[source,shell]
+---- 
+[nick@host1 ~]$ host⇥
+hostid       hostname     hostnamectl  
+[nick@host1 ~]$ host
+----
+

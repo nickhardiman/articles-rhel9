@@ -1,0 +1,20 @@
+= journald 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 08-08-2020
+
+
+
+Journald stores its logs in /run/log/journal/. 
+The /run directory is a tmpfs file system, so these logs are actually stored in memory. 
+ 
+[source,shell]
+---- 
+[nick@guest1 ~]$ df -h /run
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           662M  8.6M  653M   2% /run
+[nick@guest1 ~]$ 
+----
+
+When the system first starts, there is only one log. 
+

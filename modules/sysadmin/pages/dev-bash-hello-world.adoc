@@ -1,0 +1,27 @@
+= write "hello world" in bash
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 22-02-2020
+
+
+
+== create content 
+
+Create a bash script on guest1.
+Check out the tricky quoting and special characters in that echo line. 
+Check it. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ mkdir bash-script/
+[nick@guest1 ~]$ cd bash-script/
+[nick@guest1 bash-script]$ echo -e '#!'"/bin/bash\necho 'hello world'\n" > hello-world.sh
+[nick@guest1 bash-script]$ chmod 754 ./hello-world.sh 
+[nick@guest1 bash-script]$ ./hello-world.sh 
+hello world
+[nick@guest1 bash-script]$ 
+....
+
+Script works. 
+
+

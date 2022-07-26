@@ -1,0 +1,32 @@
+= Bash shell resource files
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 26-07-2022
+
+
+Plenty of Bash configuration has been done for you by resource files. 
+You've got plenty of environment variables (run _env_), shell options (run _shopt_), aliases (_alias_), a umask (_umask_) and a fancy prompt.
+
+
+=== dotfiles 
+
+The home directory contains many configuration files and directories. 
+The exact number varies depending on how many packages were installed. A minimal OS installation may have five, and an OS install that includes Gnome may have ten. 
+They are also known as dotfiles, or hidden files - they start with "." and Bash doesn't display them.
+Four of these are used by Bash.
+
+[source,shell]
+---- 
+[nick@host2 ~]$ ls .bash*
+.bash_history  .bash_logout  .bash_profile  .bashrc
+[nick@host2 ~]$ 
+----
+
+* .bash_history  - a list of all the commands you have run so far. To see the maximum number of commands this stores, run _echo $HISTSIZE_.
+* .bash_logout  - When Bash exits, any commands in here are run. Usually, no-one bothers adding any. 
+* .bash_profile  - This is the traditional place for a user to add their own customized settings. There's a similar file (/etc/profile) that defines settings everyone gets. 
+* .bashrc  - functions and aliases. You also get everything in /etc/bashrc.
+
+If you want to know more about dotfiles, read this great https://fedoramagazine.org/customizing-bash/[Customizing Bash] article.
+
+

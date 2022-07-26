@@ -1,0 +1,373 @@
+= kexec-kdump 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-12-2020
+
+
+== docs 
+
+Products & Services > Product Documentation > Red Hat Enterprise Linux > 8
+ > System Design Guide > Chapter 43. Installing and configuring kdump
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/system_design_guide/installing-and-configuring-kdump_system-design-guide
+
+
+
+== install 
+
+already installed 
+
+[source,shell]
+----
+[root@guest1 ~]# rpm -q kexec-tools
+kexec-tools-2.0.20-14.el8.x86_64
+[root@guest1 ~]#
+[root@guest1 ~]# dnf info kexec-tools
+Updating Subscription Management repositories.
+Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)                                             37 kB/s | 2.8 kB     00:00    
+Red Hat Ansible Engine 2 for RHEL 8 x86_64 (RPMs)                                                    31 kB/s | 2.4 kB     00:00    
+Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)                                                33 kB/s | 2.4 kB     00:00    
+Installed Packages
+Name         : kexec-tools
+Version      : 2.0.20
+Release      : 14.el8
+Architecture : x86_64
+Size         : 1.2 M
+Source       : kexec-tools-2.0.20-14.el8.src.rpm
+Repository   : @System
+From repo    : anaconda
+Summary      : The kexec/kdump userspace component
+License      : GPLv2
+Description  : kexec-tools provides /usr/sbin/kexec binary that facilitates a new
+             : kernel to boot using the kernel's kexec feature either on a
+             : normal or a panic reboot. This package contains the /usr/sbin/kexec
+             : binary and ancillary utilities that together form the userspace
+             : component of the kernel's kexec feature.
+
+[root@guest1 ~]# 
+----
+
+== content 
+
+[source,shell]
+----
+[root@guest1 ~]# ls -la /var/crash/
+total 4
+drwxr-xr-x.  2 root root    6 Feb 18  2020 .
+drwxr-xr-x. 23 root root 4096 Sep  9 15:01 ..
+[root@guest1 ~]# 
+----
+
+== config 
+
+Can do NFS, SSH, or mount a partition. 
+Out of the box, uses local directory /var/crash.
+
+[source,shell]
+----
+[root@guest1 ~]# grep -v -E '^#|^$' /etc/kdump.conf 
+path /var/crash
+core_collector makedumpfile -l --message-level 1 -d 31
+[root@guest1 ~]# 
+----
+
+[source,shell]
+----
+[root@guest1 ~]# grep crash /etc/default/grub 
+GRUB_CMDLINE_LINUX="console=ttyS0 console=ttyS0,115200n8 no_timer_check net.ifnames=0 crashkernel=auto"
+[root@guest1 ~]# 
+----
+
+
+== makedumpfile 
+
+[source,shell]
+----
+/usr/sbin/makedumpfile
+/etc/makedumpfile.conf.sample
+----
+
+== systemd 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl status kdump.service
+● kdump.service - Crash recovery kernel arming
+   Loaded: loaded (/usr/lib/systemd/system/kdump.service; enabled; vendor preset: enabled)
+   Active: active (exited) since Wed 2020-09-09 09:16:16 BST; 6h ago
+  Process: 1093 ExecStart=/usr/bin/kdumpctl start (code=exited, status=0/SUCCESS)
+ Main PID: 1093 (code=exited, status=0/SUCCESS)
+    Tasks: 0 (limit: 8102)
+   Memory: 0B
+   CGroup: /system.slice/kdump.service
+
+Sep 09 09:16:09 guest1.lab.example.com systemd[1]: Starting Crash recovery kernel arming...
+Sep 09 09:16:16 guest1.lab.example.com kdumpctl[1093]: kexec: loaded kdump kernel
+Sep 09 09:16:16 guest1.lab.example.com kdumpctl[1093]: Starting kdump: [OK]
+Sep 09 09:16:16 guest1.lab.example.com systemd[1]: Started Crash recovery kernel arming.
+[root@guest1 ~]# 
+----
+
+== test 
+
+[source,shell]
+----
+echo 1 > /proc/sys/kernel/sysrq
+echo c > /proc/sysrq-trigger
+----
+
+[source,shell]
+----
+[root@guest2 ~]# echo 1 > /proc/sys/kernel/sysrq
+
+echo c > /proc/sysrq-trigger pasted in but not echoed back
+...(wait a minute)...
+
+[root@guest2 ~]# client_loop: send disconnect: Broken pipe
+[nick@host1 ~]$ 
+[source,shell]
+----
+
+wait for boot 
+log in again
+
+[source,shell]
+----
+[nick@host1 ~]$ ssh nick@guest2.lab.example.com
+...
+[nick@guest2 ~]$ 
+
+[nick@guest2 ~]$ ls /var/crash/
+127.0.0.1-2020-09-09-10:52:57
+[nick@guest2 ~]$
+[nick@guest2 ~]$ ls /var/crash/127.0.0.1-2020-09-09-10\:52\:57/
+vmcore  vmcore-dmesg.txt
+[nick@guest2 ~]$  
+----
+
+
+
+== analyze with crash 
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s1-kdump-crash
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_monitoring_and_updating_the_kernel/installing-and-configuring-kdump_managing-monitoring-and-updating-the-kernel#analyzing-a-core-dump_installing-and-configuring-kdump
+
+crash 
+sudo yum install crash
+man  crash 
+crash - Analyze Linux crash dump data or a live system
+
+
+debuginfo-install
+This is out of date, should be yum install kernel-debuginfo
+sudo debuginfo-install kernel
+man debuginfo-install
+Install the associated debuginfo packages for a given package specification.
+Package kernel-debuginfo is big, takes a while. 
+
+[source,shell]
+----
+[nick@guest2 ~]$ sudo yum info crash
+[sudo] password for nick: 
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:56:47 ago on Thu 10 Sep 2020 04:19:43 EDT.
+Available Packages
+Name         : crash
+Version      : 7.2.7
+Release      : 3.el8
+Architecture : x86_64
+Size         : 2.8 M
+Source       : crash-7.2.7-3.el8.src.rpm
+Repository   : rhel-8-for-x86_64-appstream-rpms
+Summary      : Kernel analysis utility for live systems, netdump, diskdump, kdump, LKCD or mcore dumpfiles
+URL          : http://people.redhat.com/anderson
+License      : GPLv3
+Description  : The core analysis suite is a self-contained tool that can be used to
+             : investigate either live systems, kernel core dumps created from the
+             : netdump, diskdump and kdump packages from Red Hat Linux, the mcore kernel patch
+             : offered by Mission Critical Linux, or the LKCD kernel patch.
+
+[nick@guest2 ~]$
+
+[nick@guest2 ~]$ sudo yum install crash
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:57:00 ago on Thu 10 Sep 2020 04:19:43 EDT.
+Dependencies resolved.
+====================================================================================================================================
+ Package                  Architecture           Version                     Repository                                        Size
+====================================================================================================================================
+Installing:
+ crash                    x86_64                 7.2.7-3.el8                 rhel-8-for-x86_64-appstream-rpms                 2.8 M
+Installing dependencies:
+ binutils                 x86_64                 2.30-73.el8                 rhel-8-for-x86_64-baseos-rpms                    5.7 M
+
+Transaction Summary
+====================================================================================================================================
+Install  2 Packages
+
+Total download size: 8.5 M
+Installed size: 31 M
+Is this ok [y/N]: y
+Downloading Packages:
+(1/2): crash-7.2.7-3.el8.x86_64.rpm                                                                 3.1 MB/s | 2.8 MB     00:00    
+(2/2): binutils-2.30-73.el8.x86_64.rpm                                                              4.1 MB/s | 5.7 MB     00:01    
+------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                               6.2 MB/s | 8.5 MB     00:01     
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                                                                            1/1 
+  Installing       : binutils-2.30-73.el8.x86_64                                                                                1/2 
+  Running scriptlet: binutils-2.30-73.el8.x86_64                                                                                1/2 
+  Installing       : crash-7.2.7-3.el8.x86_64                                                                                   2/2 
+  Running scriptlet: crash-7.2.7-3.el8.x86_64                                                                                   2/2 
+  Verifying        : crash-7.2.7-3.el8.x86_64                                                                                   1/2 
+  Verifying        : binutils-2.30-73.el8.x86_64                                                                                2/2 
+Installed products updated.
+
+Installed:
+  binutils-2.30-73.el8.x86_64                                        crash-7.2.7-3.el8.x86_64                                       
+
+Complete!
+[nick@guest2 ~]$ 
+----
+
+before 
+
+[source,shell]
+----
+[nick@guest2 ~]$ ls /usr/lib/debug/lib/
+[nick@guest2 ~]$ 
+----
+
+=== install 
+
+[source,shell]
+----
+[nick@guest2 ~]$ sudo debuginfo-install kernel
+Updating Subscription Management repositories.
+enabling rhel-8-for-x86_64-appstream-debug-rpms repository
+enabling ansible-2-for-rhel-8-x86_64-debug-rpms repository
+enabling rhel-8-for-x86_64-baseos-debug-rpms repository
+Red Hat Enterprise Linux 8 for x86_64 - BaseOS (Debug RPMs)                                         189 kB/s | 9.0 MB     00:49    
+Red Hat Enterprise Linux 8 for x86_64 - AppStream (Debug RPMs)                                      6.4 MB/s |  20 MB     00:03    
+Red Hat Ansible Engine 2 for RHEL 8 x86_64 (Debug RPMs)                                             714  B/s | 2.6 kB     00:03    
+Last metadata expiration check: 0:00:02 ago on Thu 10 Sep 2020 06:19:27 EDT.
+Could not find debugsource package for the following installed packages: kernel-4.18.0-193.el8.x86_64
+Dependencies resolved.
+====================================================================================================================================
+ Package                                 Architecture    Version                 Repository                                    Size
+====================================================================================================================================
+Installing:
+ kernel-debuginfo                        x86_64          4.18.0-193.el8          rhel-8-for-x86_64-baseos-debug-rpms          497 M
+Installing dependencies:
+ kernel-debuginfo-common-x86_64          x86_64          4.18.0-193.el8          rhel-8-for-x86_64-baseos-debug-rpms           57 M
+
+Transaction Summary
+====================================================================================================================================
+Install  2 Packages
+
+Total download size: 554 M
+Installed size: 2.9 G
+Is this ok [y/N]: y
+Downloading Packages:
+(1/2): kernel-debuginfo-common-x86_64-4.18.0-193.el8.x86_64.rpm                                     5.8 MB/s |  57 MB     00:09    
+(2/2): kernel-debuginfo-4.18.0-193.el8.x86_64.rpm                                                   2.4 MB/s | 497 MB     03:31    
+------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                               2.6 MB/s | 554 MB     03:31     
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                                                                            1/1 
+  Installing       : kernel-debuginfo-common-x86_64-4.18.0-193.el8.x86_64                                                       1/2 
+  Installing       : kernel-debuginfo-4.18.0-193.el8.x86_64                                                                     2/2 
+  Running scriptlet: kernel-debuginfo-4.18.0-193.el8.x86_64                                                                     2/2 
+  Verifying        : kernel-debuginfo-common-x86_64-4.18.0-193.el8.x86_64                                                       1/2 
+  Verifying        : kernel-debuginfo-4.18.0-193.el8.x86_64                                                                     2/2 
+Installed products updated.
+
+Installed:
+  kernel-debuginfo-4.18.0-193.el8.x86_64                    kernel-debuginfo-common-x86_64-4.18.0-193.el8.x86_64                   
+
+Complete!
+[nick@guest2 ~]$ 
+----
+
+after 
+
+[source,shell]
+----
+[nick@guest2 ~]$ ls -lh /usr/lib/debug/lib/modules/4.18.0-193.el8.x86_64/vmlinux 
+-rwxr-xr-x. 1 root root 729M Mar 27 10:56 /usr/lib/debug/lib/modules/4.18.0-193.el8.x86_64/vmlinux
+[nick@guest2 ~]$ 
+----
+
+
+
+=== use 
+
+
+[source,shell]
+----
+[nick@guest2 ~]$ sudo crash /usr/lib/debug/lib/modules/4.18.0-193.el8.x86_64/vmlinux  /var/crash/127.0.0.1-2020-09-09-10\:52\:57/vmcore
+
+crash 7.2.7-3.el8
+Copyright (C) 2002-2020  Red Hat, Inc.
+Copyright (C) 2004, 2005, 2006, 2010  IBM Corporation
+Copyright (C) 1999-2006  Hewlett-Packard Co
+Copyright (C) 2005, 2006, 2011, 2012  Fujitsu Limited
+Copyright (C) 2006, 2007  VA Linux Systems Japan K.K.
+Copyright (C) 2005, 2011  NEC Corporation
+Copyright (C) 1999, 2002, 2007  Silicon Graphics, Inc.
+Copyright (C) 1999, 2000, 2001, 2002  Mission Critical Linux, Inc.
+This program is free software, covered by the GNU General Public License,
+and you are welcome to change it and/or distribute copies of it under
+certain conditions.  Enter "help copying" to see the conditions.
+This program has absolutely no warranty.  Enter "help warranty" for details.
+ 
+GNU gdb (GDB) 7.6
+Copyright (C) 2013 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-unknown-linux-gnu"...
+
+WARNING: kernel relocated [954MB]: patching 94975 gdb minimal_symbol values
+
+please wait... (patching 94975 gdb minimal_symbol values) 
+
+...(takes a minute)...
+
+WARNING: kernel relocated [954MB]: patching 94975 gdb minimal_symbol values
+
+      KERNEL: /usr/lib/debug/lib/modules/4.18.0-193.el8.x86_64/vmlinux 
+    DUMPFILE: /var/crash/127.0.0.1-2020-09-09-10:52:57/vmcore  [PARTIAL DUMP]
+        CPUS: 1
+        DATE: Wed Sep  9 10:52:53 2020
+      UPTIME: 01:42:44
+LOAD AVERAGE: 0.00, 0.05, 0.02
+       TASKS: 135
+    NODENAME: guest2.lab.example.com
+     RELEASE: 4.18.0-193.el8.x86_64
+     VERSION: #1 SMP Fri Mar 27 14:35:58 UTC 2020
+     MACHINE: x86_64  (2392 Mhz)
+      MEMORY: 1.5 GB
+       PANIC: "sysrq: SysRq : Trigger a crash"
+         PID: 26366
+     COMMAND: "bash"
+        TASK: ffff91c8b30b5f00  [THREAD_INFO: ffff91c8b30b5f00]
+         CPU: 0
+       STATE: TASK_RUNNING (SYSRQ)
+
+crash> 
+
+crash> q
+[nick@guest2 ~]$ 
+[source,shell]
+----
+

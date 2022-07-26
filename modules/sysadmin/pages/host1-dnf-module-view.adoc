@@ -1,0 +1,145 @@
+= view dnf modules
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 29-07-2020
+
+Manage modules with dnf.
+
+== the DNF modularity system
+
+The DNF modularity system provides more ways of building and consuming software. 
+The build side adds more binaries, packages and metadata to the DNF system.    
+For consumers, the DNF modularity system solves the problem of how to maintain older versions of a product. 
+
+For more information, check these out. 
+
+* https://docs.pagure.org/modularity/[fedora modularity home page] and https://docs.fedoraproject.org/en-US/modularity/[fedora docs]
+* system manual (`man 7 dnf.modularity`)
+* RHEL 8 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/installing_managing_and_removing_user-space_components/introduction-to-modules_using-appstream[module chapter].
+
+A traditional approach to supporting software is to support the latest version only. 
+The DNF system works well with this approach, installing the latest version of a package. 
+For Fedora, an OS for users at the leading edge of open source software, a DNF update keeps the system up-to-date. 
+For Red Hat, an OS for the enterprise, requirements for security, reliability and scale may not fit with leading-edge products. A DNF update of older software may not welcome. 
+
+The DNF modularity system solves the problem of how to maintain older versions of a product.
+An upgrade to the latest version is not always welcome in an enterprise environment, because a stable application, that works reliably for many years, can cause fewer maintenance headaches than the latest application. 
+Software is kept up-to-date with security patches and bug fixes, but upgrades that change features may break applications. 
+Slow and boring beats failing fast. 
+
+DNF also has a plug-in system. DNF plug-ins and DNF modules are not related. 
+
+== a module name 
+
+A module name is usually the format _name:stream_, as in nodejs:8. 
+Or it might be in the format _name:stream/profile_.
+The Fedora docs 
+https://docs.fedoraproject.org/en-US/modularity/installing-modules/#_installing_modules[installing modules] section shows four variations, along with instructions and examples. 
+
+
+== a DNF module
+
+The DNF modularity system treats a complex collection of software as one discrete component.
+The Postgresql database server for RHEL 8 is version 10. 
+Postgresql is available as a DNF module. 
+The module provides three streams, for the older version 9, the default version 10 and Postgresql's current version 12. 
+Only one of these three streams should be installed. 
+If more than one Postgresql version is required, use containers to keep the streams apart.
+
+Many DNF commands like `dnf install`, `dnf provides` and `dnf info` work for modules by changing _dnf_ to _dnf module_. Run `dnf module --help` for a list of commands and options. 
+
+The appstream repo contains dozens of modules. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ dnf module list
+...
+Name                 Stream      Profiles   Summary                                       
+389-ds               1.4                    389 Directory Server (base)                   
+ant                  1.10 [d]    common [d] Java build tool                               
+container-tools      rhel8 [d]   common [d] Common tools and dependencies for container ru
+                                            ntimes
+...
+varnish              6 [d]       common [d] Varnish HTTP cache                            
+virt                 rhel [d][e] common [d] Virtualization module                         
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+[nick@guest1 ~]$ 
+....
+
+
+List only postgresql modules. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo dnf module list postgresql
+Updating Subscription Management repositories.
+Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)   39 kB/s | 2.8 kB     00:00    
+Red Hat Ansible Engine 2 for RHEL 8 x86_64 (RPMs)          31 kB/s | 2.4 kB     00:00    
+Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)      33 kB/s | 2.4 kB     00:00    
+Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)
+Name            Stream      Profiles               Summary                                
+postgresql      9.6         client, server [d]     PostgreSQL server and client module    
+postgresql      10 [d]      client, server [d]     PostgreSQL server and client module    
+postgresql      12          client, server [d]     PostgreSQL server and client module    
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+[nick@guest1 ~]$  
+....
+
+One stream and one profile are labelled *[d]* (default).
+If the user enters the command `dnf module install postgresql`,  
+the *default* stream is the one that will be enabled and installed.  
+It's the same for profiles - the _server_ packages will be installed, not the _client_ packages. 
+
+
+=== module stream 
+
+A 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/installing_managing_and_removing_user-space_components/introduction-to-modules_using-appstream[dnf module stream] is a collection of RPM packages for one application. 
+If a module has more than one version, each version gets its own stream. 
+The https://directory.fedoraproject.org/[389-ds] module only covers version 1.4 and has one stream. 
+The https://nodejs.org/en/[nodejs] module has two streams, one for major version 10 and one for v12. 
+https://www.nginx.com/[Nginx] has different streams for minor versions - 1.14 and 1.16.
+
+A module can have many streams, but only one can be enabled. Enabling a stream is a way of telling DNF to which one to install, and which one to keep maintained by installing package updates. 
+If the admin installs a module without picking a stream, the default stream is enabled and installed. 
+
+
+
+=== module profile 
+
+Every module has an installation profile. 
+A profile is a collection of packages for one use case. 
+Most modules have only one profile called *common*.
+Postgresql has two profiles, *client* and *server*. 
+The client profile installs one package, _postgesql_, which pulls in a few dependencies . 
+The server profile is similar, installing _postgesql-server_. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ dnf module info postgresql --profile 
+...
+Name   : postgresql:10:820190104140132:9edba152:x86_64
+client : postgresql
+server : postgresql-server
+
+Name   : postgresql:12:8010120191120141335:e4e244f9:x86_64
+client : postgresql
+server : postgresql-server
+
+Name   : postgresql:9.6:820190104140337:9edba152:x86_64
+client : postgresql
+server : postgresql-server
+[nick@guest1 ~]$ 
+....
+
+A profile is a collection of packages for one purpose, so it can't be enabled or disabled. 
+
+
+
+
+
+
+
