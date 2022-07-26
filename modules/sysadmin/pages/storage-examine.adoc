@@ -1,0 +1,156 @@
+= examine storage
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 26-10-2020
+
+Even with only one storage device, like a USB stick or SSD, there is plenty to look at. 
+
+== storage device files
+
+Linux treats pretty much everything as a file, even the storage device.
+The OS gives this drive a special file in the /dev/ directory named /dev/sda. 
+Partitions also get their own file, like /dev/sda1.
+
+Use ls to list these files.
+
+[source,shell]
+----
+[nick@host2]~% ls -l /dev/sda*
+brw-rw----. 1 root disk 8, 0 Jul 19 08:25 /dev/sda
+brw-rw----. 1 root disk 8, 1 Jul 19 08:25 /dev/sda1
+brw-rw----. 1 root disk 8, 2 Jul 19 08:25 /dev/sda2
+brw-rw----. 1 root disk 8, 3 Jul 19 08:25 /dev/sda3
+[nick@host2]~% 
+----
+
+Each line is a data record. 
+Many fields are packed into each record. 
+* brw-rw----. is many fields in one. 
+** b - block device 
+** rw- permissions the user has (read and write)
+** rw- permissions for the group
+** --- permissions for the rest of the world (none)
+** . - a flag that shows  this file has SELinux settings
+* 1 - number of hard links
+* root - user who owns this file
+* disk - group that can use this file 
+* 8, 0  - major and minor numbers, related to the device driver
+* Jul 19 08:25 - date this file was last modified
+
+== partitions 
+
+This drive is split into five partitions.
+The last two start and end in the same place. 
+It's one partition that is handled by LVM.
+
+[source,shell]
+----
+[nick@host2]~% sudo fdisk -l /dev/sda
+[sudo] password for nick: 
+Disk /dev/sda: 931.51 GiB, 1000204886016 bytes, 1953525168 sectors
+Disk model: CT1000MX500SSD1 
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 4096 bytes
+I/O size (minimum/optimal): 4096 bytes / 4096 bytes
+Disklabel type: gpt
+Disk identifier: 6B46BA9D-CCE8-473A-A3CA-88DCA05D67F8
+
+Device       Start        End    Sectors   Size Type
+/dev/sda1     2048    1230847    1228800   600M EFI System
+/dev/sda2  1230848    3327999    2097152     1G Linux filesystem
+/dev/sda3  3328000 1746495487 1743167488 831.2G Linux LVM
+[nick@host2]~% 
+----
+
+
+* /dev/sda1 is /boot/efi, used by EFI.
+* /dev/sda2 is /boot, the Linux boot partition
+* /dev/sda3 is the OS and is managed by LVM. It holds the root and swap volumes. 
+
+
+
+== vfat and xfs filesystems
+
+The partitions are formatted with different file systems. 
+
+/dev/sda1 is https://en.wikipedia.org/wiki/File_Allocation_Table[FAT16] (File Allocation Table system with 16 bit entries). This is an old file system that stretches way back to the days of MS-DOS and the IBM PC AT in the 1980s.
+The OS calls this type _vfat_. 
+
+/dev/sda2 is https://en.wikipedia.org/wiki/XFS[XFS].
+
+
+[source,shell]
+----
+[nick@host2]~% df -T /dev/sda2
+Filesystem     Type 1K-blocks   Used Available Use% Mounted on
+/dev/sda2      xfs    1038336 286064    752272  28% /boot
+[nick@host2]~% 
+----
+
+/dev/sda3 is complicated, because of LVM. It holds root and swap. The root filesystem holds all the OS files and is the RHEL default type https://en.wikipedia.org/wiki/XFS[XFS]. 
+Swap is a store for the kernel, not a file system. 
+
+[source,shell]
+----
+[nick@host2]~% df -T /dev/sda3
+Filesystem     Type     1K-blocks  Used Available Use% Mounted on
+devtmpfs       devtmpfs  32381808     0  32381808   0% /dev
+[nick@host2]~% 
+----
+
+
+== no ext4 filesystem
+
+There are no https://en.wikipedia.org/wiki/Ext4[ext4] partitions. Ext4 (fourth extended filesystem) is a Linux file system that was the default for about 10 years. 
+If you're wondering what ext4 extended, that'll be the https://en.wikipedia.org/wiki/MINIX_file_system[Minix file system]. 
+Minix is an OS built decades ago as a teaching aid. It is a forerunner of Linux. 
+
+
+== mount shows more file systems
+
+These aren't the only three filesystems used on your machine. 
+If you enter the command _mount_, you will see about 20 lines with many more types of filesystem: sysfs, proc, devtmpfs, devpts, cgroup2, pstore, efivarfs, bpf, tracefs, configfs, selinuxfs, autofs, mqueue, hugetlbfs and debugfs.
+What can they all mean? 
+
+[source,shell]
+----
+[nick@host2]~% mount
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime,seclabel)
+devtmpfs on /dev type devtmpfs (rw,nosuid,seclabel,size=32381808k,nr_inodes=8095452,mode=755,inode64)
+...
+tmpfs on /run/user/42 type tmpfs (rw,nosuid,nodev,relatime,seclabel,size=6490488k,nr_inodes=1622622,mode=700,uid=42,gid=42,inode64)
+sunrpc on /var/lib/nfs/rpc_pipefs type rpc_pipefs (rw,relatime)
+binfmt_misc on /proc/sys/fs/binfmt_misc type binfmt_misc (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /run/user/1000 type tmpfs (rw,nosuid,nodev,relatime,seclabel,size=6490488k,nr_inodes=1622622,mode=700,uid=1000,gid=1000,inode64)
+[nick@host2]~% 
+----
+
+More file systems are listed in the file /proc/filesystems.
+
+[source,shell]
+----
+[nick@host2]~% cat /proc/filesystems 
+nodev	sysfs
+nodev	tmpfs
+nodev	bdev
+...
+nodev	fusectl
+	xfs
+	vfat
+nodev	rpc_pipefs
+nodev	binfmt_misc
+[nick@host2]~% 
+----
+
+== temporary filesystems 
+
+Some of these are temporary filesystems that store files in memory, rather than on the USB drive. 
+Everything in /proc, /run and /tmp ceases to exist when the computer is switched off. 
+These temporary filesystems are useful for some specialised work like storing session data, sharing data fast, and interacting with the kernel.
+
+== permanent filesystems 
+
+If you want to play with more filesystems that do store files permanently, there are many to choose from including iso9660, one for CD-ROMs, and NFS, the Network File System. 
+
+
