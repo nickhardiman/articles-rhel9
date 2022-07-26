@@ -1,0 +1,405 @@
+= read the kernel log 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+customer portal documentation: 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_monitoring_and_updating_the_kernel/getting-started-with-kernel-logging_managing-monitoring-and-updating-the-kernel
+
+
+
+== things related to kernel logging 
+
+=== kernel log buffer 
+
+Size is set during kernel compilation by CONFIG_LOG_BUF_SHIFT. 
+This is listed in 
+_/boot/config-4.18.0-240.10.1.el8_3.x86_64_.
+
+[source,shell]
+----
+[root@host1 ~]# grep LOG_BUF /boot/config-4.18.0-240.10.1.el8_3.x86_64 
+CONFIG_LOG_BUF_SHIFT=20
+CONFIG_PRINTK_SAFE_LOG_BUF_SHIFT=13
+[root@host1 ~]# 
+----
+
+       
+=== loglevel values 
+
+The reference manual page for syslog (run `man 2 syslog`) describes the eight log levels. 
+Section 2 of the manual describes system calls, so this page is packed with low-level programming information. 
+
+[source,shell]
+----
+[nick@host1 ~]$ man 2 syslog
+...
+   The log level
+       Every printk() message has its own log level.  If the log level is 
+       not explicitly specified as part of  the  message,  it defaults to default_message_loglevel.  The conventional meaning of the log level 
+       is as follows:
+
+       Kernel constant   Level value   Meaning
+       KERN_EMERG             0        System is unusable
+       KERN_ALERT             1        Action must be taken immediately
+       KERN_CRIT              2        Critical conditions
+       KERN_ERR               3        Error conditions
+       KERN_WARNING           4        Warning conditions
+       KERN_NOTICE            5        Normal but significant condition
+       KERN_INFO              6        Informational
+       KERN_DEBUG             7        Debug-level messages
+----
+
+
+
+== display messages 
+
+There are a surprising number of ways to view kernel messages. 
+Some are nicely formatted and others show formatting codes. 
+
+=== /proc/kmsg 
+
+The first number in angle brackets is the log level. 
+The next number in square brackets is a timestamp, measured in seconds since the kernel started.
+
+[source,shell]
+----
+[root@host1 ~]#  cat  /proc/kmsg
+
+<5>[    0.000000] Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+<6>[    0.000000] Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+<6>[    0.000000] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+=== /dev/kmsg 
+
+[source,shell]
+----
+[root@host1 ~]# cat /dev/kmsg 
+5,0,0,-;Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+6,1,0,-;Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+6,2,0,-;x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+[source,shell]
+----
+[root@host1 ~]# dd if=/dev/kmsg iflag=nonblock
+5,0,0,-;Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+6,1,0,-;Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+6,2,0,-;x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+
+=== dmesg
+
+[source,shell]
+----
+[root@host1 boot]# dmesg 
+[    0.000000] Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+[    0.000000] Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+[    0.000000] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+[source,shell]
+----
+[root@host1 boot]# dmesg --ctime
+[Thu Jan  7 09:58:24 2021] Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+[Thu Jan  7 09:58:24 2021] Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+[Thu Jan  7 09:58:24 2021] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+[source,shell]
+----
+[root@host1 boot]# dmesg --level=err,warn
+[    0.109847] ACPI BIOS Error (bug): Failure creating named object [\SMIB], AE_ALREADY_EXISTS (20200110/dsfield-629)
+[    0.109853] ACPI Warning: NsLookup: Type mismatch on SMIB (Integer), searching for (RegionField) (20200110/nsaccess-703)
+[    0.110288] ACPI BIOS Error (bug): Could not resolve symbol [\_SB.PCI0.M291.WLAN], AE_NOT_FOUND (20200110/dswload2-160)
+----
+
+[source,shell]
+----
+[nick@host1 insights-client]$ dmesg --raw 
+<5>[    0.000000] Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (gcc version 8.3.1 20191121 (Red Hat 8.3.1-5) (GCC)) #1 SMP Wed Dec 16 03:30:52 EST 2020
+<6>[    0.000000] Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+<6>[    0.000000] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+----
+
+Numbers in angle brackets are loglevel values, listed below 
+(3 - error, 4 - warning, 5 - notice, 6 - info).
+
+[source,shell]
+----
+<6>[    0.106048] ACPI: Added _OSI(Linux-HPI-Hybrid-Graphics)
+<3>[    0.109847] ACPI BIOS Error (bug): Failure creating named object [\SMIB], AE_ALREADY_EXISTS (20200110/dsfield-629)
+<4>[    0.109853] ACPI Warning: NsLookup: Type mismatch on SMIB (Integer), searching for (RegionField) (20200110/nsaccess-703)
+----
+
+
+
+=== journalctl
+
+[source,shell]
+----
+[root@host1 boot]# journalctl --dmesg 
+-- Logs begin at Thu 2021-01-07 09:58:25 GMT, end at Thu 2021-01-07 16:22:56 GMT. --
+Jan 07 09:58:25 host1.silvan.uk kernel: Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (>
+Jan 07 09:58:25 host1.silvan.uk kernel: Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper>
+Jan 07 09:58:25 host1.silvan.uk kernel: x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+[source,shell]
+----
+[root@host1 boot]# journalctl --list-boots
+ 0 02d48adcaa494fe98cdb507bce97945f Thu 2021-01-07 09:58:25 GMT—Thu 2021-01-07 16:25:00 GMT
+[root@host1 boot]# 
+[root@host1 boot]# journalctl _TRANSPORT=kernel _BOOT_ID=02d48adcaa494fe98cdb507bce97945f
+-- Logs begin at Thu 2021-01-07 09:58:25 GMT, end at Thu 2021-01-07 16:25:00 GMT. --
+Jan 07 09:58:25 host1.silvan.uk kernel: Linux version 4.18.0-240.10.1.el8_3.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com) (>
+Jan 07 09:58:25 host1.silvan.uk kernel: Command line: BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper>
+Jan 07 09:58:25 host1.silvan.uk kernel: x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+...
+----
+
+== console logging 
+
+=== printk and ring buffer 
+
+[source,shell]
+----
+[root@host1 logrotate.d]# sysctl kernel.printk
+kernel.printk = 4	4	1	7
+[root@host1 logrotate.d]# 
+----
+
+[source,shell]
+----
+[nick@host1 insights-client]$ cat  /proc/sys/kernel/printk
+4	4	1	7
+[nick@host1 insights-client]$ 
+----
+
+fields 
+
+* Console log-level, defines the lowest priority of messages printed to the console.
+* Default log-level for messages without an explicit log-level attached to them.
+* lowest possible log-level configuration for the console log-level.
+* default value for the console log-level at boot time.
+
+
+from
+man 2 syslog 
+
+[source,shell]
+----
+console_loglevel
+       Only  messages  with a log level lower than this value will be printed to the console.  The default value for this
+       field is DEFAULT_CONSOLE_LOGLEVEL (7), but it is set to 4 if the kernel command line contains the word "quiet", 10
+       if  the kernel command line contains the word "debug", and to 15 in case of a kernel fault (the 10 and 15 are just
+       silly, and equivalent to 8).  The value of console_loglevel can be set (to a value in the range 1–8) by a syslog()
+       call with a type of 8.
+
+default_message_loglevel
+       This  value  will  be  used  as the log level for printk() messages that do not have an explicit level.  Up to and
+       including Linux 2.6.38, the hard-coded default value for this field was 4 (KERN_WARNING); since Linux 2.6.39,  the
+       default  value  is a defined by the kernel configuration option CONFIG_DEFAULT_MESSAGE_LOGLEVEL, which defaults to
+       4.
+
+minimum_console_loglevel
+       The value in this field is the minimum value to which console_loglevel can be set.
+
+default_console_loglevel
+       This is the default value for console_loglevel.
+----
+
+command line does contain `quiet`. 
+
+[source,shell]
+----
+[root@host1 boot]# cat /proc/cmdline 
+BOOT_IMAGE=(hd0,msdos2)/vmlinuz-4.18.0-240.10.1.el8_3.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet
+[root@host1 boot]# 
+----
+ 
+
+== syslog logging
+
+/etc/rsyslog.conf 
+
+[source,shell]
+----
+#### RULES ####
+
+# Log all kernel messages to the console.
+# Logging much else clutters up the screen.
+#kern.*                                                 /dev/console
+----
+
+
+=== write to a log file 
+
+Log all messages with facility "kern" and all priorities.
+
+
+vi /etc/rsyslog.d/kern.conf
+
+[source,shell]
+----
+# facilities: auth, authpriv, cron, daemon, kern, lpr, mail, news, syslog, user, uucp and local0 through local7
+# priorities: debug, info, notice, warning, err, crit, alert and emerg
+# for more information, run "man rsyslog.conf"
+# selector:
+kern.warning        /var/log/kern.log
+----
+
+[source,shell]
+----
+systemctl restart rsyslog
+----
+
+All OK? 
+
+[source,shell]
+----
+systemctl status rsyslog
+----
+
+Kernel log messages may be many minutes apart. 
+Instead of waiting, tell the kernel to print a help message. 
+
+[source,shell]
+----
+echo h > /proc/sysrq-trigger
+----
+
+The file is created when the first message shows up. 
+
+[source,shell]
+----
+ls -l /var/log/kern.log
+----
+
+The rsyslog process manages this new log file. 
+
+[source,shell]
+----
+[root@host1 ~]# lsof /var/log/kern.log 
+COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF      NODE NAME
+rsyslogd 1546 root    7w   REG  253,0   103851 268823973 /var/log/kern.log
+[root@host1 ~]# 
+----
+
+
+=== help 
+
+* `man 2 syslog`         system call provided by the kernel 
+* `man 3 syslog`         library call provided by a library 
+* `man 3p syslog`        library call, posix version
+* `man 5 rsyslog.conf`   File format
+* `man 8 rsyslogd`       System administration command
+
+
+=== kernel messages on the console
+
+=== change console log level 
+
+
+change for current session.
+Increase from 4 (quiet).
+
+Console displays messages with priorities less than the set number, so setting 8 logs everything. 
+
+These three commands do the same thing. 
+
+[source,shell]
+----
+echo 8 > /proc/sys/kernel/printk
+dmesg -n 8
+sysctl -w kernel.printk=8
+----
+
+[source,shell]
+----
+[root@host1 boot]# dmesg --console-level 8
+[root@host1 boot]# 
+[root@host1 boot]# cat /proc/sys/kernel/printk
+8	4	1	7
+[root@host1 boot]# 
+----
+
+
+== loglevel and the kernel command line
+
+When Grub menu appears, hit a kit to interrupt.
+
+Log everything. 
+
+Edit the kernel command line.
+Replace `quiet` with one of these. 
+
+* debug
+* systemd.log_level=debug loglevel=8
+
+Log errors only. 
+
+Edit the kernel command line.
+Replace `quiet` with something like 
+
+* debug
+* systemd.log_level=debug 
+* loglevel=8
+
+
+=== change loglevel in GRUB 
+
+change for all sessions 
+
+decrease from 4 (quiet) 
+
+Edit /etc/default/grub and find this line.
+
+[source,shell]
+----
+GRUB_CMDLINE_LINUX=" ... quiet"
+----
+
+Change it to this. 
+
+[source,shell]
+----
+GRUB_CMDLINE_LINUX=" ... loglevel=3"
+----
+
+
+== write a message to the kernel ring buffer 
+
+The kernel treats these as messages from user space, not kernel space.
+Rsyslog won't treat them as facility: kern 
+
+[source,shell]
+----
+echo "<2>critical printk message from userspace" >/dev/kmsg
+echo "<7>my debug message from userspace" >/dev/kmsg
+----
+
+See the result.
+[source,shell]
+----
+dmesg 
+----
+
+
+
+
+== systemd 
+
+Linux command line options to send messages to the ring buffer. 
+
+https://freedesktop.org/wiki/Software/systemd/Debugging/
+systemd.log_level=debug systemd.log_target=kmsg log_buf_len=1M printk.devkmsg=on
+

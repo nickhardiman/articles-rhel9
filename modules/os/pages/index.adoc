@@ -1,0 +1,23 @@
+=  OS (Operating System)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+When a user turns on a computer - a physical computer - there is plenty of hardware and software action in the few seconds before Linux starts. The software that controls these early stages is called firmware. 
+
+== firmware 
+
+A boot loader is a collection of programs to get a system ready. Boot loaders are split into two groups.
+
+* The first stage boot loader gets hardware ready.
+* The second stage boot loader launches the OS.
+
+
+== OS
+
+The operating system is another collection of programs, split into three groups. 
+
+* The kernel manages the machine, and supervises scheduling of user programs. 
+* A shell handles communication between user and system. 
+* Many utility programs help with tasks. All the commands in /usr/bin/ are utility programs. 
+
