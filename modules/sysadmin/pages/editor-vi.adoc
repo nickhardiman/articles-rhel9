@@ -25,6 +25,8 @@ modes
 
 == vi and vim 
 
+A miimal install may not include vim. 
+
 Install vim. 
 
 [source,shell]

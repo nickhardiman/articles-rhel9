@@ -1,0 +1,274 @@
+= run more shells 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 15-01-2021
+
+
+Shells have been around for decades, and they have multiplied.  
+Ancestors of the the shell program stretch all the way back to a world before Linux, before Unix and even before Multics, all the way to back to https://en.wikipedia.org/wiki/Run_commands[RUNCOM]. First, second and third places in the "incredibly old shell" competition go to sh, csh and ksh. 
+
+Over the years, many people have written many shells for many purposes. 
+But it isn't immediately apparent what's available or where to find them. 
+
+== REPL (Read, Evaluate and Print Loop)
+
+The https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop[REPL] is the loop that makes a shell interactive. 
+It waits for the user to type a command, reads what's been enters, acts on it, displays the result and loops back to waiting again. 
+
+Every traditional Linux command interpreter has one. 
+That's what gives us the CLI (Command Line Interface). 
+
+Some general purpose programming languages also come with one, so there's a bit of Venn Diagram overlap between shells and programming languages.
+A command-line shell can be used for programming, and a programming language can be used as a command-line shell. 
+
+== anything already installed? 
+
+You can try looking around your OS, but there's not much to see.
+The _/etc/passwd_ file lists a few login shells, like _/bin/bash_ for user accounts and _/sbin/nologin_ for service accounts. 
+
+[source,shell]
+----
+[nick@host2 bash-script]$ cat /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+...
+----
+
+The _/etc/shells_ file isn't a lot of help.
+
+[source,shell]
+----
+[nick@host2 bash-script]$ cat /etc/shells 
+/bin/sh
+/bin/bash
+/usr/bin/sh
+/usr/bin/bash
+[nick@host2 bash-script]$ 
+----
+
+You can try searching with DNF, by running the command _sudo dnf search shell_. 
+It returns dozens of lines, most of which aren't actually the shell programs.  
+
+
+== traditional shells 
+
+Use  _dnf info_ to find out more about these two.
+
+* https://www.tcsh.org/[tcsh (Tenex C SHell)] was designed to be easy for C programmers - that's why there's a C in the name. 
+* http://www.kornshell.org/[ksh (Korn SHell)] was designed as a better sh. 
+
+Unfortunately, shells are not exactly what you'd call intuitive. 
+A new user, faced with a prompt, a flashing cursor, and nothing else, may enjoy the experience about as much as being slapped in the face. 
+Start small by starting and stopping shells. 
+
+
+=== bash 
+
+Bash is a newer and fancier version of sh. 
+
+The bash shell is already running. 
+Use _ps_ to find the process ID. 
+Use _pstree_ to draw a diagram of what's running. 
+
+[source,shell]
+---- 
+[nick@host1 ~]$ ps
+    PID TTY          TIME CMD
+   1486 pts/0    00:00:00 bash
+  32801 pts/0    00:00:00 ps
+[nick@host1 ~]$ 
+[nick@host1 ~]$ pstree 1486
+bash───pstree
+[nick@host1 ~]$ 
+----
+
+The bash shell is running. 
+
+=== install more
+
+If you want to play with each one, run _dnf install tcsh ksh zsh_. 
+Installing these takes up about 4MiB storage, which is no big deal. 
+
+[source,shell]
+----
+dnf install tcsh ksh zsh 
+----
+
+=== tcsh 
+
+Tcsh is a newer and fancier version of csh. 
+
+Start another shell, tcsh. 
+The prompt looks the same, but it is not defined by $PS1.
+
+[source,shell]
+---- 
+[nick@host2 ~]$ csh
+[nick@host2 ~]$ 
+----
+
+=== ksh 
+
+Try ksh.
+The prompt changes. 
+
+[source,shell]
+---- 
+[nick@host2 ~]$ ksh
+$ 
+----
+
+That's a bunch of different shells running now.
+
+[source,shell]
+----
+$ pstree 1486
+bash───csh───ksh───pstree
+$ 
+----
+
+=== zsh 
+
+Zsh is a newer and fancier version of ksh.
+
+Try zsh. 
+
+[source,shell]
+----
+[nick@host2]~% zsh
+----
+
+Wait, what?
+
+[source,shell]
+----
+This is the Z Shell configuration function for new users,
+zsh-newuser-install.
+You are seeing this message because you have no zsh startup files
+(the files .zshenv, .zprofile, .zshrc, .zlogin in the directory
+~).  This function can help you with a few settings that should
+make your use of the shell easier.
+
+You can:
+
+(q)  Quit and do nothing.  The function will be run again next time.
+
+(0)  Exit, creating the file ~/.zshrc containing just a comment.
+     That will prevent this function being run again.
+
+(1)  Continue to the main menu.
+
+--- Type one of the keys in parentheses --- 
+----
+
+Type q to quit. 
+
+ZSH is the new shiny and many people share their customizations for it. 
+If you want a fancy-looking working environment for bash or zsh, dress up the prompt with https://github.com/starship/starship[starship], or https://fedoramagazine.org/tuning-your-bash-or-zsh-shell-in-workstation-and-silverblue/[powerline and oh-my-zsh].
+
+=== exit
+
+Stop the new shells. 
+All shells understand the _exit_ command. 
+
+[source,shell]
+----
+$ exit
+nick@host1 ~ 4$ exit
+$ exit
+[nick@host1 ~]$ exit
+exit
+$ exit
+[nick@host1 ~]$ pstree 1486
+bash───pstree
+[nick@host1 ~]$ 
+----
+
+For the next challenge, try running the command _echo "hello world"_ in each of these shells. 
+For a bigger challenge, look for the differences between these shells. 
+Some things, like cd, echo and ls, work the same in each shell. 
+Other things, like source, $HOME and variable assignment, are different. 
+
+
+== print "hello world" with interactive programming shells 
+
+Many general-purpose programming languages provide an interactive shell to try out simple commands. 
+These do pretty much everything the traditional shells do, although simple tasks like listing files is trickier with these programming shells. 
+
+These examples print a message using perl, python and tclsh.
+
+
+If you want to create an interactive shell in your favorite programming language, start with some research into the https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop[REPL (Read-Eval-Print Loop)].
+
+=== install 
+
+If you want to try these shells, install language files with the command 
+_dnf install perl python3 tcl_.
+Check your disk space first. 
+These take up hundreds of MB storage, *way* more space than the five shells above. 
+If you are comfortable with podman, keep your environment clean by installing these in separate containers. 
+
+Depending on the OS install choice, python and TCL may be already installed. 
+
+[source,shell]
+----
+dnf install perl python3 tcl
+----
+
+=== TCL
+
+https://www.tcl-lang.org/[TCL (Tool Control Language)]
+
+[source,shell]
+----
+[nick@host1 ~]$ tclsh
+% puts {hello world}
+hello world
+% exit
+[nick@host1 ~]$ 
+----
+
+=== perl 
+
+https://www.perl.org/[Perl]
+
+[source,shell]
+----
+[nick@host1 ~]$ perl
+print "hello world\n"
+^D
+hello world
+[nick@host1 ~]$ 
+----
+
+=== python3
+
+https://www.python.org/[Python]. 
+For more Python shells, read the article https://fedoramagazine.org/enhance-python-interactive-shell/[Enhance your Python with an interactive shell].
+
+[source,shell]
+----
+[nick@host1 ~]$ python3
+Python 3.8.5 (default, Aug 12 2020, 00:00:00) 
+[GCC 10.2.1 20200723 (Red Hat 10.2.1-1)] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> print("hello world")
+hello world
+>>> quit()
+[nick@host1 ~]$ 
+----
+
+
+=== more shells 
+
+There are many more shells that are not in the repository. 
+If you're ready to put in some hacking effort, other shells can be manually installed. 
+
+See if you can find a shell written in your favorite language. 
+https://www.nushell.sh/[Nu shell] is written in rust, not C.  
+https://github.com/michaelmacinnis/oh[Oh shell] is written in Go, and https://www.youtube.com/watch?v=v1m-WEZz46U[the author] created a page https://htmlpreview.github.io/?https://raw.githubusercontent.com/michaelmacinnis/oh/master/doc/comparison.html[Comparing oh to other Unix shells].
+
+If you're getting started, go with https://fedoramagazine.org/fish-a-friendly-interactive-shell/[fish].
+Stick with it for a while, get over that non-intuitive learning curve, and get to grips with its quirks. 
+

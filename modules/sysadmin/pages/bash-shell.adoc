@@ -4,7 +4,6 @@ Nick Hardiman
 :revdate: 16-10-2020
 
 
-
 When you use the CLI of a Linux machine, the system gives you a shell. 
 The shell is a pillar of developer and sysadmin worlds, up there with the toolchain, the source code repository and the IDE.  
 
@@ -14,6 +13,11 @@ Ths interactive command line shell is nowhere near as friendly as a GUI.
 No-one is born knowing what '. ./.bashrc' means. 
 But there's no avoiding it - the shell has been around forever (in IT terms) and is everywhere. For instance, if the Linux startup process goes wrong, you may find yourself in the https://fedoramagazine.org/initramfs-dracut-and-the-dracut-emergency-shell/[dracut emergency shell].
 When you log into the system console, or SSH to a machine, or run tmux, you get your own copy of the _bash_ shell. 
+
+Bash knowledge is not shared out equally. 
+Some knowledge is universal - you can't use Bash for five minutes without running _ls_. 
+And some knowledge is arcane, like job control.
+If you really want to find out what Bash is capable of, read the https://www.gnu.org/software/bash/manual/bash.html[manual]. 
 
 
 == GNU Bash 
@@ -51,59 +55,5 @@ The article contains many instantly recognizable commands. And - bonus - this ar
 OS distributions that include GNU software often use bash as the default shell. That's true for Fedora, other Linux distributions, and even Apple OS X. Bash isn't the default everywhere - it's available for FreeBSD, but the default is _sh_. 
 
 Bash, like sh, is written in C. You can get the https://git.savannah.gnu.org/cgit/bash.git[source code] from https://savannah.gnu.org/[Savannah], Gnu's software site.
-
-
-
-
-
-
-
-== getting to grips with Bash 
-
-Bash knowledge is not shared out equally. 
-Some knowledge is universal - you can't use Bash for five minutes without running _ls_. 
-And some knowledge is arcane, like job control.
-If you really want to find out what Bash is capable of, read the https://www.gnu.org/software/bash/manual/bash.html[manual]. 
-
-
-If you just want some simple gratification, play around with these. 
-
-
-=== prompt 
-
-[source,shell]
----- 
-[nick@host1 ~]$ 
-----
-
-A special set of symbols define how the prompt looks. 
-
-[source,shell]
----- 
-[nick@host1 ~]$ echo $PS1
-[\u@\h \W]\$
-[nick@host1 ~]$ 
-----
-
-To play around with the prompt layout, look at the man page (_man bash_) and search for _PROMPTING_. 
-It has a big list of these backslash-escaped special characters.
-
-
-=== completion 
-
-Typing long commands is annoying. 
-That's why the GNU project added  https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html[programmable completion].
-The easiest completion is typing the first few characters of a command (three usually does it) and hitting the tab key (⇥). 
-
-It's not good for all commands. 
-If you want to type _hostnamectl_, then _hos⇥_ gets you _host_. 
-Another tab displays three commands that all start with _host_.
-
-[source,shell]
----- 
-[nick@host1 ~]$ host⇥
-hostid       hostname     hostnamectl  
-[nick@host1 ~]$ host
-----
 
 

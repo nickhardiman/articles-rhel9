@@ -1,4 +1,4 @@
-= extend cockpit for VMs
+= cockpit and VMs
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 14-01-2021

@@ -7,19 +7,36 @@ Nick Hardiman
 
 == create content 
 
-Create a bash script on guest1.
+Create a bash script on host1.
 Check out the tricky quoting and special characters in that echo line. 
-Check it. 
 
 [source,shell]
 ....
-[nick@guest1 ~]$ mkdir bash-script/
-[nick@guest1 ~]$ cd bash-script/
-[nick@guest1 bash-script]$ echo -e '#!'"/bin/bash\necho 'hello world'\n" > hello-world.sh
-[nick@guest1 bash-script]$ chmod 754 ./hello-world.sh 
-[nick@guest1 bash-script]$ ./hello-world.sh 
+[nick@host1 ~]$ mkdir bash-script/
+[nick@host1 ~]$ cd bash-script/
+[nick@host1 bash-script]$ echo -e '#!'"/bin/bash\necho 'hello world'\n" > hello-world.sh
+[nick@host1 bash-script]$ 
+....
+
+This adds content to a new file without needing to use an editor. 
+
+[source,shell]
+....
+[nick@host1 bash-script]$ cat hello-world.sh 
+#!/bin/bash
+echo 'hello world'
+
+[nick@host1 bash-script]$ 
+....
+
+Configure and run. 
+
+[source,shell]
+....
+[nick@host1 bash-script]$ chmod 754 ./hello-world.sh 
+[nick@host1 bash-script]$ ./hello-world.sh 
 hello world
-[nick@guest1 bash-script]$ 
+[nick@host1 bash-script]$ 
 ....
 
 Script works. 

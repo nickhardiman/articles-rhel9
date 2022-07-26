@@ -7,16 +7,16 @@ Nick Hardiman
 https://cockpit-project.org/[Cockpit] is a server management system with a web-based control panel.
 
 https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_systems_using_the_rhel_8_web_console/index[cockpit] 
-is installed on RHEL 8 hosts, but not enabled. 
+is installed on RHEL hosts, but not enabled. 
 
-Connecting to a RHEL 8 host displays an MOTD (Message of the Day) that lets the user know cockpit is waiting to be enabled.
+Connecting to a RHEL host displays an MOTD (Message of the Day) that lets the user know cockpit is waiting to be enabled.
 
 [source,shell]
 ----
 workstation:~ nick$ ssh 10.0.1.45
 Activate the web console with: systemctl enable --now cockpit.socket
 
-Last login: Thu May 14 17:29:53 2020 from 10.0.1.3
+Last login: Thu May 14 17:29:53 2022 from 10.0.1.3
 [nick@host1 ~]$ 
 ----
 
@@ -51,9 +51,9 @@ After it's enabled, the MOTD message changes.
 [source,shell]
 ----
 workstation:~ nick$ ssh 10.0.1.45
-Web console: https://host.lab.example.com:9090/ or https://10.0.1.40:9090/
+Web console: https://host1.lab.example.com:9090/ or https://10.0.1.40:9090/
 
-Last login: Thu May 14 17:29:53 2020 from 10.0.1.3
+Last login: Thu May 14 17:29:53 2022 from 10.0.1.3
 [nick@host1 ~]$ 
 ----
 
@@ -76,8 +76,8 @@ certificate: /etc/cockpit/ws-certs.d/0-self-signed.cert
 [nick@host1 ~]$ 
 ----
 
- Web browsers don't like self-signed certificates. 
- Chrome displays this warning.
+Web browsers don't like self-signed certificates. 
+Chrome displays this warning.
 
 [source,shell]
 ----
@@ -97,41 +97,5 @@ The journal may contain many _gnutls_handshake_ errors.
 ...
 Jul 23 17:43:02 host1 cockpit-tls[14712]: cockpit-tls: gnutls_handshake failed: A TLS fatal alert has been received.
 ----
-
-== one cockpit, many servers 
-
-Add a hostname onto the end of the URL. 
-https://10.0.1.40:9090/@guest2.lab.example.com
-
-First attempt shows
-
-[source,shell]
-----
-Couldn't connect to the machine 
-Cannot connect to an unknown machine 
-Troubleshoot 
-----
-
-Troubleshoot button displays a second page.
-
-[source,shell]
-----
-Add machine to dashboard 
-Address 192.168.122.3
-Color 
-Cancel Add 
-----
-
-
-Servers are copied to the config file 
-/etc/cockpit/machines.d/99-webui.json.
-
-
-=== from cockpit to remote machines
-
-Cockpit itself works by having a web interface that talks to the client using SSH as a transport mechanism
-Instead of running a bash shell on the client, it runs cockpit-bridge.
-This uses the cockpit PAM stack to authenticate and run commands, talk to dbus, etc. and sends the results back in a way the GUI can understand. 
-So we need ssh ports open between the cockpit and clients.
 
 

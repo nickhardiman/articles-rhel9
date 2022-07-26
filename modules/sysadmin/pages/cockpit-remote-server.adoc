@@ -1,0 +1,38 @@
+= cockpit and a remote server
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 14-01-2022
+
+Cockpit itself works by having a web interface that talks to the client using SSH as a transport mechanism
+Instead of running a bash shell on the client, it runs cockpit-bridge.
+This uses the cockpit PAM stack to authenticate and run commands, talk to dbus, etc. and sends the results back in a way the GUI can understand. 
+So we need ssh ports open between the cockpit and clients.
+
+== connect from cockpit to a remote machine
+
+Add a hostname onto the end of the URL. 
+https://10.0.1.40:9090/@guest2.lab.example.com
+
+First attempt shows
+
+[source,shell]
+----
+Couldn't connect to the machine 
+Cannot connect to an unknown machine 
+Troubleshoot 
+----
+
+Troubleshoot button displays a second page.
+
+[source,shell]
+----
+Add machine to dashboard 
+Address 192.168.122.3
+Color 
+Cancel Add 
+----
+
+Servers are copied to the config file 
+/etc/cockpit/machines.d/99-webui.json.
+
+
