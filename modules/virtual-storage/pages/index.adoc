@@ -1,0 +1,61 @@
+= VM image storage
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It's used by RHV (Red Hat Virtualization), Openstack, and even the latest Openshift.
+
+Libvirt [manages storage] using pools to store volumes.
+Here the storage pool is a directory, _/var/lib/libvirt/images/_. 
+It's a default location provided by libvirt. 
+Other storage options include an NFS share, an iSCSI target or multipath to a SAN. 
+
+The disk image used by a virtual machine is a storage volume. 
+Install ISO files will also go in here. 
+
+Create a libvirt storage pool using the ``virsh`` command. 
+
+.storage pool containing three volumes 
+....
+.-------------------------------------.
+|                                     |    
+|   storage pool 1                    |    
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 1           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 2           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 3           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+.-------------------------------------.  
+....
+
+
+
+
+== a storage pool for your image files  
+
+Each virtual machine has a storage volume - this is the disk image.
+
+A storage pool is where image files are kept. 
+A storage pool can be made from many types of storage, 
+like a local disk drive, a distributed file system, or a SCSI volume.
+Machine image files contain a lot of empty space. 
+Storing them somewhere that deduplicates blocks saves a lot of room. 
+VDO 
+
+We use the simplest kind of storage pool - a directory.
+
+

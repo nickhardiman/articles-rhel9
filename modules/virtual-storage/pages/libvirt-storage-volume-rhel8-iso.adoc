@@ -1,0 +1,126 @@
+= add a RHEL 8 ISO to the images pool
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+We can use a *fresh install* process to build a new virtual machine and install the OS. 
+But before we start, we need an install ISO. 
+The ISO file acts like a DVD in an optical disk drive. 
+For more information on Red Hat's ISO files, check out the https://access.redhat.com/solutions/104063[Understanding the various RHEL .iso files] page. 
+
+Download the installer https://en.wikipedia.org/wiki/ISO_9660[ISO] file and add it to libvirt's _images_ storage pool. 
+Downloading the file requires access to Red Hat's customer portal and CDN. 
+Use your developer account to log into the portal. 
+The customer portal has documentation on https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_virtualization/getting-started-with-virtualization-in-rhel-8_configuring-and-managing-virtualization#assembly_creating-virtual-machines_virt-getting-started[Creating virtual machines].
+
+
+
+== download the RHEL 8 installer ISO
+
+* Use a web browser. 
+* Sign into the https://access.redhat.com/[customer portal]. 
+* Find the [Download Red Hat Enterprise Linux] page. Downloads > Infrastructure Management > Red Hat Enterprise Linux 8
+* Change the version from the latest to 8.2.
+* Have a look at what's on offer. The https://access.redhat.com/downloads/content/479/ver=/rhel---8/8.2/x86_64/product-software[download page for RHEL 8] lists many installers (including a small ISO and a big DVD) and a ready-made KVM guest image. 
+* Find the entry titled  _Red Hat Enterprise Linux 8.2 Binary DVD_.
+* Download the DVD image from the customer portal to the images directory. More gory details on how to do this are below.
+
+Downloading the ISO requires a little jumping around between the web browser interface and the command line interface. 
+You could use the web browser to download, then copy from your workstation to _host1_. 
+But this method get tricky with the URL and the _curl_ command.
+
+Right-click the _Download Now_ button and copy the link address. 
+It's a URL containing long strings of nonsense, along the lines of this one.  __https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-8.2-x86_64-dvd.iso?user=1234&_auth_=1234__.
+Some of this nonsense is authorization tokens embedded in the URL. 
+
+The download link is only valid for a few minutes, so this is a bad time for a coffee break. 
+If using _curl_, like this example does, the link must be put in quotes so the ampersand *&* does not fool Bash into starting a background job. 
+
+[source,shell]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# 
+[root@host1 images]# curl --output rhel-8.2-x86_64-dvd.iso --location 'https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-8.2-x86_64-dvd.iso?user=1234&_auth_=1234'
+----
+
+This file is an 8GB monster. 
+The download takes a while. 
+This is a good time for a coffee break.  
+
+
+== check the SELinux context 
+
+If the file was downloaded somewhere else and moved, it may well have a different SELinux file context. 
+
+This file was downloaded to a user's home dir first, then moved. 
+It has a SELinux file type of __user_home_t__ (__admin_home_t__ belongs to root's home directory).
+
+[source,shell]
+....
+[root@host1 images]# pwd
+/var/lib/libvirt/images
+[root@host1 images]# 
+[root@host1 images]# ls -lZ
+total 9244672
+-rw-r--r--. 1 root root unconfined_u:object_r:user_home_t:s0 9466544128 Jan 11 14:21 rhel-8.3-x86_64-dvd.iso
+[root@host1 images]# 
+[root@host1 images]# cd
+[root@host1 ~]#
+....
+
+Fix the file type. 
+
+[source,shell]
+....
+[root@host1 ~]# restorecon -Rv /var/lib/libvirt/images/
+Relabeled /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso from unconfined_u:object_r:user_home_t:s0 to unconfined_u:object_r:virt_image_t:s0
+[root@host1 ~]# 
+....
+
+
+
+== refresh the libvirt pool 
+
+Libvirt doesn't notice the new ISO file.
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name   Path
+--------------
+
+[root@host1 ~]# 
+....
+
+Refresh the pool. 
+This tells libvirt to take another look at what's stored in _images_. 
+
+[source,shell]
+....
+[root@host1 ~]# 
+[root@host1 ~]# virsh pool-refresh images
+Pool images refreshed
+
+[root@host1 ~]# 
+....
+
+The new file is now listed. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name                      Path
+----------------------------------------------------------------------------
+ rhel-8.3-x86_64-dvd.iso   /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
+
+[root@host1 ~]# 
+[root@host1 ~]# virsh vol-info rhel-8.3-x86_64-dvd.iso images
+Name:           rhel-8.3-x86_64-dvd.iso
+Type:           file
+Capacity:       8.82 GiB
+Allocation:     8.82 GiB
+
+[root@host1 ~]# 
+....
+
+
