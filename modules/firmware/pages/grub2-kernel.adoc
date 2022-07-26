@@ -1,0 +1,63 @@
+= tell GRUB2 to use an older kernel
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-09-2021
+
+
+Change kernels with grub2-reboot.
+
+!!! no updated  kernel yet 
+
+The grub2-reboot command can tell GRUB which kernel to use on the next reboot. 
+
+Check the current release, list options and choose an earlier kernel release.
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo grubby --info=ALL | grep title
+title="Red Hat Enterprise Linux (5.14.0-70.17.1.el9_0.x86_64) 9.0 (Plow)"
+title="Red Hat Enterprise Linux (0-rescue-e93d80a3bae3487db0e1856ba4aa139d) 9.0 (Plow)"
+[nick@host1 ~]$ 
+----
+
+Tell Grub to use an older kernel. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ sudo grub2-reboot "Red Hat Enterprise Linux (4.18.0-193.6.3.el8_2.x86_64) 8.2 (Ootpa)"
+[nick@guest1 ~]$ 
+----
+
+Reboot. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ sudo systemctl reboot 
+Connection to guest1.lab.example.com closed by remote host.
+Connection to guest1.lab.example.com closed.
+[nick@host1 ~]$ 
+[nick@host1 ~]$ ssh nick@guest1.lab.example.com
+...
+[nick@guest1 ~]$ uname -r
+4.18.0-193.6.3.el8_2.x86_64
+[nick@guest1 ~]$ 
+----
+
+Return to the default. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ sudo grub2-reboot "Red Hat Enterprise Linux (4.18.0-193.13.2.el8_2.x86_64) 8.2 (Ootpa)"
+[sudo] password for nick: 
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ sudo systemctl reboot
+Connection to guest1.lab.example.com closed by remote host.
+Connection to guest1.lab.example.com closed.
+[nick@host1 ~]$ 
+[nick@host1 ~]$ ssh nick@guest1.lab.example.com
+...
+[nick@guest1 ~]$ uname -r
+4.18.0-193.13.2.el8_2.x86_64
+[nick@guest1 ~]$ 
+----
+

@@ -1,0 +1,77 @@
+= look at GRUB2 files
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-09-2021
+
+GRUB2 is one of the chain-loaded programs that run when the machine is powered up.
+The first stage boot loader (UEFI) starts GRUB2, then GRUB2 starts the kernel.
+UEFI and GRUB2 provide low-level device management. 
+
+GRUB2 is a collection of firmware programs. 
+GRUB2 handles tasks like displaying the boot menu, user interaction, loading kernel files into memory, and starting the kernel stage. 
+
+
+== how it works  
+
+There are a few GRUB programs, run in this sequence.
+
+. UEFI loads a tiny 
+https://www.gnu.org/software/grub/manual/grub/html_node/Images.html[boot.img] file from the MBR (the very start of the disk). This boot image is a program that does nothing except kick off the next GRUB program. There isn't enough room in the MBR to store anything interesting. 
+. The second program is a much bigger *core image*. This provides the framework to search for the _/boot/grub2_ directory and load the rest of GRUB from there. The _core.img_ file is built from kernel module code by a utility called grub2-mkimage. 
+. The _core.img_ program runs the _/boot/grub2/i386-pc/normal.mod_ module, and that sets up everything required to complete the booting process. 
+
+== the boot loader partition 
+
+The core image is stored in its own small disk partition, called the https://en.wikipedia.org/wiki/BIOS_boot_partition[BIOS boot partition].
+
+
+== configuration files 
+
+[source,shell]
+----
+[nick@rpi4 ~]$ sudo ls /etc/grub.d/
+00_header	      10_reset_boot_success  20_ppc_terminfo   41_custom
+01_users	      12_menu_auto_hide      30_os-prober      README
+08_fallback_counting  14_menu_show_once      30_uefi-firmware
+10_linux	      20_linux_xen	     40_custom
+[nick@rpi4 ~]$ 
+----
+
+=== the /boot/grub2 directory
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo ls /etc/grub.d/
+[sudo] password for nick: 
+00_header	      10_linux		     20_linux_xen      35_fwupd
+00_tuned	      10_reset_boot_success  20_ppc_terminfo   40_custom
+01_users	      12_menu_auto_hide      30_os-prober      41_custom
+08_fallback_counting  14_menu_show_once      30_uefi-firmware  README
+[nick@host1 ~]$ 
+
+----
+
+
+
+== list kernel details with the grubby command 
+
+The grubby command manages configuration. 
+
+[source,shell]
+----
+[nick@host1 ~]$ uname -r    
+5.14.0-70.17.1.el9_0.x86_64
+[nick@host1 ~]$ 
+[nick@host1 ~]$ KERNEL_RELEASE=$(uname -r)   
+[nick@host1 ~]$ sudo grubby --info=/boot/vmlinuz-$KERNEL_RELEASE
+index=0
+kernel="/boot/vmlinuz-5.14.0-70.17.1.el9_0.x86_64"
+args="ro crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet"
+root="/dev/mapper/rhel-root"
+initrd="/boot/initramfs-5.14.0-70.17.1.el9_0.x86_64.img"
+title="Red Hat Enterprise Linux (5.14.0-70.17.1.el9_0.x86_64) 9.0 (Plow)"
+id="e93d80a3bae3487db0e1856ba4aa139d-5.14.0-70.17.1.el9_0.x86_64"
+[nick@host1 ~]$ 
+----
+
+

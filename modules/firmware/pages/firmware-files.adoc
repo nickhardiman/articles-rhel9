@@ -1,0 +1,143 @@
+= look at firmware files
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 24-10-2020
+
+Once the system is up and running, you can have a look at some firmware files. 
+
+
+== /dev/sda1, /boot/efi/
+
+The first partition is /dev/sda1. 
+This is mounted on directory /boot/efi/.
+
+[source,shell]
+----
+[nick@ host1]~% df /boot/efi 
+Filesystem     1K-blocks  Used Available Use% Mounted on
+/dev/sda1         613160  7132    606028   2% /boot/efi
+[nick@ host1]~% 
+----
+
+View its files.
+
+.files on the first partition
+[source,shell]
+----
+[nick@ host1]~% sudo tree /boot/efi
+/boot/efi
+└── EFI
+    ├── BOOT
+    │   ├── BOOTX64.EFI
+    │   └── fbx64.efi
+    └── redhat
+        ├── BOOTX64.CSV
+        ├── grub.cfg
+        ├── grub.cfg.rpmsave
+        ├── grubx64.efi
+        ├── mmx64.efi
+        ├── shim.efi
+        ├── shimx64.efi
+        └── shimx64-redhat.efi
+
+3 directories, 10 files
+[nick@ host1]~% 
+----
+
+
+
+== /dev/sda2, /boot 
+
+The second partition contains many more files. 
+This partition contains files for the final part of firmware's work, and kernel files for starting the OS.  
+
+Some are protected, like the GRUB directory. 
+Others are available, like the OS files initramfs and vmlinuz. 
+
+[source,shell]
+----
+[nick@ host1]~% tree /boot
+/boot
+├── config-5.14.0-70.17.1.el9_0.x86_64
+├── efi [error opening dir]
+├── extlinux
+│   ├── cat.c32
+│   ├── chain.c32
+│   ├── cmd.c32
+...
+│   ├── vpdtest.c32
+│   ├── whichsys.c32
+│   └── zzjson.c32
+├── grub2 [error opening dir]
+├── initramfs-0-rescue-e93d80a3bae3487db0e1856ba4aa139d.img
+├── initramfs-5.14.0-70.17.1.el9_0.x86_64.img
+├── initramfs-5.14.0-70.17.1.el9_0.x86_64kdump.img
+├── loader
+│   └── entries [error opening dir]
+├── symvers-5.14.0-70.17.1.el9_0.x86_64.gz -> /lib/modules/5.14.0-70.17.1.el9_0.x86_64/symvers.gz
+├── System.map-5.14.0-70.17.1.el9_0.x86_64
+├── vmlinuz-0-rescue-e93d80a3bae3487db0e1856ba4aa139d
+└── vmlinuz-5.14.0-70.17.1.el9_0.x86_64
+
+5 directories, 69 files
+[nick@ host1]~% 
+----
+
+
+== /lib/firmware/
+
+More firmware may be required while the OS is running. 
+A device driver may request a firmware at any time. 
+This firmware is code that is uploaded to a device to make it work. 
+The code is stored in hundreds of files in the /lib/firmware/ directory. 
+
+Most of these files are not useful.
+
+[source,shell]
+----
+[nick@ host1]~% ls /lib/firmware 
+3com                                  iwlwifi-Qu-b0-jf-b0-50.ucode.xz
+5.14.0-70.17.1.el9_0.x86_64           iwlwifi-Qu-b0-jf-b0-53.ucode.xz
+a300_pfp.fw.xz                        iwlwifi-Qu-b0-jf-b0-55.ucode.xz
+...
+iwlwifi-Qu-b0-hr-b0-66.ucode.xz       wil6210.fw.xz
+iwlwifi-Qu-b0-hr-b0-68.ucode.xz       wsm_22.bin.xz
+iwlwifi-Qu-b0-jf-b0-48.ucode.xz       yam
+[nick@ host1]~% 
+----
+
+== /sys/firmware/
+
+Linux has a special file system, sysfs. 
+Kernel objects appear as files in the /sys/ directory. 
+All the firmware objects are in the /sys/firmware directory.  
+
+[source,shell]
+----
+[nick@ host1]~% ls /sys/firmware
+acpi  dmi  efi  memmap  qemu_fw_cfg
+[nick@ host1]~% 
+----
+
+/sys/firmware/dmi/ files are all part of a big https://en.wikipedia.org/wiki/Desktop_Management_Interface[DMI] table of device data.  
+The _dmidecode_ command displays this table in a readable format. 
+
+[source,shell]
+----
+[nick@ host1]~% sudo dmidecode -s system-manufacturer
+[sudo] password for nick: 
+ASUSTeK COMPUTER INC.
+[nick@ host1]~% 
+----
+
+/sys/firmware/efi/ holds EFI variables and values, such as whether this is a 32 bit or 64 bit UEFI system.
+
+[source,shell]
+----
+[nick@ host1]~%  cat /sys/firmware/efi/fw_platform_size
+64
+[nick@ host1]~% 
+----
+
+
+

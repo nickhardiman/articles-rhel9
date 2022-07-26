@@ -1,2 +1,5 @@
 * xref:index.adoc[]
 ** xref:boot-stages.adoc[]
+** xref:firmware-files.adoc[]
+** xref:grub2-examine.adoc[]
+** xref:grub2-kernel.adoc[]
