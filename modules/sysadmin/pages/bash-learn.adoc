@@ -1,0 +1,47 @@
+= learn Bash 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 26-07-2022
+
+
+Bash knowledge is not shared out equally. 
+Some knowledge is universal - you can't use Bash for five minutes without running _ls_. 
+And some knowledge is arcane, like job control.
+If you really want to find out what Bash is capable of, read the https://www.gnu.org/software/bash/manual/bash.html[manual]. 
+
+
+== learn Bash 
+
+This is not a bash tutorial. There are plenty of free resources out there on the web and in bookstores. 
+
+== learn the basics
+
+* https://learnxinyminutes.com/docs/bash/
+* Pimoroni, the Raspberry Pi store, has learning resources. https://learn.pimoroni.com/getting-started-with-bash
+* The GNU foundation provide a manual. https://www.gnu.org/software/bash/manual/bash.html[manual]. 
+* And so does The Linux Documentation Project. https://tldp.org/LDP/Bash-Beginners-Guide/html/.
+
+Cheat sheets summarize Bash commands. There are many on the web. 
+
+* Julien Le Coupanec's page on GitHub: https://github.com/LeCoupa/awesome-cheatsheets/blob/master/languages/bash.sh
+* https://github.com/rstacruz[Rico Sta. Cruz] made this pretty Devhints page: https://devhints.io/bash
+* Many more have been posted to Cheatography: https://cheatography.com/tag/bash/
+
+== read a book
+
+* "Learning the bash Shell" is old and well-loved. https://www.oreilly.com/library/view/learning-the-bash/0596009658/
+* Books on Linux include plenty about Bash, like "Chapter 10. Working with files and folders on the command line" in "Learn Linux in a Month of Lunches".  https://www.manning.com/books/learn-linux-in-a-month-of-lunches
+* Bookauthority lists many more books. https://bookauthority.org/books/best-bash-books
+
+== RTFM (Read the Fucking Manual)
+
+For variations on these initials, see [RTFM].
+
+If you have already learned how to do something but can't quite remember the syntax, run `man bash`. This displays a long dense page, crammed with brief descriptions. 
+
+The man page is no use to beginners. 
+It's handy for advanced users who have forgotten part of the syntax, or are filling in holes in their knowledge, or who can't sleep. 
+
+
+
+

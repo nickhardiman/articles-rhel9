@@ -6,4 +6,6 @@
 ** xref:host1-rhsm-syspurpose.adoc[]
 ** xref:host1-rhsm-repo.adoc[]
 ** xref:host1-insights.adoc[]
-** xref:host1-dnf-update.adoc[]
+** xref:dnf-examine.adoc[]
+** xref:dnf-update.adoc[]
+** xref:dnf-group-examine.adoc[]

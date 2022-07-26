@@ -1,0 +1,103 @@
+= examine the libvirt default bridge
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 23-11-2020
+
+Libvirt adds config, services and devices behind the scenes to make each network function.
+Libvirt creates a dnsmasq configuration file, _/var/lib/libvirt/dnsmasq/(network).conf_. 
+Dnsmasq handles DNS and DHCP queries. 
+Libvirt adds a firewall zone (try running ``sudo firewall-cmd --list-all --zone=libvirt``). 
+And it creates network interfaces.
+
+For the _default_ network, libvirt creates a bridge interface named _virbr0_ and a NIC named _virbr0-nic_. 
+Every time a VM starts, libvirt also creates a https://en.wikipedia.org/wiki/TUN/TAP[TAP] interface named something like _tap0_.  
+
+The libvirt bridge _virbr0_ doesn't look like a real bridge - it doesn't connect two paths. 
+A simple network bridge does connect two network interfaces, but 
+virbr0 is a forwarding bridge.
+It uses a forwarding database of layer 2 addresses (ethernet MAC addresses) to send packets to many destinations. 
+
+View the forwarding database with the command ``bridge fdb``.
+
+[source,shell]
+....
+[nick@host1 ansible]$ bridge fdb show br virbr0
+01:00:5e:00:00:6a dev virbr0 self permanent
+33:33:00:00:00:6a dev virbr0 self permanent
+01:00:5e:00:00:01 dev virbr0 self permanent
+01:00:5e:00:00:fb dev virbr0 self permanent
+52:54:00:19:75:be dev virbr0 vlan 1 master virbr0 permanent
+52:54:00:19:75:be dev virbr0 master virbr0 permanent
+[nick@host1 ansible]$ 
+....
+
+When an IP packet passes through virbr0 destined for the Internet, IP masquerading and forwarding get it to the outside world. 
+When a packet is destined for a virtual machine, it's sent to the VM's TAP interface where the machine emulator https://www.qemu.org/[QEMU] picks it up. 
+
+Most of these components are duplicated for the _private_ network. 
+There is no IP masquerading and forwarding, so there is no communication with the outside world. 
+
+Only the default network exists.
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-list --all
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+
+[root@host1 libvirt]# 
+....
+
+The _default_ configuration contains the XML tag _forward_. 
+The _mode_ attribute is set to 'nat', which means it's easy for virtual machines using this bridge to send requests to the workstation on the home network and to the Internet, but impossible for the workstation to send requests to these virtual machines. 
+
+The virsh net-dumpxml command displays libvirt's network config. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh net-dumpxml default 
+....
+
+This is how the default network is configured. 
+
+[source,XML]
+....
+<network>
+  <name>default</name>
+  <uuid>beb06c88-f2a8-47b6-b82a-d07f7170bacd</uuid>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:1c:9b:1c'/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+    </dhcp>
+  </ip>
+</network>
+....
+
+
+
+
+==  permissions 
+
+Only required for non-root? 
+
+libvirt uses qemu to do the hard work, and qemu uses ACLs (Access Control Lists). 
+Permissions for _virbr0_ are set in qemu's config file. 
+
+[source,shell]
+....
+[nick@host1 ~]$ cat /etc/qemu-kvm/bridge.conf 
+allow virbr0
+[nick@host1 ~]$ 
+....
+
+
+
+

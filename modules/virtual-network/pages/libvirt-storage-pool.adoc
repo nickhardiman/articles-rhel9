@@ -1,0 +1,197 @@
+
+= libvirt storage pool
+Nick Hardiman 
+:source-highlighter: highlight.js
+
+The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It's used by RHV (Red Hat Virtualization), Openstack, and even the latest Openshift.
+
+Libvirt [manages storage] using pools to store volumes.
+Here the storage pool is a directory, _/var/lib/libvirt/images/_. 
+It's a default location provided by libvirt. 
+Other storage options include an NFS share, an iSCSI target or multipath to a SAN. 
+
+The disk image used by a virtual machine is a storage volume. 
+Install ISO files will also go in here. 
+
+Create a libvirt storage pool using the ``virsh`` command. 
+
+.storage pool containing three volumes 
+....
+.-------------------------------------.
+|                                     |    
+|   storage pool 1                    |    
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 1           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 2           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+|                                     |    
+|   +-----------------------------+   |    
+|   |                             |   |   
+|   |  storage volume 3           |   |
+|   |                             |   |  
+|   +-----------------------------+   |  
+.-------------------------------------.  
+....
+
+
+
+
+== a storage pool for your image files  
+
+Each virtual machine has a storage volume - this is the disk image.
+
+A storage pool is where image files are kept. 
+A storage pool can be made from many types of storage, 
+like a local disk drive, a distributed file system, or a SCSI volume.
+Machine image files contain a lot of empty space. 
+Storing them somewhere that deduplicates blocks saves a lot of room. 
+VDO 
+
+We use the simplest kind of storage pool - a directory.
+
+
+
+
+
+
+== libvirt's storage pool
+
+There is no storage pool yet. 
+
+[source,shell]
+----
+[root@host1 libvirt]# virsh pool-list  --all
+ Name     State      Autostart
+--------------------------------
+
+[root@host1 libvirt]#
+----
+
+But a directory to hold images does exist.
+Files in here get the special SELinux file type _virt_var_lib_t_.
+
+[source,shell]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# 
+[root@host1 images]# ls -laZ
+total 0
+drwx--x--x. 2 root root system_u:object_r:virt_image_t:s0     6 Aug 26 19:07 .
+drwxr-xr-x. 9 root root system_u:object_r:virt_var_lib_t:s0 106 Aug 26 19:07 ..
+[root@host1 images]#  
+----
+
+
+
+This XML defines a storage pool named _images_. 
+
+[source,XML]
+----
+<pool type='dir'>
+  <name>images</name>
+  <target>
+    <path>/var/lib/libvirt/images</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+      <label>system_u:object_r:virt_image_t:s0</label>
+    </permissions>
+  </target>
+</pool>
+----
+
+Create.
+
+[source,shell]
+----
+[root@host1 libvirt]# vi pool-images.xml 
+----
+
+Add. 
+
+[source,shell]
+----
+[root@host1 libvirt]# virsh pool-define pool-images.xml 
+Pool images defined from pool-images.xml
+
+[root@host1 libvirt]# 
+----
+
+Virsh stores a copy of this XML in its configuration directory. 
+
+[source,shell]
+----
+[root@host1 libvirt]# cat /etc/libvirt/storage/images.xml
+<!--
+WARNING: THIS IS AN AUTO-GENERATED FILE. CHANGES TO IT ARE LIKELY TO BE
+OVERWRITTEN AND LOST. Changes to this xml configuration should be made using:
+  virsh pool-edit images
+or other application using the libvirt API.
+-->
+
+<pool type='dir'>
+...
+</pool>
+[root@host1 libvirt]# 
+----
+
+
+=== delete 
+
+If it's not right, remove the new config with _virsh pool-undefine_.
+
+[root@host1 libvirt]# virsh pool-undefine images
+Pool images has been undefined
+
+[root@host1 libvirt]# 
+
+
+
+== start the libvirt pool
+
+Start. 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh pool-start images
+Pool images started
+
+[root@host1 libvirt]# 
+[root@host1 libvirt]# virsh pool-list  --all
+ Name     State    Autostart
+------------------------------
+ images   active   no
+
+[root@host1 libvirt]# virsh pool-autostart images
+Pool images marked as autostarted
+
+[root@host1 libvirt]# 
+[root@host1 libvirt]# virsh pool-list  --all
+ Name     State    Autostart
+------------------------------
+ images   active   yes
+
+[root@host1 libvirt]# 
+....
+
+Check the pool is empty.
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh vol-list images
+ Name   Path
+--------------
+
+[root@host1 libvirt]# 
+....
+

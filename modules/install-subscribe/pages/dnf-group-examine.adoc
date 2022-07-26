@@ -1,0 +1,190 @@
+= examine DNF groups  
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 13-09-2021
+
+A DNF group is a collection of RPM packages. 
+
+Some packages are useful to install together, even though they don't depend on each other to work. 
+A DNF group defines a useful collection of packages.
+
+A DNF group is not related to package dependencies. 
+Installing one RPM package often means installing more than one package - the one you want and other packages required to make it work. 
+
+
+== a DNF group 
+
+RHEL has dozens of DNF groups, to help with system administration, office work and container development. 
+
+The DNF group "System Tools" lists packages for working with network connections, interfaces, storage and more. 
+
+Groups are listed under four headings. 
+
+* Available Environment Groups
+* Installed Environment Groups
+* Installed Groups
+* Available Groups
+
+
+== an environment group 
+
+An environment group is everything required to create a customized environment, such as a hypervisor system for maanging virtual machines.
+The Anaconda installer uses environment groups when building a new system.
+An environment group contains many groups. 
+
+An environment group contains groups. 
+
+[source,shell]
+....
+[nick@host1 roles]$ dnf group info 'Virtualization Host'
+...
+Environment Group: Virtualization Host
+ Description: Minimal virtualization host.
+ Mandatory Groups:
+   Base
+   Core
+   Standard
+   Virtualization Hypervisor
+   Virtualization Tools
+ Optional Groups:
+   Debugging Tools
+   Network File System Client
+   Remote Management for Linux
+   Virtualization Platform
+[nick@host1 roles]$ 
+....
+
+
+
+== group commands 
+
+`dnf group (something)`, where something is info, install, list, remove, upgrade or mark. 
+Run `man dnf` and search for _Group Command_. 
+
+== list groups 
+
+List DNF groups. 
+
+[source,shell]
+----
+[nick@host1]~%  dnf group list  
+
+Not root, Subscription Management repositories not updated
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Last metadata expiration check: 2:34:28 ago on Tue 26 Jul 2022 11:31:03 BST.
+Available Environment Groups:
+   Server
+   Minimal Install
+   Workstation
+   Custom Operating System
+Installed Environment Groups:
+   Server with GUI
+   Virtualization Host
+Installed Groups:
+   Container Management
+   Headless Management
+Available Groups:
+   .NET Development
+   Console Internet Tools
+   RPM Development Tools
+   Scientific Support
+   Legacy UNIX Compatibility
+   Network Servers
+   Graphical Administration Tools
+   Development Tools
+   Security Tools
+   Smart Card Support
+   System Tools
+[nick@host1]~% 
+----
+
+
+
+
+== list packages in a group
+
+List packages in the DNF group "System Tools".
+
+[source,shell]
+----
+[nick@host1 ~]$ dnf group info "System Tools"
+...
+Group: System Tools
+ Description: This group is a collection of various tools for the system, such as the client for connecting to SMB shares and tools to monitor network traffic.
+ Default Packages:
+   NetworkManager-libreswan
+   chrony
+   cifs-utils
+...
+ Optional Packages:
+   PackageKit-command-not-found
+   aide
+   autofs
+...
+[nick@host1 ~]$ 
+----
+
+
+== lists groups and their IDs 
+
+
+Each group has a group ID. 
+The group name and ID are similar. 
+The "Minimal Install" group has ID _minimal-environment_.
+
+[source,shell]
+----
+[nick@host1 ~]$ dnf group list --ids
+...
+   Minimal Install (minimal-environment)
+...
+[nick@host1 ~]$ 
+----
+
+These IDs are also shown with the -v option. 
+
+[source,shell]
+----
+[nick@host1 ~]$ dnf group list -v
+Loaded plugins: builddep, changelog, config-manager, copr, debug, debuginfo-install, download, generate_completion_cache, groups-manager, kpatch, needs-restarting, playground, product-id, repoclosure, repodiff, repograph, repomanage, reposync, subscription-manager, uploadprofile
+Not root, Subscription Management repositories not updated
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+DNF version: 4.10.0
+...
+Available Environment Groups:
+   Fedora Custom Operating System (custom-environment)
+   Minimal Install (minimal-environment)
+   Fedora Workstation (workstation-product-environment)
+...
+   System Tools (system-tools)
+   Text-based Internet (text-internet)
+   Window Managers (window-managers)
+[nick@host1 ~]$ 
+----
+
+
+
+== view hidden groups 
+
+The group list includes the most useful groups, not all. 
+Dozens of groups are hidden, including the installed Gnome group. 
+View all 160 groups using the --hidden option. 
+
+[source,shell]
+----
+[nick@host1 ~]$ dnf group list --hidden
+...
+Installed Groups:
+   Core
+   GNOME
+...
+   Xfce Software Development
+   XMonad
+   XMonad for MATE
+[nick@host1 ~]$ 
+----
+

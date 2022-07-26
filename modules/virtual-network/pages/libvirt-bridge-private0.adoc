@@ -1,0 +1,221 @@
+= create a libvirt private bridge
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 23-11-2020
+
+
+Create a private bridge and libvirt network named _privbr0_.
+
+Libvirt does all the work here. 
+It does a bunch of jobs, including creating the bridge, setting the MAC address and setting up DHCP. 
+This work is required. 
+
+* Create an XML file containing the config.
+* Hand the XML to libvirt.
+* Tell libvirt to start the new bridge. 
+
+== the theory 
+
+The virtual machine guest1 will be attached to both bridges. 
+This makes it part of the physical home network and the virtual private network.
+
+
+.networks 
+....
+.----------------------------.
+|                            |
+|  host1                     |
+|                            |   
+|   +----------+             |    
+|   |          |             |
+|   |  guest1  |             |  
+|   |          +----> public +--> Internet  
+|   |          |             |  
+|   |          +---> private |   
+|   +----------+             |
+.----------------------------.  
+....
+
+All guests can join this new _private_ network and talk to each other.
+Unlike _default_, this network is isolated because there is no connection to the outside world.
+The host is also connected to the _private_ networkt. 
+NetworkManager runs another copy of dnsmasq to provide DHCP and DNS services. 
+
+Add a second network interface on guest1, and connect it to the new network. 
+VM guest1 already has one network interface, enp1s0.
+The current enp1s0 interface on the guest connects to the virbr0 interface on the host, and the new enp2s0 interface connects to privbr0.
+
+.interfaces 
+....
+.---------------------------.
+|                           |
+|  host                     |
+|                           |   
+|   +----------+            |    
+|   |          |            |
+|   |  guest1  |            |  
+|   |          |            |  
+|   |  enp1s0  +---> pubbr0 | 
+|   |          |            |  
+|   |  enp2s0  +--> privbr0 |   
+|   +----------+            |
+.---------------------------.  
+....
+
+
+
+
+== create the libvirt network privbr0
+
+=== create an XML file
+
+Create an XML file defining the interface. 
+
+Run the command ``vim net-privbr0.xml``.
+
+Add XML. 
+
+This markup is based on the 
+https://libvirt.org/formatnetwork.html#examplesPrivate[libvirt example].
+
+.net-privbr0.xml
+[source,XML]
+----
+<network>
+  <name>private0</name>
+  <bridge name="privbr0"/>
+  <mac address='52:54:00:00:01:01'/>
+  <domain name='private0.example.com' localOnly='yes'/>
+  <ip address="192.168.152.1" netmask="255.255.255.0">
+    <dhcp>
+      <range start="192.168.152.2" end="192.168.152.254"/>
+    </dhcp>
+  </ip>
+  <ip family="ipv6" address="2001:db8:ca2:3::1" prefix="64"/>
+</network>
+----
+
+
+=== check the file with xmllint 
+
+Check your work with xmllint. 
+This is a tool for detecting errors in XML files. 
+
+No news is good news. 
+
+[source,shell]
+----
+[root@host1 libvirt]# xmllint --noout  ./net-privbr0.xml 
+[root@host1 libvirt]# 
+----
+
+xmllint lists any problems it finds, and attempts to show where the problems are.   
+In this case, a copy'n'paste missed the last line (_</network>_). 
+Line 10 is a whole lot of nothing. 
+
+[source,shell]
+----
+[root@host1 libvirt]# xmllint --noout net-privbr0-broken.xml 
+net-privbr0-broken.xml:10: parser error : Premature end of data in tag network line 1
+
+^
+[root@host1 libvirt]# 
+----
+
+
+=== hand it to libvirt 
+
+Create the new network. Run ``sudo virsh net-define net-privbr0.xml``
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-define net-privbr0.xml
+Network privbr0 defined from net-privbr0.xml
+
+[root@host1 libvirt]#  
+....
+
+The network is created and is persistent - it will still exist across reboots. 
+But it is not in use.
+
+[source,shell]
+.... 
+[root@host1 libvirt]# virsh net-list --all
+ Name      State      Autostart   Persistent
+----------------------------------------------
+ default   active     yes         yes
+ privbr0   inactive   no          yes
+
+[root@host1 libvirt]# 
+....
+
+=== start the new network 
+
+Set the new network to start on boot, and start it now. 
+
+[source,shell]
+....
+[root@host1 libvirt]# virsh net-start privbr0
+Network privbr0 started
+
+[root@host1 libvirt]# virsh net-autostart privbr0
+Network privbr0 marked as autostarted
+
+[root@host1 libvirt]# 
+[root@host1 libvirt]# virsh net-list --all
+ Name      State    Autostart   Persistent
+--------------------------------------------
+ default   active   yes         yes
+ privbr0   active   yes         yes
+
+[root@host1 libvirt]# 
+....
+
+
+=== check interfaces 
+
+Libvirt creates a new bridge. 
+Two new interfaces appear on the host, *privbr0* and *privbr0-nic*.
+There is no need to create a bridge manually using ``nmcli connection``, ``ip link`` or ``bridge link`` commands. 
+
+[source,shell]
+....
+[nick@host1 ~]$ ip addr show
+...
+8: privbr0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 52:54:00:23:0f:f9 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.152.1/24 brd 192.168.152.255 scope global privbr0
+       valid_lft forever preferred_lft forever
+    inet6 2001:db8:ca2:3::1/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe23:ff9/64 scope link 
+       valid_lft forever preferred_lft forever
+9: privbr0-nic: <BROADCAST,MULTICAST> mtu 1500 qdisc fq_codel master privbr0 state DOWN group default qlen 1000
+    link/ether 52:54:00:23:0f:f9 brd ff:ff:ff:ff:ff:ff
+....
+
+
+=== loosen permissions 
+
+Only required for non-root? 
+
+libvirt uses qemu to do the hard work, and qemu uses ACLs (Access Control Lists). 
+It won't let anyone use the new _privbr0_ interface. 
+Let the VMs use the new network by copying permissions for the current _virbr0_ interface. 
+Permissions for _virbr0_ are set in qemu's config file. 
+
+[source,shell]
+....
+[nick@host1 ~]$ cat /etc/qemu-kvm/bridge.conf 
+allow virbr0
+[nick@host1 ~]$ 
+....
+
+Add a similar line for the new bridge interface. 
+[source,shell]
+....
+[nick@host1 ~]$ sudo sh -c 'echo "allow privbr0" >> /etc/qemu-kvm/bridge.conf'
+[nick@host1 ~]$ 
+....
+
+

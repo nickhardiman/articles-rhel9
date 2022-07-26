@@ -1,0 +1,417 @@
+= plan the virtual network 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 21-06-2020
+
+! Change 
+
+This page is a mess. 
+
+
+Use libvirt to create a test network on my laptop.
+
+I want a virtual test network. 
+I can't afford a big second-hand workstation so I bumped up the memory and disk on an old laptop. 
+
+The old laptop can be used standalone, but I usually end up using my office-issue MacBook Pro as a 
+workstation and the old laptop as a headless machine. 
+SSH and port forwarding connects the two. 
+
+.workstation, host and guests  
+....
+.-----------------.      .------------------------------------------------------.     
+|                 |      |                                                      |    
+|   workstation   |      |   host1                                              |    
+|                 +----->|                                                      |    
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   |  guest1    |   |  guest2    |   |  guest3    |   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |                                                      |    
+.-----------------.      .------------------------------------------------------.  
+....
+
+
+
+
+
+
+== virtual network 
+
+Only one physical host, with many virtual guests. 
+
+Good for 
+
+* portability. Not the cross-platform programming kind, this is literally carrying your test network in a bag. 
+
+Bad for 
+
+* data center hardware tests - 10Gb ethernet, IPMI
+* big VMs - Oracle database, Microsoft Windows
+* other virtualization platforms - VMware, Openstack
+* virtualization tricks - compressed storage, live migration 
+
+Not sure about 
+
+* multipath 
+* VLAN
+* RHV
+* HA cluster
+
+
+.one host, many guests 
+....
+.---------------------------------------------------------------------------------------------------------.
+|                                                                                                         |    
+|   host1                                                                                                 |    
+|                                                                                                         |    
+|   +-----------------------------+   +-----------------------------+   +-----------------------------+   | 
+|   |                             |   |                             |   |                             |   |
+|   |  guest1                     |   |   guest2                    |   |   guest3                    |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |   +---------------------+   |   |                             |   |
+|   |   | container1          |   |   |   | container4          |   |   |                             |   |
+|   |   +---------------------+   |   |   +---------------------+   |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |   | container2          |   |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |   | container3          |   |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   +-----------------------------+   +-----------------------------+   +-----------------------------+   |  
+.---------------------------------------------------------------------------------------------------------.  
+....
+
+
+== technical stack 
+
+.technical stack of host and guest
+....
+
+host 
+.-------------------------------------.
+|                                     |    
+|   application layer                 |    
+|                                     |    
+|    guest                            |    
+|   .-----------------------------.   | 
+|   |  application layer          |   |
+|   +-----------------------------+   |
+|                                     |    
+|   +-----------------------------+   |
+|   |  OS layer                   |   |
+|   +-----------------------------+   |
+|                                     |    
+|   +-----------------------------+   |
+|   | hardware layer              |   |
+|   .-----------------------------.   |
+|                                     |    
++-------------------------------------+   
+
++-------------------------------------+    
+|                                     |    
+|   OS layer                          |    
+|                                     |    
++-------------------------------------+    
+
++-------------------------------------+    
+|                                     |    
+|   hardware layer                    |    
+|                                     |    
+.-------------------------------------.  
+....
+
+
+=== host hardware layer 
+
+==== my laptop
+
+one big host machine 
+
+. host1
+
+laptop specs 
+
+* CPU - 4 cores
+* memory - 32G
+* disk - 500G SSD
+
+
+==== CPU 
+
+CPUs can be overprovisioned. 
+Assume an overprovision of 10X is OK.
+4 CPUs x 10 = 40.
+
+
+==== memory 
+
+Memory can be overprovisioned.  
+Hard to calculate. 
+Assume the host1 platform needs 4GB (1GB for OS + 1GB for Gnome + 1GB for libvirt + 1GB other). 
+Assume the guests need ten times as much. 
+40G + 4G does not fit in 32G.
+
+Overprovisioning is riskier than CPU - Memory is protected by the OOM killer.
+
+Memory is allocated when needed. 
+For example, three idle machines, each specified with 2GB memory, probably use 3GB, not 6GB.
+
+
+
+This is top, copied after starting satellite1, capsule1 and isolatedn1.
+These three do not take up 32GB (14 + 14 + 4).
+Satellite is installed on satellite1, but no applications have yet been installed on the other two. 
+
+[source,shell]
+----
+Tasks: 293 total,   1 running, 292 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  1.7 us,  0.4 sy,  0.0 ni, 97.8 id,  0.0 wa,  0.1 hi,  0.0 si,  0.0 st
+MiB Mem :  31884.5 total,  18644.8 free,   8864.9 used,   4374.7 buff/cache
+MiB Swap:  16088.0 total,  16088.0 free,      0.0 used.  22474.2 avail Mem 
+
+    PID USER  PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                                     
+   4281 nick  20   0   16.7g   6.2g  20092 S  14.3  19.9   6:10.69 qemu-kvm                                                    
+   5546 nick  20   0   14.1g 817552  20180 S   0.3   2.5   0:13.51 qemu-kvm                                                    
+   5611 nick  20   0 5568936 861792  20080 S   0.3   2.6   0:48.24 qemu-kvm  
+...  
+----
+
+
+==== disk
+
+Disk is not overprovisioned. 
+It can be, but to lessen the strain on the CPU, disks are provisioned in full. 
+No sparse disks, no compression, no encryption.
+
+Assume the host1 platform needs 20G. 
+Assume the guests need ten times that much. 
+200G + 20G easily fits in one 500GB SSD. 
+
+
+
+=== host OS layer 
+
+* OS: RHEL 8
+* subscription: free developer subscription
+* Groups: Server with graphical desktop 
+* QEMU and KVM 
+
+
+=== host application layer 
+
+* Gnome - requires 1GB
+* `dnf module install virt` plus other virtualization tools
+* libvirt provides a virtual stack 
+* RHV might be better (adds Ovirt, pretty web UI), or may eat resources.
+
+
+=== guest hardware layer 
+
+* QEMU machine type is pc-q35, architecture is x86_64 - run `virsh dumpxml guest1 | grep machine`
+* some machines are underspec'd compared to system requirements - satellite and capsule memory
+
+
+=== guest OS layer 
+
+* RHEL 8 minimal disk image
+* does not have graphical desktop or a running firewall
+* OS is either RHEL 7 or RHEL 8. 
+* subscription is Employee Sku for  machines running Red Hat enterprise software
+* subscription is developer for the rest  
+
+
+=== guest application layer 
+
+* some machines run Red Hat enterprise software - Satellite, Ansible Tower, Directory Server 
+
+
+
+== libvirt networks 
+
+Three networks 
+
+* default. Machines on this network can get to the Internet. 
+* private1. These machines can get to the default gateway.
+
+I want an isolated network, so it's more like the real world. 
+All it takes for all machines to reach Internet is to add routes, and maybe some dnsmasq changes on the host.  
+All machines have IPv4 forwarding enabled by default. 
+
+Two DNS zones 
+
+* .lab.example.com - machines in the default network. Managed by dnsmasq on host1. 
+* .private.example.com - machines in the other networks. Managed by guest1.
+
+
+.networks 
+....
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| default  |-----------------+----------- 192.168.122.0/24 
+|              |      |          |                 |            52:54:00:00:00:XX 
++--------------+      .----------.                 |            .lab.example.com
+                                                   |         
+                                           +------------+   
+                                           | default    |   
+                                           | gateway    | 
+                                           |            |  
+                                           +------------+   
+                                                   |              
+                                                   |            
+                      .----------.                 |             
+                      |          |                 |             
+                      | private1 |-----------------+-------+----------- 192.168.152.0/24 
+                      |          |                                      52:54:00:00:01:XX 
+                      .----------.                                      .private.example.com
+                                                                          
+....
+
+
+
+=== virtual machines 
+
+Dual-homed guest1 provides services (TFTP, DHCP, DNS) on the private interface, to the private1 network. 
+This machine also acts as the gateway. 
+
+Three small RHEL 8 boxes
+
+. guest1
+. guest2
+. guest3
+
+
+
+
+.libvirt networks and guests 
+....
+                       KVM/libvirt
+
+ host machine          networks                       guest machines
+
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| default  |-----------------+-------------------------------------
+|              |      |          |                 |            
++--------------+      .----------.                 |             
+                                                   |            
+                                           +------------+  
+                                           |            |   
+                                           | guest1     |    
+                                           |            |     
+                                           +------------+    
+                                                   |       
+                                                   |          
+                      .----------.                 |            
+                      |          |                 |           
+                      | private1 |-----------------+-------+-------------------+---------
+                      |          |                         |                   |                
+                      .----------.                         |                   |         
+                                                           |                   |                
+                                                   +------------+      +------------+      
+                                                   |            |      |            |      
+                                                   | guest2     |      | guest3     |     
+                                                   |            |      |            |      
+                                                   +------------+      +------------+    
+....
+
+
+
+
+
+
+=== network interfaces 
+
+
+I'm trying to make predictable IP adresses and MAC addresses. 
+
+* network addresses end in 1
+* IP and MAC addresses end with the same number eg. 52:54:00:00:00:02 and 192.168.122.2
+
+
+.interfaces 
+....
+
+
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .------------------.
+|              |      |                  |
+| host1        |      |   default        |
+|              +------|           virbr0 |---------+-----------------
+|              |      |52:54:00:00:00:01 |         |           
++--------------+      |    192.168.122.1 |         |                  
+                      .------------------.         |                 
+                                           +------------------+ 
+                                           |     eth0         | 
+                                           |52:54:00:00:00:02 | 
+                                           | 192.168.122.2    |
+                                           |   guest1         | 
+                                           |     eth1         | 
+                                           |52:54:00:00:01:02 | 
+                                           | 192.168.152.2    | 
+                                           +------------------+  
+                      .------------------.         |                  
+                      |                  |         |                  
+                      |   private1       |         |                  
+                      |           virbr1 |---------+-------+--------------------+----------
+                      |52:54:00:00:01:01 |                 |                    |        
+                      |                  |                 |                    |           
+                      .------------------.                 |                    |              
+                                                   +------------------+ +------------------+ 
+                                                   |    eth0          | |    eth0          | 
+                                                   |52:54:00:00:01:04 | |52:54:00:00:01:05 | 
+                                                   | 192.168.152.4    | | 192.168.152.5    | 
+                                                   |   capsule1       | |   isolatedn1     | 
+                                                   |    eth1          | |    eth1          | 
+                                                   |52:54:00:00:02:02 | |52:54:00:00:02:03 | 
+                                                   | 192.168.162.2    | | 192.168.162.3    | 
+                                                   +------------------+ +------------------+ 
+....
+
+
+
+.guest interfaces and addresses
+[%header,format=csv]
+|===
+name,       interface, MAC, IP, domain
+*default*,       *virbr0*, 52:54:00:00:00:01, 192.168.122.1, lab.example.com
+guest1,          eth0,   52:54:00:00:00:04, 192.168.122.4, lab.example.com
+*private1*,      *virbr1*, 52:54:00:00:01:01, -, private.example.com
+guest2,          eth0,   52:54:00:00:00:05, 192.168.122.5, lab.example.com
+guest3,          eth0,   52:54:00:00:00:06, 192.168.122.6, lab.example.com
+|===
+
+
+
+=== guest resources 
+
+The resources add up to far too much for a 32GB laptop with a 500GB disk. 
+Libvirt allocates resources as required. 
+
+
+.guest resources
+[%header,format=csv]
+|===
+name,CPU,memory,disk
+guest1,     2,4G,20G
+guest2,     1,1G,10G
+guest3,     1,1G,10G
+|===
+
+
+
+

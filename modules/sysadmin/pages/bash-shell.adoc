@@ -9,15 +9,21 @@ The shell is a pillar of developer and sysadmin worlds, up there with the toolch
 
 A shell is a command interpreter that waits for your commands, ready to run its https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop[REPL (Read-Eval-Print Loop)] until you stop the program. The _shell_ name comes from a nut or seed analogy - shell on the outside, kernel on the inside. 
 
-Ths interactive command line shell is nowhere near as friendly as a GUI. 
-No-one is born knowing what '. ./.bashrc' means. 
-But there's no avoiding it - the shell has been around forever (in IT terms) and is everywhere. For instance, if the Linux startup process goes wrong, you may find yourself in the https://fedoramagazine.org/initramfs-dracut-and-the-dracut-emergency-shell/[dracut emergency shell].
 When you log into the system console, or SSH to a machine, or run tmux, you get your own copy of the _bash_ shell. 
 
-Bash knowledge is not shared out equally. 
-Some knowledge is universal - you can't use Bash for five minutes without running _ls_. 
-And some knowledge is arcane, like job control.
-If you really want to find out what Bash is capable of, read the https://www.gnu.org/software/bash/manual/bash.html[manual]. 
+== the CLI (Command Line Interface) 
+
+Ths interactive command line shell is nowhere near as friendly as a GUI.
+
+[source,shell]
+----
+[nick@host1 ~]$
+----
+
+Ths interactive command line shell is nowhere near as friendly as a GUI. 
+The CLI is not intuitive. No-one is born knowing what '. ./.bashrc' means. 
+But there's no avoiding it when you want to do server work. 
+The shell has been around forever (in IT terms) and is everywhere. For instance, if the Linux startup process goes wrong, you may find yourself in the https://fedoramagazine.org/initramfs-dracut-and-the-dracut-emergency-shell/[dracut emergency shell].
 
 
 == GNU Bash 
@@ -40,7 +46,6 @@ This is free software; you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 [nick@host1 ~]$ 
 ----
-
 
 == the Bash back story 
 

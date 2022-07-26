@@ -1,0 +1,122 @@
+= check KVM, QEMU and libvirt 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2021
+
+
+One big physical machine can run many small virtual machines. 
+KVM, QEMU and libvirt make virtualization work. 
+Many virtualization packages are already installed. 
+
+https://www.linux-kvm.org/page/Main_Page[Linux KVM] is the engine that makes virtualization work on RHEL 8. 
+
+https://www.qemu.org/[QEMU] is a machine emulator. 
+QEMU handles hardware emulation for virtual machines.
+
+The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It's used by RHV (Red Hat Virtualization), Openstack, and even the latest Openshift.
+
+
+
+== KVM 
+
+The  https://www.redhat.com/en/topics/virtualization/what-is-KVM hypervisor[KVM (Kernel-based Virtual Machine) hypervisor] is built into Linux. 
+Run ``lsmod | grep kvm`` to see the kernel modules.
+
+== QEMU 
+
+[source,shell]
+----
+/usr/libexec/qemu-kvm --version
+----
+
+[source,shell]
+----
+yum info qemu-kvm
+----
+
+
+== libvirt 
+
+libvirt provides a management interface to QEMU. 
+Libvirt is used by the https://www.redhat.com/en/technologies/virtualization/enterprise-virtualization[RHV (Red Hat Virtualization)] system, and RHV's upstream open-source project https://www.ovirt.org/[oVirt].
+
+
+libvirt-daemon manages the virtualization. 
+The version is a https://libvirt.org/news.html[couple years old]. 
+This libvirt version was included in Fedora 28, which was used as the base of RHEL 8. 
+
+[source,shell]
+----
+[nick@host ~]$ /usr/sbin/libvirtd --version
+/usr/sbin/libvirtd (libvirt) 4.5.0
+[nick@host ~]$ 
+----
+
+The systemd service _libvirtd_ is running. 
+
+=== libirt's network devices
+
+Libvirt created a couple network devices.
+
+* a bridge devices named virbr0 
+* a https://en.wikipedia.org/wiki/TUN/TAP[TUN/TAP] network interface named virbr0-nic, used by the bridge. 
+
+Run ``nmcli device status`` to see theses. 
+
+[source,shell]
+----
+[root@host1 ~]# nmcli device status
+DEVICE          TYPE      STATE                   CONNECTION 
+enp2s0f0        ethernet  connected               enp2s0f0   
+virbr0          bridge    connected (externally)  virbr0     
+wlp3s0          wifi      disconnected            --         
+p2p-dev-wlp3s0  wifi-p2p  disconnected            --         
+lo              loopback  unmanaged               --         
+virbr0-nic      tun       unmanaged               --         
+[root@host1 ~]# 
+----
+
+
+== systemd 
+
+From man systemd-machined
+
+systemd-machined is a system service that keeps track of virtual machines and containers, and processes belonging to them.
+
+[source,shell]
+----
+[nick@host1 ~]$ machinectl 
+MACHINE       CLASS SERVICE      OS VERSION ADDRESSES
+qemu-1-guest1 vm    libvirt-qemu -  -       -        
+
+1 machines listed.
+[nick@host1 ~]$ 
+----
+
+Unit file /usr/lib/systemd/system/systemd-machined.service runs /usr/lib/systemd/systemd-machined
+
+[source,shell]
+----
+[nick@host1 ~]$ systemctl status machined
+Unit machined.service could not be found.
+[nick@host1 ~]$ man machinectl
+[nick@host1 ~]$ systemctl status systemd-machined
+● systemd-machined.service - Virtual Machine and Container Registration Service
+   Loaded: loaded (/usr/lib/systemd/system/systemd-machined.service; static; vendor preset: disabled)
+   Active: active (running) since Wed 2021-01-13 08:42:11 GMT; 1h 35min ago
+     Docs: man:systemd-machined.service(8)
+           https://www.freedesktop.org/wiki/Software/systemd/machined
+ Main PID: 1036 (systemd-machine)
+   Status: "Processing requests..."
+    Tasks: 1 (limit: 406402)
+   Memory: 2.2M
+   CGroup: /system.slice/systemd-machined.service
+           └─1036 /usr/lib/systemd/systemd-machined
+
+Jan 13 08:42:10 host1.silvan.uk systemd[1]: Starting Virtual Machine and Container Registration Service...
+Jan 13 08:42:11 host1.silvan.uk systemd[1]: Started Virtual Machine and Container Registration Service.
+Jan 13 09:10:11 host1.silvan.uk systemd-machined[1036]: New machine qemu-1-guest1.
+[nick@host1 ~]$ 
+----
+

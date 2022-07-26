@@ -1,0 +1,200 @@
+= install the 'Virtualization Host' environment group
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-01-2021
+
+
+
+
+== the DNF module virt  
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module list virt
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:05:12 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)
+Name         Stream              Profiles           Summary                     
+virt         rhel [d][e]         common [d]         Virtualization module       
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+[nick@host1 ~]$ 
+....
+
+This module only has one stream, _rhel_. 
+This stream is enabled. 
+
+Selecting a stream is not like using the DNF plug-in 
+https://dnf-plugins-core.readthedocs.io/en/latest/versionlock.html[versionlock] 
+because an enabled stream receives maintenance updates.
+Running `dnf versionlock add postgresql` prevents the client package being upgraded, so bugfixes and security updates can't be installed. 
+ 
+
+=== module profile 
+
+Every module has an installation profile. 
+A profile is a collection of packages for one use case. 
+Most modules, like this one, have only one profile called *common*.
+
+The Postgresql module has two profiles, *client* and *server*. 
+The client profile installs one package, _postgesql_, which pulls in a few dependencies . 
+The server profile is similar, installing _postgesql-server_. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module info virt
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:10:16 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Name             : virt
+Stream           : rhel [d][e][a]
+Version          : 8000020190510171727
+
+...(lots of data)...
+
+                 : virt-p2v-maker-1:1.38.4-10.module+el8+2709+40ed2f2c.x86_64
+                 : virt-v2v-1:1.38.4-10.module+el8+2709+40ed2f2c.x86_64
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled, [a]ctive
+[nick@host1 ~]$ 
+....
+
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module info virt --profile
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:08:31 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Name   : virt:rhel:8000020190510171727:55190bc5:x86_64
+common : libguestfs
+       : libvirt-client
+       : libvirt-daemon-config-network
+       : libvirt-daemon-kvm
+
+...(more like these)...
+
+Name   : virt:rhel:820190226174025:9edba152:x86_64
+common : libguestfs
+       : libvirt-client
+       : libvirt-daemon-config-network
+       : libvirt-daemon-kvm
+[nick@host1 ~]$ 
+
+....
+
+A profile is a collection of packages for one purpose, so it can't be enabled or disabled. 
+
+
+
+== install the virt module profile 
+
+Install virt, stream _rhel_, profile _common_.
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module install virt 
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:13:14 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Dependencies resolved.
+================================================================================
+ Package           Arch   Version        Repository                        Size
+================================================================================
+Installing group/module packages:
+ libguestfs        x86_64 1:1.40.2-25.module+el8.3.0+7421+642fe24f
+                                         rhel-8-for-x86_64-appstream-rpms 2.7 M
+ libvirt-client    x86_64 6.0.0-28.module+el8.3.0+7827+5e65edd7
+                                         rhel-8-for-x86_64-appstream-rpms 361 k
+Installing dependencies:
+ autogen-libopts   x86_64 5.18.12-8.el8  rhel-8-for-x86_64-appstream-rpms  75 k
+ gnutls-dane       x86_64 3.6.14-7.el8_3 rhel-8-for-x86_64-appstream-rpms  51 k
+ gnutls-utils      x86_64 3.6.14-7.el8_3 rhel-8-for-x86_64-appstream-rpms 347 k
+ hivex             x86_64 1.3.18-20.module+el8.3.0+6423+e4cb6418
+                                         rhel-8-for-x86_64-appstream-rpms 112 k
+ libvirt-bash-completion
+                   x86_64 6.0.0-28.module+el8.3.0+7827+5e65edd7
+                                         rhel-8-for-x86_64-appstream-rpms  54 k
+ scrub             x86_64 2.5.2-14.el8   rhel-8-for-x86_64-appstream-rpms  45 k
+ supermin          x86_64 5.1.19-10.module+el8.3.0+6423+e4cb6418
+                                         rhel-8-for-x86_64-appstream-rpms 709 k
+ syslinux          x86_64 6.04-4.el8     rhel-8-for-x86_64-baseos-rpms    579 k
+ syslinux-extlinux x86_64 6.04-4.el8     rhel-8-for-x86_64-baseos-rpms    141 k
+ syslinux-extlinux-nonlinux
+                   noarch 6.04-4.el8     rhel-8-for-x86_64-baseos-rpms    386 k
+ syslinux-nonlinux noarch 6.04-4.el8     rhel-8-for-x86_64-baseos-rpms    555 k
+Installing module profiles:
+ virt/common                                                                   
+
+Transaction Summary
+================================================================================
+Install  13 Packages
+
+Total download size: 6.1 M
+Installed size: 13 M
+Is this ok [y/N]: 
+....
+
+
+=== remove module packages
+
+Remove all the module packages. 
+
+This removes a lot more than it added. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module remove --all virt 
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:16:19 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Dependencies resolved.
+================================================================================
+ Package         Arch   Version                                Repository  Size
+================================================================================
+Removing:
+ hivex           x86_64 1.3.18-20.module+el8.3.0+6423+e4cb6418 @rhel-8-for-x86_64-appstream-rpms
+                                                                          257 k
+...
+Transaction Summary
+================================================================================
+Remove  98 Packages
+
+Freed space: 130 M
+Is this ok [y/N]: y
+...
+  usbredir-0.8.0-1.el8.x86_64                                                   
+  yajl-2.1.0-10.el8.x86_64                                                      
+
+Complete!
+[nick@host1 ~]$ 
+....
+
+
+=== reset the module 
+
+Erase your configuration change. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo dnf module reset virt
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:17:26 ago on Tue 05 Jan 2021 14:10:14 GMT.
+Dependencies resolved.
+================================================================================
+ Package           Architecture     Version             Repository         Size
+================================================================================
+Resetting modules:
+ virt                                                                          
+
+Transaction Summary
+================================================================================
+
+Is this ok [y/N]: y
+Complete!
+[nick@host1 ~]$ 
+....
+
+The disabled module can be re-enabled with `sudo dnf module enable virt`.
+
+== DNF module maintenance 
+
+No special module treatment is needed for system operation. 
+Running `dnf update` upgrades module packages to the latest versions provided by their streams. 
+

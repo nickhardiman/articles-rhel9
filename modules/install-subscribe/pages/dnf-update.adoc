@@ -1,0 +1,64 @@
+= update packages with DNF
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-01-2021
+
+Connect with SSH and update packages with DNF.
+
+If a system is installed from an ISO, there are probably newer packages to install. 
+Install media don't get updated with the latest packages. 
+The older the ISO file, the more packages require updates. 
+
+If a system is installed from Red Hat's CDN, there may not be newer packages. 
+
+
+
+== update 
+
+If the system is up to date, the reply looks like this. 
+
+[source,shell]
+----
+[root@host1 ~]# dnf -y update
+Updating Subscription Management repositories.
+Last metadata expiration check: 0:34:38 ago on Mon 25 Jul 2022 17:12:41 BST.
+Dependencies resolved.
+Nothing to do.
+Complete!
+[root@host1 ~]# 
+----
+
+If some packages are updated and new ones are added, the reply looks like this. 
+
+[source,shell]
+----
+[root@host1 ~]# dnf -y update
+Updating Subscription Management repositories.
+Last metadata expiration check: 0:04:07 ago on Mon 25 Jul 2022 17:12:41 BST.
+Dependencies resolved.
+...
+Transaction Summary
+======================================================
+Install   3 Packages
+Upgrade  74 Packages
+...
+Complete!
+[root@host1 ~]# 
+----
+
+
+
+== reboot if the kernel is updated
+
+Reboot to swap from the current kernel to the new one. 
+
+
+[source,shell]
+----
+[root@host1 ~]# systemctl reboot
+[root@host1 ~]# Connection to host1 closed by remote host.
+Connection to host1 closed.
+MacBook-Pro:~ nick$ 
+----
+
+
