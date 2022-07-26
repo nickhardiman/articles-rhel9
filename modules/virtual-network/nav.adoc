@@ -1,5 +1,5 @@
 * xref:index.adoc[]
-** xref:host1-dnf-module-virt.adoc[]
+** xref:dnf-module-virt.adoc[]
 ** xref:libvirt-plan.adoc[]
 ** xref:libvirt-storage-pool.adoc[]
 ** xref:libvirt-storage-volume-rhel8-iso.adoc[]

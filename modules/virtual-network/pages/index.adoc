@@ -3,5 +3,204 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 25-09-2021
 
-I'm in the process of experimenting with a free developer subscription and RHEL 8 on an Asus PN50  mini-PC in my home lab. 
-I'm writing about my experiments here. 
+!!! This page is a mess. 
+
+
+Use libvirt to create a test network on my laptop.
+
+This physical machine is the host to many virtual machines. 
+
+.workstation, host and guests  
+....
+.-----------------.      .------------------------------------------------------.     
+|                 |      |                                                      |    
+|   workstation   |      |   host1                                              |    
+|                 +----->|                                                      |    
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   |  guest1    |   |  guest2    |   |  guest3    |   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |                                                      |    
+.-----------------.      .------------------------------------------------------.  
+....
+
+
+
+
+== virtual network 
+
+Only one physical host, with many virtual guests. 
+
+Good for 
+
+* portability. Not the cross-platform programming kind, this is literally carrying your test network in a bag. 
+
+Bad for 
+
+* data center hardware tests - 10Gb ethernet, IPMI
+* big VMs - Oracle database, Microsoft Windows
+* other virtualization platforms - VMware, Openstack
+* virtualization tricks - compressed storage, live migration 
+
+Not sure about 
+
+* multipath 
+* VLAN
+* RHV
+* HA cluster
+
+
+== libvirt networks 
+
+Three networks 
+
+* default. Machines on this network can get to the Internet. 
+* private1. These machines can get to the default gateway.
+
+I want an isolated network, so it's more like the real world. 
+All it takes for all machines to reach Internet is to add routes, and maybe some dnsmasq changes on the host.  
+All machines have IPv4 forwarding enabled by default. 
+
+
+== network bridges 
+
+A bridge acts like a network switch that a guest plugs into. 
+A guest using any bridge can be reached from the host.
+Guests using the private bridges have restricted network access. 
+Only guests using pubbr0 can talk to the outside world. 
+
+Other guests rely on gateways to proxy their requests.
+Dual-homed guest1 provides services (TFTP, DHCP, DNS) on the private interface, to the private1 network. 
+This machine  acts as the gateway to the outside world. 
+
+For instance, guest5 can only send requests to the Internet if traffic is proxied via guest3 and guest1. 
+
+.libvirt networks and guests 
+....
+ host machine          virsh networks                 guest machines
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| public0  |-----------------+-------------------------------------
+|              |      |          |                 |                   |
++--------------+      .----------.                 |                   |
+                                                   |                   |
+                                           +------------+      +------------+
+                                           |            |      |            |   
+                                           | guest1     |      | guest2     |   
+                                           |            |      |            |   
+                                           +------------+      +------------+
+                                                   |       
+                                                   |          
+                      .----------.                 |            
+                      |          |                 |           
+                      | private0 |-----------------+-------+-------------------+---------
+                      |          |                         |                   |
+                      .----------.                         |                   |         
+                                                           |                   |                
+                                                   +------------+      +------------+
+                                                   |            |      |            |      
+                                                   | guest3     |      | guest4     |     
+                                                   |            |      |            |      
+                                                   +------------+      +------------+    
+                                                           |       
+                                                           |          
+                      .----------.                         |            
+                      |          |                         |           
+                      | private1 |-----------------+-------+-----------+---------
+                      |          |                 |                   |                
+                      .----------.                 |                   |         
+                                                   |                   |                
+                                          +------------+      +------------+      
+                                          |            |      |            |      
+                                          | guest5     |      | guest6     |     
+                                          |            |      |            |      
+                                          +------------+      +------------+    
+....
+
+
+== guest DNS 
+
+Three DNS zones 
+
+* .lab.example.com - machines in the public0 network. Managed by dnsmasq on host1. 
+* .private1.example.com - machines in the other networks. Managed by guest1.
+* .private2.example.com - machines in the other networks. Managed by guest1.
+
+
+
+
+== guest network interfaces 
+
+predictable IP adresses and MAC addresses. 
+
+* network addresses end in 1
+* IP and MAC addresses end with the same number eg. 52:54:00:00:00:02 and 192.168.122.2
+
+Each bridge has an IP address and MAC address. 
+This provides guests with a gateway address.
+
+
+
+.interfaces 
+....
+
+
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .------------------.
+|              |      |                  |
+| host1        |      |   public0        |
+|              +------|           pubbr0 |---------+-----------------
+|              |      |52:54:00:00:00:01 |         |           
++--------------+      |    192.168.122.1 |         |                  
+                      .------------------.         |                 
+                                           +------------------+ 
+                                           |     eth0         | 
+                                           |52:54:00:00:00:02 | 
+                                           | 192.168.122.2    |
+                                           |                  | 
+                                           |   guest1         | 
+                                           |                  | 
+                                           |     eth1         | 
+                                           |52:54:00:00:01:02 | 
+                                           | 192.168.152.2    | 
+                                           +------------------+  
+                                                   |                  
+                                                   |                  
+....
+
+An IP address pool provides IP addresses to guests. 
+Each guest MAC address will be set to a known value, to make configuration and network experiments easier. 
+Each guest gets an FQDN (Fully Qualified Domain Name)  along the lines of guest1.lab.example.com and guest5.private2.example.com.
+
+.guest domains and address blocks 
+....
+ host machine          bridge                IP address block
+                                             MAC addresses
+                                             DNS domain
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| pubbr0   |---------- 192.168.122.0/24 
+|              |      |          |           52:54:00:00:00:XX 
++--------------+      .----------.           .lab.example.com
+                                                    
+                      .----------.                 
+                      |          |           
+                      | privbr0  |---------- 192.168.152.0/24 
+                      |          |           52:54:00:00:01:XX 
+                      .----------.           .private1.example.com
+                                          
+                      .----------.             
+                      |          |             
+                      | privbr1  |---------- 192.168.162.0/24 
+                      |          |           52:54:00:00:01:XX 
+                      .----------.           .private2.example.com
+                                                                          
+....
+
