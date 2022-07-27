@@ -40,7 +40,7 @@ When a packet is destined for a virtual machine, it's sent to the VM's TAP inter
 Most of these components are duplicated for the _private_ network. 
 There is no IP masquerading and forwarding, so there is no communication with the outside world. 
 
-= the libvirt network default
+== the libvirt network default
 
 Only the default network exists.
 
