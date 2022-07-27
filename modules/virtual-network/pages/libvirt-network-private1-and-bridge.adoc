@@ -4,7 +4,8 @@ Nick Hardiman
 :revdate: 23-11-2020
 
 
-Create a private bridge and libvirt network named _privbr1_.
+Create a private bridge named _privbr1_.
+Create a libvirt network named _private1_.
 
 
 == the theory 
@@ -16,7 +17,7 @@ A gateway is attached to both bridges.
 This is the only way to communicate with guests in the _private1_ network.
 
 
-.networks 
+.libvirt networks 
 ....
 .----------------------------.
 |                            |
@@ -24,7 +25,7 @@ This is the only way to communicate with guests in the _private1_ network.
 |                            |   
 |   +----------+             |    
 |   | gateway  |             |
-|   | guest    |             |  
+|   | guest2   |             |  
 |   |          +--> private0 |  
 |   |          |             |  
 |   |          +--> private1 |   
@@ -34,17 +35,17 @@ This is the only way to communicate with guests in the _private1_ network.
 
 All guests can join this new _private1_ network and talk to each other.
 
-.interfaces 
+.bridges 
 ....
 .---------------------------.
 |                           |
-|  host                     |
+|  host1                    |
 |                           |   
 |   +----------+            |    
 |   | gateway  |            |
-|   | guest    |            |  
+|   | guest2   |            |  
 |   |          |            |  
-|   |  enp1s0  +--> privbr1 | 
+|   |  enp1s0  +--> privbr0 | 
 |   |          |            |  
 |   |  enp2s0  +--> privbr1 |   
 |   +----------+            |
@@ -54,20 +55,20 @@ All guests can join this new _private1_ network and talk to each other.
 
 
 
-== create the libvirt network privbr1
+== create the libvirt network private1
 
 === create an XML file
 
 Create an XML file defining the interface. 
 
-Run the command ``vim net-privbr1.xml``.
+Run the command ``vim net-private1.xml``.
 
 Add XML. 
 
 This markup is based on the 
 https://libvirt.org/formatnetwork.html#examplesPrivate[libvirt example].
 
-.net-privbr1.xml
+.net-private1.xml
 [source,XML]
 ----
 <network>
@@ -94,7 +95,7 @@ No news is good news.
 
 [source,shell]
 ----
-[root@host1 libvirt]# xmllint --noout  ./net-privbr1.xml 
+[root@host1 libvirt]# xmllint --noout  ./net-private1.xml 
 [root@host1 libvirt]# 
 ----
 
@@ -104,8 +105,8 @@ Line 10 is a whole lot of nothing.
 
 [source,shell]
 ----
-[root@host1 libvirt]# xmllint --noout net-privbr1-broken.xml 
-net-privbr1-broken.xml:10: parser error : Premature end of data in tag network line 1
+[root@host1 libvirt]# xmllint --noout net-private1-broken.xml 
+net-private1-broken.xml:10: parser error : Premature end of data in tag network line 1
 
 ^
 [root@host1 libvirt]# 
@@ -114,12 +115,12 @@ net-privbr1-broken.xml:10: parser error : Premature end of data in tag network l
 
 === hand it to libvirt 
 
-Create the new network. Run ``sudo virsh net-define net-privbr1.xml``
+Create the new network. Run ``sudo virsh net-define net-private1.xml``
 
 [source,shell]
 ....
-[root@host1 libvirt]# virsh net-define net-privbr1.xml
-Network privbr1 defined from net-privbr1.xml
+[root@host1 libvirt]# virsh net-define net-private1.xml
+Network private1 defined from net-private1.xml
 
 [root@host1 libvirt]#  
 ....
@@ -133,7 +134,7 @@ But it is not in use.
  Name      State      Autostart   Persistent
 ----------------------------------------------
  default   active     yes         yes
- privbr1   inactive   no          yes
+ private1  inactive   no          yes
 
 [root@host1 libvirt]# 
 ....
@@ -144,18 +145,18 @@ Set the new network to start on boot, and start it now.
 
 [source,shell]
 ....
-[root@host1 libvirt]# virsh net-start privbr1
-Network privbr1 started
+[root@host1 libvirt]# virsh net-start private1
+Network private1 started
 
-[root@host1 libvirt]# virsh net-autostart privbr1
-Network privbr1 marked as autostarted
+[root@host1 libvirt]# virsh net-autostart private1
+Network private1 marked as autostarted
 
 [root@host1 libvirt]# 
 [root@host1 libvirt]# virsh net-list --all
  Name      State    Autostart   Persistent
 --------------------------------------------
  default   active   yes         yes
- privbr1   active   yes         yes
+ private1  active   yes         yes
 
 [root@host1 libvirt]# 
 ....

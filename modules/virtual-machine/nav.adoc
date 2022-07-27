@@ -1,4 +1,5 @@
 * xref:index.adoc[]
+** xref:libvirt-vm-plan.adoc[]
 ** xref:host-resources.adoc[]
 ** xref:guest1-kickstart-file.adoc[]
 ** xref:guest1-virt-install.adoc[]

@@ -5,7 +5,12 @@ Nick Hardiman
 
 
 One big physical machine can run many small virtual machines. 
-This physical machine is the host to many virtual machines. 
+Add three virtual machines to this physical machine. 
+
+* guest1 - a fresh install of RHEL 8. Give it two network interfaces. 
+* guest2 - copy a disk image of a RHEL 9 host.
+* guest3 - clone guest2.
+
 
 .workstation, host and guests  
 ....
@@ -84,4 +89,5 @@ Some virtual machines will run containers.
 |   +-----------------------------+   +-----------------------------+   +-----------------------------+   |  
 .---------------------------------------------------------------------------------------------------------.  
 ....
+
 

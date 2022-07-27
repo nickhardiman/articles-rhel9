@@ -1,0 +1,202 @@
+= plan the virtual network 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 21-06-2020
+
+
+!!! a mess
+
+
+
+
+== network bridges 
+
+* virbr0
+* pubbr0
+* privbr0
+* privbr1
+
+A bridge acts like a network switch that a guest plugs into. 
+A guest using any bridge can be reached from the host.
+Guests using the private bridges have restricted network access. 
+Only guests using pubbr0 can talk to the outside world. 
+
+Other guests rely on gateways to proxy their requests.
+Dual-homed guest1 provides services (TFTP, DHCP, DNS) on the private interface, to the private1 network. 
+This machine  acts as the gateway to the outside world. 
+
+.network bridges 
+....
+ host machine          network bridges
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| pubbr0   |---------
+|              |      |          |  
++--------------+      .----------.  
+                                  
+                      .----------.               
+                      |          |                    
+                      | privbr0  |---------
+                      |          |                 
+                      .----------.                             
+                                       
+                      .----------.               
+                      |          |                    
+                      | privbr1  |---------
+                      |          |                 
+                      .----------.                             
+                                                                       
+....
+== libvirt networks 
+
+* default. Machines on this network can get to the Internet. 
+* public0. These machines can get to the Internet.
+* private0. Isolated. These machines can only talk to each other VMs on the host.
+* private1. Isolated. 
+
+
+
+
+An isolated network is more like the real world. 
+for all machines to reach Internet:
+
+* add routes
+* dnsmasq changes on the host?  
+* IPv4 forwarding, enabled by default, or proxying
+
+
+For instance, guest5 can only send requests to the Internet if traffic is proxied via guest3 and guest1. 
+
+.libvirt networks and guests 
+....
+ host machine          virsh networks                 guest machines
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| public0  |-----------------+-------------------------------------
+|              |      |          |                 |                   |
++--------------+      .----------.                 |                   |
+                                                   |                   |
+                                           +------------+      +------------+
+                                           |            |      |            |   
+                                           | guest1     |      | guest2     |   
+                                           |            |      |            |   
+                                           +------------+      +------------+
+                                                   |       
+                                                   |          
+                      .----------.                 |            
+                      |          |                 |           
+                      | private0 |-----------------+-------+-------------------+---------
+                      |          |                         |                   |
+                      .----------.                         |                   |         
+                                                           |                   |                
+                                                   +------------+      +------------+
+                                                   |            |      |            |      
+                                                   | guest3     |      | guest4     |     
+                                                   |            |      |            |      
+                                                   +------------+      +------------+    
+                                                           |       
+                                                           |          
+                      .----------.                         |            
+                      |          |                         |           
+                      | private1 |-----------------+-------+-----------+---------
+                      |          |                 |                   |                
+                      .----------.                 |                   |         
+                                                   |                   |                
+                                          +------------+      +------------+      
+                                          |            |      |            |      
+                                          | guest5     |      | guest6     |     
+                                          |            |      |            |      
+                                          +------------+      +------------+    
+....
+
+
+
+
+== guest DNS 
+
+Three DNS zones 
+
+* .lab.example.com - machines in the public0 network. Managed by dnsmasq on host1. 
+* .private1.example.com - machines in the other networks. Managed by guest1.
+* .private2.example.com - machines in the other networks. Managed by guest1.
+
+
+
+
+== guest network interfaces 
+
+predictable IP adresses and MAC addresses. 
+
+* network addresses end in 1
+* IP and MAC addresses end with the same number eg. 52:54:00:00:00:02 and 192.168.122.2
+
+Each bridge has an IP address and MAC address. 
+This provides guests with a gateway address.
+
+
+
+.interfaces 
+....
+
+
+                       KVM/libvirt
+
+ host machine          networks                                                    guest machines
+
+
++--------------+      .------------------.
+|              |      |                  |
+| host1        |      |   public0        |
+|              +------|           pubbr0 |---------+-----------------
+|              |      |52:54:00:00:00:01 |         |           
++--------------+      |    192.168.122.1 |         |                  
+                      .------------------.         |                 
+                                           +------------------+ 
+                                           |     eth0         | 
+                                           |52:54:00:00:00:02 | 
+                                           | 192.168.122.2    |
+                                           |                  | 
+                                           |   guest1         | 
+                                           |                  | 
+                                           |     eth1         | 
+                                           |52:54:00:00:01:02 | 
+                                           | 192.168.152.2    | 
+                                           +------------------+  
+                                                   |                  
+                                                   |                  
+....
+
+An IP address pool provides IP addresses to guests. 
+Each guest MAC address will be set to a known value, to make configuration and network experiments easier. 
+Each guest gets an FQDN (Fully Qualified Domain Name)  along the lines of guest1.lab.example.com and guest5.private2.example.com.
+
+.guest domains and address blocks 
+....
+ host machine          bridge                IP address block
+                                             MAC addresses
+                                             DNS domain
+
++--------------+      .----------.
+|              |      |          |
+| host1        +------| pubbr0   |---------- 192.168.122.0/24 
+|              |      |          |           52:54:00:00:00:XX 
++--------------+      .----------.           .lab.example.com
+                                                    
+                      .----------.                 
+                      |          |           
+                      | privbr0  |---------- 192.168.152.0/24 
+                      |          |           52:54:00:00:01:XX 
+                      .----------.           .private1.example.com
+                                          
+                      .----------.             
+                      |          |             
+                      | privbr1  |---------- 192.168.162.0/24 
+                      |          |           52:54:00:00:01:XX 
+                      .----------.           .private2.example.com
+                                                                          
+....
+
+
+
