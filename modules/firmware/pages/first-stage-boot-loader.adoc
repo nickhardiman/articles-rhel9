@@ -1,0 +1,78 @@
+=  first stage boot loader (BIOS or UEFI)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 18-08-2020
+
+What happens when booting a VM, from start to login prompt.
+
+Much of the boot process doesn't apply to virtual machines. 
+Virtual machines don't have any hardware, let alone power hardware, 
+but a VM management system will emulate some parts. 
+For instance, a graphical system will display a power button to turn on a VM, and an https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface[ACPI] command can turn off a VM. 
+
+
+
+
+== boot first stage
+
+Many types of firmware exist to manage the boot process. 
+There are many different products for general purpose computers like PCs, and many more for special purpose computers like network equipment and storage devices. 
+Most of it is proprietary, treated as IP (Intellectual Property) and kept secret by hardware vendors. 
+
+Usually there's a chain of programs to run. The first program is often tiny, and does little more than figure out how to load the next much bigger program.
+
+* The CPU loads the first part of the boot loader program, executes the first command, and does what it's told.  
+* The first boot loader does its work, loads the next program from storage, and finishes. 
+* The next program does its work, and hands over to another program in the chain.
+
+New PC firmware works with the UEFI specification, and older PC firmware works with the BIOS specification. 
+
+
+=== BIOS 
+
+
+Guest virtual machines get an open source product called https://seabios.org/SeaBIOS[SeaBIOS] by default. 
+The QEMU hypervisor includes this BIOS. 
+
+For instance, when the BIOS hands over to GRUB, it first loads a tiny 
+https://www.gnu.org/software/grub/manual/grub/html_node/Images.html[boot.img] file from the 
+https://en.wikipedia.org/wiki/Master_boot_record[MBR (Master Boot Record)] - that's the 512 byte sector at the very start of the disk. This boot image is a program that does nothing except kick off the next GRUB program. There isn't enough room in the MBR to store anything interesting. 
+
+
+=== UEFI 
+
+UEFI is a https://www.uefi.org/specifications[set of specifications], not software. 
+Software that is built to these specification is a UEFI system.
+UEFI defines how to boot over the network (with PXE and TFTP), how secure boot should work, and where to find the OS boot loader.
+A UEFI system is modular and extendable, so it's more like a small OS than an application. It even comes with its own shell. 
+
+The OS needs to know about the clock, console, block storage, memory and all the other devices that make up a computer. 
+The UEFI system presents that information in a standardized way - any OS that talks the UEFI language can get its hands on all that device data.
+
+Linux can be built to do the job of UEFI - it can find all the hardware, initalize it and creating reference tables for how it all hangs together. 
+But then there would be one version of Linux for one manufacturer's PC and another version for another manufacturer's PC with different hardware. 
+Instead, the hardware work is handed over to the UEFI application.
+The UEFI application for one PC model is different to the UEFI application on another PC model. 
+
+Usng a UEFI application means the same copy of Linux can run on both machines. 
+In fact, the UEFI system presents all these devices in a standardised way, so any OS can get the information it needs to work. 
+Mac OS X, Windows, Linux and BSD all work with UEFI.
+
+The physical host machine probably uses UEFI, unless its several years old. 
+
+[source,shell]
+----
+[nick@host2 ~]$ ls /sys/firmware/efi
+config_table  esrt              fw_vendor      runtime      systab
+efivars       fw_platform_size  mok-variables  runtime-map  vars
+[nick@host2 ~]$   
+[nick@host2 ~]$ efibootmgr 
+BootCurrent: 0000
+Timeout: 1 seconds
+BootOrder: 0000
+Boot0000* Red Hat Enterprise Linux
+[nick@host2 ~]$ 
+----
+
+
+

@@ -1,0 +1,33 @@
+= device firmware
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 18-08-2020
+
+
+== firmware initializes hardware 
+
+The host machine is made up of many physical devices, like memory, network interface and communication bus. 
+Many of these are driven by firmware. 
+Firmware is low-level software that controls hardware. 
+Firmware is called low-level software because, in a technology stack diagram, it is literally lower down.
+A technology stack diagram looks something like this. 
+
+* data
+* application 
+* operating system 
+* firmware 
+* hardware
+
+Boot loader firmware manages the computer start-up process, and device firmware initializes devices that make up the computer.
+The start-up process is automatic, so there is no need for most people to understand what's happening. 
+
+The boot loader firmware carries out many jobs, like these.
+
+* runs the https://en.wikipedia.org/wiki/Power-on_self-test[POST (Power-on self-test)]
+* trains memory
+* searches for option ROMs (extra firmware included with some devices)
+* displays a control panel
+* finds devices that can boot an OS
+* starts the next stage of booting
+
+Firmware starts before many devices work, so it's not stored on a disk. Instead, some kind of non-volatile memory on the motherboard stores the first firmware program.

@@ -3,16 +3,40 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 25-09-2021
 
-When a user turns on a computer - a physical computer - there is plenty of hardware and software action in the few seconds before Linux starts. The software that controls these early stages is called firmware. 
+https://en.wikipedia.org/wiki/Firmware[Firmware] does all the work between power-on and OS starting.  When a user turns on a computer - a physical computer - there is plenty of hardware and software action in the few seconds before Linux starts. 
 
-== firmware 
+
+
+
+Firmware is software that controls hardware. 
+The boot process is a chain of software. 
+The boot loader starts the https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface[UEFI] system. When you boot up a computer, obscure messages start to appear to the screen after a few seconds. These are messages from the UEFI application. 
+The UEFI bootloader starts the kernel. 
+
+
+== boot loaders 
 
 A boot loader is a collection of programs to get a system ready. Boot loaders are split into two groups.
 
-* The first stage boot loader gets hardware ready.
+* The first stage boot loader gets hardware ready and launches the second stage boot loader. 
 * The second stage boot loader launches the OS.
 
-The more sophisticated the server, the more firmware runs. Boot loader programs form a chain from power-on to OS. The first firmware program to run is tiny and lives in https://en.wikipedia.org/wiki/Nonvolatile_BIOS_memory[ROM]. It handles jobs like https://en.wikipedia.org/wiki/Power-on_self-test[POST (Power On Self Test)], finding the next boot  program and pointing the CPU at it to start execution. The next boot program's job may be to find the UEFI system and start that running. UEFI starts GRUB, and GRUB gets ready to start Linux. This chain of increasingly sophisticated programs are all called firmware.
+The more sophisticated the server, the more firmware runs. Boot loader programs form a chain from power-on to OS. The first firmware program to run is tiny and lives in https://en.wikipedia.org/wiki/Nonvolatile_BIOS_memory[ROM]. It handles jobs like https://en.wikipedia.org/wiki/Power-on_self-test[POST (Power On Self Test)], finding the next boot  program and pointing the CPU at it to start execution. The next boot program's job may be to find the UEFI system and start that running. 
+
+UEFI is the first stage boot loader. UEFI starts GRUB, and GRUB gets ready to start Linux. 
+
+The GNU project maintain their own second stage boot loader, https://en.wikipedia.org/wiki/GNU_GRUB#Version_2_(GRUB_2)[GRUB2]. 
+
+
+
+
+
+
+== origin
+
+image::datamation-67-cover.png[magazine,height=200,float="right",title="Datamation 67 cover"]
+
+If you want to know who's responsible for the "firmware" name and if he had a sense of humor, check out Ascher Opler's article in http://bitsavers.org/magazines/Datamation/196701.pdf[Datamation magazine, volume 13 number 1]. This magazine came out half a century ago, has groovy modern art on the cover and plenty of great hardware photos inside.  
 
 
 

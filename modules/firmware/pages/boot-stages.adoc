@@ -25,10 +25,13 @@ https://en.wikipedia.org/wiki/Switched-mode_power_supply[SMPS (Switched-Mode Pow
 
 Plenty of software runs before any user application runs. 
 
-. xref:unsorted:boot-devices.adoc[] - firmware initializes hardware
-. xref:unsorted:boot-first-stage.adoc[] - UEFI (The default libvirt machine setup defaults to the older BIOS system)
-. xref:unsorted:boot-grub.adoc[] 
-. xref:unsorted:boot-kernel.adoc[] 
+. xref:device-firmware.adoc[] - firmware initializes hardware
+. xref:first-stage-boot-loader.adoc[] - UEFI (The libvirt default is to create a VM with BIOS, not UEFI)
+. xref:second-stage-boot-loader.adoc[] - GRUB2
+
+Then it's onto the OS. 
+
+. xref:os:host-kernel.adoc[] 
 . xref:unsorted:boot-systemd.adoc[] 
 
 
@@ -52,12 +55,18 @@ Usually there's a chain of boot loader programs to run. The first program is oft
 * The first boot loader does its work, loads the next program from storage, and finishes. 
 * The next program does its work, and hands over to another program in the chain.
 
+The system loads the UEFI application, and UEFI may display a few lines on the screen.
+
+
+
+
 
 
 === second stage boot - GRUB
 
-These chain-loaded programs are firmware - low-level device management software. 
-BIOS starts GRUB. 
+The UEFI system starts GRUB2. 
+It presents a menu of OS choices.
+After a few seconds, GRUB2 loads the default kernel and its RAMdisk from the /boot partition and runs it. 
 
 There are a few GRUB programs, run in this sequence.
 
