@@ -1,0 +1,391 @@
+= set the IP address using dnsmasq 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+
+
+set a VM's domain name and IP address using dnsmasq
+
+.VMs use dnsmasq services 
+....
+.-------------------------------------.  
+|                                     |
+|  host1                              |
+|                                     |
+|   +----------+        +----------+  |
+|   |          |        |          |  |
+|   |  guest2  | DHCP   | dnsmasq  |  |
+|   |          +------->|          |  |
+|   |          |        |          |  |
+|   |          | DNS    |          |  |
+|   |          +------->|          |  |
+|   +----------+        +----------+  |
+.-------------------------------------.  
+....
+
+
+Set up a name and address for the new VM _guest2_. Use dnsmasq to fix the IP address _192.168.152.100_ and the 
+https://en.wikipedia.org/wiki/Fully_qualified_domain_name[FQDN (Fully Qualified Domain Name)] _guest2.private.example.com_.
+
+RHEL 8 includes a complete system for managing VMs (virtual machines) - the KVM hypervisor, QEMU machine emulator and libvirt tools. 
+The libvirt daemon uses http://www.thekelleys.org.uk/dnsmasq/doc.html[dnsmasq] to provide 
+https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol[DHCP] 
+and https://en.wikipedia.org/wiki/Domain_Name_System[DNS] services. 
+This article configures dnsmasq to set a fixed IPv4 address and domain name for our new guest VM. 
+
+The _privbr0_ DHCP setup isn't great if you want to SSH to your new VM, because it takes some work to figure out what IPv4 address to use.  
+When the guest VM boots up, it is given the address 192.168.152...er...something. 
+The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
+
+Instead of searching for the address after every boot, it's easier to assign a fixed IP address. 
+All we need to get started is the MAC address, and that was fixed by the _virt-install_ command when the VM was created (``52:54:00:00:00:03``). 
+
+People remember names better than numbers. A fixed IP address is easier to use than a random IP address, and a DNS name is easier still.  
+Out of the box, dnsmasq reads names and addresses from the /etc/hosts file. 
+Add _guest2.private.example.com_ to two places. 
+
+* the host's /etc/hosts file, so the host can look up the guest's name
+* the host's dnsmasq configuration, so guests can look up the name
+
+
+== dnsmasq services 
+
+Usually _systemd_ is in charge of running services, but not here. 
+The _libvirtd_ daemon controls _dnsmasq_ services, not systemd. 
+Running the command ``systemctl status dnsmasq`` says dnsmasq isn't running. 
+
+[source,shell]
+....
+[nick@host1 ~]# systemctl status dnsmasq
+● dnsmasq.service - DNS caching server.
+   Loaded: loaded (/usr/lib/systemd/system/dnsmasq.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+[nick@host1 ~]# 
+....
+
+One pair of processes - a parent and child - are started for each libvirt network that needs DHCP.
+The _pubbr0_ network doesn't use dnsmasq.
+The _default_ and _privbr0_ networks do.
+
+[source,shell]
+....
+[nick@host1 ~]# ps -fwwC dnsmasq
+UID          PID    PPID  C STIME TTY          TIME CMD
+dnsmasq     2077       1  0 08:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+root        2078    2077  0 08:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+dnsmasq    16756       1  0 20:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/privbr0.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+root       16757   16756  0 20:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/privbr0.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+[nick@host1 ~]#  
+....
+
+
+
+== check the IP pool 
+
+View the dnsmasq configuration. 
+Its config files are in the folder /var/lib/libvirt/dnsmasq/. 
+
+This ``dhcp-range`` line tells dnsmasq what IP pool to manage for the _privbr0_ network. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep dhcp-range /var/lib/libvirt/dnsmasq/privbr0.conf
+[sudo] password for nick: 
+dhcp-range=192.168.152.2,192.168.152.254,255.255.255.0
+dhcp-range=2001:db8:ca2:3::1,ra-only
+[nick@host1 ~]$ 
+....
+
+View the libvirt configuration. 
+libvirt writes that dnsmasq configuration after reading its own network configuration.
+You can see libvirt's configuration  using the ``virsh net-dumpxml`` command.
+There are about 20 lines of XML that define the network.
+These are all listed further down. 
+
+The IP pool config is between a pair of dhcp tags.  
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-dumpxml privbr0
+...
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+...
+[nick@host1 ~]$ 
+....
+
+
+== assign a name and address
+
+Add an XML tag to the network's configuration.
+
+This dnsmasq config file can't be edited directly because it's created by libvirt - any changes would be overwritten. 
+Instead, use ``virsh`` commands to add config. 
+
+
+=== add the private.example.com domain 
+
+Add the domain _private.example.com_ before adding the name _guest2.private.example.com_.
+
+dnsmasq has a security feature that ignores DNS domains it doesn't recognize. 
+The privbr0 configuration has no domain, so adding a full FQDN for the VM (_guest2.private.example.com_) won't work. 
+Journalctl would show an error like this. 
+
+[source,shell]
+....
+May 29 18:17:15 host.private.example.com dnsmasq-dhcp[2380]: Ignoring domain private.example.com for DHCP host name guest2
+....
+
+
+Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
+
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-edit privbr0
+....
+
+virsh fires up the vi editor and displays this. 
+
+[source,xml]
+....
+<network>
+  <name>privbr0</name>
+  <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:23:0f:f9'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+Add a domain by adding this line between the network tags:   
+ ``<domain name='private.example.com' localOnly='yes'/>``.
+
+The file now looks like this. 
+
+[source,xml]
+....
+<network>
+  <name>privbr0</name>
+  <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:23:0f:f9'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+Save and exit. 
+
+Restart the network. 
+Check its state before and after - it changes from _inactive_ to _active_. 
+
+[source,shell]
+....
+Network privbr0 XML configuration edited.
+
+[nick@host1 ~]$ sudo virsh net-destroy privbr0
+Network privbr0 destroyed
+
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name                 State      Autostart     Persistent
+----------------------------------------------------------
+ privbr0              inactive   yes           yes
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-start privbr0
+Network privbr0 started
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name      State      Autostart   Persistent
+----------------------------------------------
+ default   active     yes         yes
+ privbr0   active     yes         yes
+ pubbr0    active     yes         yes
+
+[nick@host1 ~]$ 
+....
+
+Virsh updates the dnsmasq config.
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep private.example.com /var/lib/libvirt/dnsmasq/privbr0.conf
+local=/private.example.com/
+domain=private.example.com
+[nick@host1 ~]$ 
+....
+
+
+
+=== add the FQDN and IPv4 address to libvirt's config
+
+It's easier to add the host name and address. 
+Use _virsh net-update_, which doesn't require a network restart. 
+The command contains the line of XML to be added. 
+The name in the _name_ attribute matches the hostname set by the ``virt-customize`` command.
+The ``--live`` and ``--config`` options make sure both the current configuration and the stored config are updated.
+
+[source,shell]
+....
+sudo virsh net-update privbr0 add ip-dhcp-host \
+    "<host  mac='52:54:00:00:00:01' name='guest2.private.example.com' ip='192.168.152.100' />" \
+    --live \
+    --config
+....
+
+Add the host line. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-update privbr0 add ip-dhcp-host "<host mac='52:54:00:00:00:01' name='guest2.private.example.com' ip='192.168.152.100' />" --live --config
+Updated network privbr0 persistent config and live state
+[nick@host1 ~]$ 
+....
+
+You can remove this line by replacing ``add`` with ``delete``. 
+
+Check your work with the command `sudo virsh net-dumpxml privbr0`. 
+The config XML now looks like this. 
+
+[source,xml]
+....
+<network>
+  <name>privbr0</name>
+  <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:23:0f:f9'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+      <host mac='52:54:00:00:00:03' name='guest2.private.example.com' ip='192.168.152.100'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+
+=== add the FQDN and IPv4 address to the host 
+
+Machine _host1_ doesn't use dnsmasq. 
+The host machine has no idea what the name and address of this new VM are. 
+
+Add a line to /etc/hosts. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo bash -c 'echo "192.168.152.100 guest2 guest2.private.example.com" >> /etc/hosts'
+[nick@host1 ~]$ 
+....
+
+
+== check your work 
+
+=== watch the activity log
+
+When the _guest2_ VM starts, it uses DHCP to obtain an IP address.
+The guest VM starts by broadcasting a 'looking for DHCP server' message and gets an answer from dnsmasq on the host machine. 
+You can see the conversation taking place using ``journalctl``.
+
+[source,shell]
+....
+[nick@host1 ~]$ journalctl -f
+...
+Feb 24 20:47:49 host1.lab.example.com dnsmasq-dhcp[30277]: DHCPREQUEST(privbr0) 192.168.152.100 52:54:00:00:00:03
+Feb 24 20:47:49 host1.lab.example.com dnsmasq-dhcp[30277]: DHCPACK(privbr0) 192.168.152.100 52:54:00:00:00:03 guest2
+Feb 24 20:47:51 host1.lab.example.com dnsmasq-dhcp[30277]: RTR-SOLICIT(privbr0)
+Feb 24 20:47:51 host1.lab.example.com dnsmasq-dhcp[30277]: RTR-ADVERT(privbr0) 2001:db8:ca2:3::
+....
+
+
+=== stop and start the VM 
+
+Check whether guest2 is running with ``virsh dominfo guest2``.
+Stop the guest VM with ``virsh shutdown guest2``. 
+Start with ``virsh start guest2``.
+
+
+
+=== resolve the name 
+
+dnsmasq only listens to the libvirt network interface. 
+
+[source,shell]
+....
+[nick@host1 libvirt]# host guest2.private.example.com 192.168.152.1
+Using domain server:
+Name: 192.168.152.1
+Address: 192.168.152.1#53
+Aliases: 
+
+guest2.private.example.com has address 192.168.152.100
+[nick@host1 libvirt]# 
+....
+
+Can the host find it?
+Try with the short name. 
+
+[source,shell]
+....
+[nick@host1 ~]$ ping -c1 guest2
+PING guest2 (192.168.152.100) 56(84) bytes of data.
+64 bytes from guest2 (192.168.152.100): icmp_seq=1 ttl=64 time=0.226 ms
+
+--- guest2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.226/0.226/0.226/0.000 ms
+[nick@host1 ~]$ 
+....
+
+
+=== connect using SSH
+
+The only account on this machine belongs to root. 
+Root's SSH access should be blocked to increase security, but it's currently available. 
+ 
+[source,shell]
+....
+[nick@host1 ~]$ ssh root@guest2
+The authenticity of host 'guest2 (192.168.152.100)' can't be established.
+ECDSA key fingerprint is SHA256:p3XZSmOmc2+pWAe4hhnvaJtTUoD6NM0epj6AhW1W2oI.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'guest2,192.168.152.100' (ECDSA) to the list of known hosts.
+root@guest2's password: 
+Activate the web console with: systemctl enable --now cockpit.socket
+
+This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
+To register this system, run: insights-client --register
+
+Last login: Wed Feb 24 20:55:01 2021 from 192.168.152.1
+[root@guest2 ~]# 
+....
+
+Disconnect. 
+
+[source,shell]
+----
+[root@guest2 ~]# exit
+logout
+Connection to guest2 closed.
+[nick@host1 ~]$ 
+----
+

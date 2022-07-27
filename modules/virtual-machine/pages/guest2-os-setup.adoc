@@ -1,0 +1,202 @@
+= set up the guest2 OS 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 24-02-2021
+
+
+Carry out some first-run sysadmin on the new machine. 
+
+----
+            + pubbr0                                   + privbr0
+            |                                          |  
+            |                                          |     +--------------------------+
+            |                                          |     |  guest2.lab.example.com  |
+            |                                          |     |                          |
+            |                                          |     |                          |
+            |     +-----------------------------+      |     |                          |
+            |     |  guest1.lab.example.com     |      +-----+ enp1s0                   |
+  Internet  |     |                             |      |     +--------------------------+
+  <---------+-----+ enp1s0               enp2s0 +------+
+            |     |                             |      |     +--------------------------+
+            |     |                             |      |     |  guest3.lab.example.com  |
+            |     +-----------------------------+      +-----+ enp1s0                   |
+            |                                          |     |                          |
+            +                                          +     |                          |
+                                                             |                          |
+                                                             +--------------------------+
+----
+
+== connect using SSH 
+
+Copy your public key for easier login. 
+
+[source,shell]
+....
+ssh-copy-id root@guest1
+....
+
+SSH from your workstation to the machine. 
+
+
+
+
+
+== add swap 
+
+Add swap.
+
+[source,shell]
+....
+# Add 4G swap
+# 1024 K in M * 1024 M in G * 4 G = 4194304
+SWAPFILE=/var/cache/swap
+dd if=/dev/zero of=/var/cache/swap bs=1024 count=4194304
+chmod 0600 $SWAPFILE
+# Setup the swap file with the command:
+mkswap $SWAPFILE
+# To enable the swap file immediately but not automatically at boot time:
+swapon $SWAPFILE
+# To enable it at boot time, edit /etc/fstab to include the following entry:
+echo "$SWAPFILE swap swap defaults 0 0" >> /etc/fstab
+....
+
+== add another account 
+
+[source,shell]
+....
+NAME=nick
+useradd $NAME
+usermod -a -G wheel $NAME
+echo 'Password;1' | passwd --stdin $NAME
+....
+
+Logout.
+Login with the new account. 
+
+
+
+== harden security  
+
+Anyone on the home network can get at this machine, so security is an issue. 
+
+Disable root login. 
+
+* Use the root account. 
+* Edit /etc/ssh/sshd_config.
+* Change PermitRootLogin to no.
+* Restart the service with _systemctl reload sshd.service_
+
+
+== proxy 
+
+Use squid on guest1 
+
+[source,shell]
+....
+[root@guest2 ~]# vi /etc/profile.d/proxy.sh
+export http_proxy=192.168.152.11:3128
+export https_proxy=192.168.152.11:3128
+....
+
+
+== DNS  
+
+[source,shell]
+....
+nmcli con mod System\ eth0 ipv4.dns 192.168.152.11
+nmcli con mod System\ eth0 ipv4.ignore-auto-dns yes
+....
+
+
+== network routing 
+
+!!! not useful
+Not sure what the point of this is. 
+
+[source,shell]
+....
+[root@guest2 ~]# ip route list
+192.168.152.0/24 dev eth0 proto kernel scope link src 192.168.152.100 metric 100 
+[root@guest2 ~]# 
+[root@guest2 ~]# ip route add default via 192.168.152.11 
+[root@guest2 ~]# 
+[root@guest2 ~]# ip route list
+default via 192.168.152.11 dev eth0 
+192.168.152.0/24 dev eth0 proto kernel scope link src 192.168.152.100 metric 100 
+[root@guest2 ~]# 
+....
+
+IP forwarding on guest1 
+
+[source,shell]
+....
+[root@guest1 ~]# cat /proc/sys/net/ipv4/ip_forward
+0
+[root@guest1 ~]# 
+[root@guest1 ~]# sysctl net.ipv4.ip_forward=1
+net.ipv4.ip_forward = 1
+[root@guest1 ~]# 
+....
+
+Check 
+
+[source,shell]
+....
+[root@guest2 ~]# ping -c1 192.168.1.217 # enp1s0 on guest1
+PING 192.168.1.217 (192.168.1.217) 56(84) bytes of data.
+64 bytes from 192.168.1.217: icmp_seq=1 ttl=64 time=0.372 ms
+
+--- 192.168.1.217 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.372/0.372/0.372/0.000 ms
+[root@guest2 ~]# 
+[root@guest2 ~]# ping -c1 192.168.122.1 # pubbr0 bridge on host1
+PING 192.168.122.1 (192.168.122.1) 56(84) bytes of data.
+
+--- 192.168.122.1 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[root@guest2 ~]# 
+....
+
+delete 
+
+[source,shell]
+....
+ip route delete default via 192.168.152.11
+....
+
+
+
+
+== subscribe 
+
+Use RHSM (Red Hat Subscription Manager) to entitle this machine to Red Hat's services.
+
+* xref:subscribe-update:host1-rhsm-entitlement.adoc[]
+
+[source,shell]
+....
+subscription-manager status
+subscription-manager register  --username <username>  --password <password>
+subscription-manager attach  --pool=1234567890abcdef1234567890abcdef
+....
+
+
+
+== update packages 
+
+The kickstart process registered this machine with Red Hat and entitled it to receive updates. 
+
+[source,shell]
+....
+[root@guest1 ~]# dnf -y update
+...
+[root@guest1 ~]# systemctl reboot
+Connection to guest1 closed by remote host.
+Connection to guest1 closed.
+workstation:~ nick$ 
+....
+
+Wait a minute and log in again. 
+

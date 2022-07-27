@@ -1,0 +1,128 @@
+= create a kickstart file for guest2 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+Create a kickstart file for the virtual machine _guest2_.
+This machine will be built using a *fresh install* build process, as opposed to a golden image build process. 
+
+This procedure is similar to xref:guest1-kickstart-file.adoc[].
+
+
+== create a kickstart file
+
+Create a new https://en.wikipedia.org/wiki/Kickstart_(Linux)[kickstart] file.
+This file will contain all the configuration instructions for the kickstart program to follow. 
+
+The naming policy for this file is "__machine_name__.ks". 
+This kickstart config file goes in the _libvirt_ directory, along with bridge scripts and libvirt XML definitions. 
+
+[source,shell]
+....
+[root@host1 ~]# cd ~/libvirt
+[root@host1 libvirt]# vi guest2.ks 
+....
+
+Search the   
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/performing_an_advanced_rhel_installation/kickstart-commands-and-options-reference_installing-rhel-as-an-experienced-user[list of commands] to find an explanation of each line. 
+
+This kickstart file is different to the file for guest1 (xref:guest1-kickstart-file.adoc[]).
+
+* The package groups are different. 
+* the HTTPD service is started. 
+* The `subscription-manager` commands need a --proxy option.
+* The `dnf update` command needs a proxy variable. 
+
+
+
+[source,shell]
+....
+# kickstart file for guest2.private.example.com
+
+# install
+# don't use graphical install
+text
+# look for an installer DVD
+cdrom
+# Run the Setup Agent on first boot
+firstboot --enable
+
+# l10n (localization)
+lang en_GB.UTF-8
+timezone Europe/London --isUtc
+keyboard uk
+
+# network
+network  --bootproto=dhcp --device=enp1s0 --ipv6=auto --activate
+network  --hostname=guest2.private.example.com
+
+# licences and repos
+# And have a look at the "subscription" section, in the post section below. 
+repo --name="AppStream" --baseurl=file:///run/install/repo/AppStream
+eula --agreed
+
+# accounts
+rootpw --iscrypted $6$SQXqGsYna84.3SL5$gJw6v23ZZ7WEITfBoZmyNDsIKeoqhS2Mwfk.KpCRloK7EfxlhL3MAlTCO33fr7QRfoG.GvBH1seWtQqz5v82q1
+user --groups=wheel --name=nick --password=$6$G3GIlnUH.JqcrAQl$I.q7gGoT37tcNnrGiHkeUTBtr8AAuoM/yy3P3FuEpJaSun6clgR8GlvKIbqOTgqNe.fIBV6xZOPiWvsduhXeC/ --iscrypted --gecos="nick"
+
+# storage 
+ignoredisk --only-use=vda
+# Partition clearing information
+clearpart --all --initlabel
+part /boot/efi --fstype="efi"   --ondisk=vda --size=600 --fsoptions="umask=0077,shortname=winnt"
+part pv.217    --fstype="lvmpv" --ondisk=vda --size=25000
+part /boot     --fstype="xfs"   --ondisk=vda --size=1024
+volgroup rhel --pesize=4096 pv.217
+logvol /     --fstype="xfs"  --size=1024  --name=root --vgname=rhel --grow
+logvol swap  --fstype="swap" --size=256   --name=swap --vgname=rhel
+
+# applications and services 
+# Do not configure the X Window System
+skipx
+services --enabled="httpd"
+
+# done
+# skip anaconda's prompt "Installation complete. Press ENTER to quit:"
+reboot
+
+
+# special install sections
+%packages
+# This is a group of packages. 
+# To view the full list of groups, run
+#   dnf group list --hidden
+@Basic Web Server
+
+%end
+
+# password policy (for the anaconda installer, not PAM)
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
+
+# last jobs
+%post --log=/root/ks-post.log
+# subscription
+/usr/sbin/subscription-manager register --proxy 192.168.152.11:3128 --username=nick --password='some password!' 
+/usr/sbin/subscription-manager attach --proxy 192.168.152.11:3128  --pool=123456789abcdef123456789abcdef12
+# package update
+ALL_PROXY=192.168.152.11:3128 /usr/bin/dnf -y update 
+%end
+....
+
+
+== check the kickstart file 
+
+The kickstart validation utility _ksvalidator_ provides a static analysis of the new file.
+
+Validate the file. 
+No news is good news. 
+
+[source,shell]
+....
+[root@host1 libvirt]# ksvalidator guest2.ks 
+[root@host1 libvirt]# 
+....
+

@@ -1,0 +1,64 @@
+= set up the guest1 OS 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 28-11-2020
+
+
+Carry out some first-run sysadmin on the new machine. 
+
+Many things are already configured, like SSH daemon, NTP, hostname and first interface. 
+
+== IP address and DNS 
+
+The first network interface on _guest1_ is connected to the home network. 
+It has probably been given an IP address by the DHCP server built into the ISP router. 
+
+Virsh can't tell you because it isn't managing DHCP for this interface. The _virsh net-dhcp-leases pubbr0_ won't work. 
+
+Find the address. 
+
+* Connect to the console, log into the machine, run _ip addr_ and copy the IP address.
+This is the easiest way. 
+* Find out what IP address the home DHCP server allocated.  
+This depends on what your home network equipment is. 
+* Watch network traffic. Run _sudo tcpdump -nn ether host 52:54:00:00:00:01_ on _host1_ and wait for something to happen. 
+This is proper network admin. 
+
+== connect using SSH 
+
+Copy your public key for easier and safer login. 
+
+[source,shell]
+....
+ssh-copy-id nick@guest1
+....
+
+SSH from your workstation to the machine. 
+
+== harden security  
+
+Anyone on the home network can get at this machine, so security is an issue. 
+
+Disable root login. 
+
+* Use the root account. 
+* Edit /etc/ssh/sshd_config.
+* Change PermitRootLogin to no.
+* Restart the service with _systemctl reload sshd.service_
+
+
+== update packages 
+
+The kickstart process registered this machine with Red Hat and entitled it to receive updates. 
+
+[source,shell]
+....
+[root@guest1 ~]# dnf -y update
+...
+[root@guest1 ~]# systemctl reboot
+Connection to guest1 closed by remote host.
+Connection to guest1 closed.
+workstation:~ nick$ 
+....
+
+Wait a minute and log in again. 

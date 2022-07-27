@@ -1,0 +1,87 @@
+= virtual machine
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+
+One big physical machine can run many small virtual machines. 
+This physical machine is the host to many virtual machines. 
+
+.workstation, host and guests  
+....
+.-----------------.      .------------------------------------------------------.     
+|                 |      |                                                      |    
+|   workstation   |      |   host1                                              |    
+|                 +----->|                                                      |    
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   |  guest1    |   |  guest2    |   |  guest3    |   |
+|                 |      |   |            |   |            |   |            |   |
+|                 |      |   +------------+   +------------+   +------------+   |
+|                 |      |                                                      |    
+.-----------------.      .------------------------------------------------------.  
+....
+
+KVM, QEMU and libvirt make virtualization work. 
+
+* https://www.linux-kvm.org/page/Main_Page[Linux KVM] is the engine that makes virtualization work on RHEL 8. 
+* https://www.qemu.org/[QEMU] is a machine emulator. 
+QEMU handles hardware emulation for virtual machines.
+* The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+It's used by RHV (Red Hat Virtualization), Openstack, and even the latest Openshift.
+
+
+
+== guest 
+
+=== guest hardware 
+
+* QEMU machine type is pc-q35, architecture is x86_64 - run `virsh dumpxml guest1 | grep machine`
+* some machines are underspec'd compared to system requirements - satellite and capsule memory
+
+
+=== guest OS 
+
+* RHEL 8 minimal disk image
+* does not have graphical desktop or a running firewall
+* OS is either RHEL 7, 8 or 9
+* subscription is Employee Sku for  machines running Red Hat enterprise software
+* subscription is developer for the rest  
+
+
+=== guest applications 
+
+* some machines run Red Hat enterprise software - Satellite, Ansible Tower, Directory Server 
+
+
+
+== containers 
+
+Some virtual machines will run containers. 
+
+.one host, many guests 
+....
+.---------------------------------------------------------------------------------------------------------.
+|                                                                                                         |    
+|   host1                                                                                                 |    
+|                                                                                                         |    
+|   +-----------------------------+   +-----------------------------+   +-----------------------------+   | 
+|   |                             |   |                             |   |                             |   |
+|   |  guest1                     |   |   guest2                    |   |   guest3                    |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |   +---------------------+   |   |                             |   |
+|   |   | container1          |   |   |   | container4          |   |   |                             |   |
+|   |   +---------------------+   |   |   +---------------------+   |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |   | container2          |   |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |   | container3          |   |   |                             |   |                             |   |
+|   |   +---------------------+   |   |                             |   |                             |   |
+|   |                             |   |                             |   |                             |   |
+|   +-----------------------------+   +-----------------------------+   +-----------------------------+   |  
+.---------------------------------------------------------------------------------------------------------.  
+....
+
