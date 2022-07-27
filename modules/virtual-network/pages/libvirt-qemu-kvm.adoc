@@ -6,16 +6,15 @@ Nick Hardiman
 
 One big physical machine can run many small virtual machines. 
 KVM, QEMU and libvirt make virtualization work. 
-Many virtualization packages are already installed. 
 
-https://www.linux-kvm.org/page/Main_Page[Linux KVM] is the engine that makes virtualization work on RHEL 8. 
 
-https://www.qemu.org/[QEMU] is a machine emulator. 
+* https://www.linux-kvm.org/page/Main_Page[Linux KVM] is the engine that makes virtualization work on RHEL 8. 
+* https://www.qemu.org/[QEMU] is a machine emulator. 
 QEMU handles hardware emulation for virtual machines.
-
-The https://libvirt.org/[libvirt] project provides a virtualization management system. 
+* The https://libvirt.org/[libvirt] project provides a virtualization management system. 
 It's used by RHV (Red Hat Virtualization), Openstack, and even the latest Openshift.
 
+Many virtualization packages are already installed. 
 
 
 == KVM 

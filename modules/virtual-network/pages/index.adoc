@@ -53,14 +53,19 @@ Not sure about
 
 == libvirt networks 
 
-Three networks 
+libvirt networks 
 
 * default. Machines on this network can get to the Internet. 
-* private1. These machines can get to the default gateway.
+* public0. These machines can get to the Internet.
+* private0. Isolated. These machines can only talk to each other VMs on the host.
+* private1. Isolated. 
 
-I want an isolated network, so it's more like the real world. 
-All it takes for all machines to reach Internet is to add routes, and maybe some dnsmasq changes on the host.  
-All machines have IPv4 forwarding enabled by default. 
+An isolated network is more like the real world. 
+for all machines to reach Internet:
+
+* add routes
+* dnsmasq changes on the host?  
+* IPv4 forwarding, enabled by default, or proxying
 
 
 == network bridges 
