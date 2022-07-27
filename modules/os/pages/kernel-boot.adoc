@@ -1,0 +1,9 @@
+= boot kernel
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-07-2020
+
+
+These chain-loaded programs are firmware - low-level device management software. 
+BIOS starts GRUB, then GRUB starts the kernel.
+

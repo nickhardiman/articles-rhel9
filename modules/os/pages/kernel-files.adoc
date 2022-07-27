@@ -1,9 +1,9 @@
-= check out the kernel
+= examine kernel files
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 08-01-2021
 
-Your new RHEL 8 system is running a downstream version of the Linux kernel. 
+Your new RHEL system is running a downstream version of the Linux kernel. 
 Find out a few things with these commands. 
 
 == kernel version 
@@ -32,7 +32,7 @@ For more information, see the article
 https://www.redhat.com/en/blog/what-latest-kernel-release-my-version-red-hat-enterprise-linux[What is the latest kernel release for my version of Red Hat Enterprise Linux?
 ].
 
-The *el9_0* part shows the upstream kernel code was copied for RHEL and worked on for the 8.3 release. 
+The *el9_0* part shows the upstream kernel code was copied for RHEL and worked on for this release. 
 
 
 == kernel file 
@@ -51,6 +51,53 @@ Use the _file_ command to describe the kernel file.
 [nick@host1 ~]$ 
 ----
 
+
+== more kernel files 
+
+The /boot/ directory contains the current kernel and a few older ones, in case the new kernel has issues. 
+
+Each kernel version has a few files. 
+* https://en.wikipedia.org/wiki/Vmlinux[vmlinuz], the kernel.
+* https://en.wikipedia.org/wiki/Initial_ramdisk[initrd (initial ramdisk)]. This contains drivers and other files the kernel needs.
+* https://en.wikipedia.org/wiki/System.map[System.map], a look-up table that maps symbols to memory locations.
+* config, the configuration file used to build the kernel. 
+
+The kernel release name is rather long. 
+
+[source,shell]
+----
+[nick@host2 ~]$ uname -r
+5.14.0-70.17.1.el9_0.x86_64
+[nick@host2 ~]$ 
+[nick@host2 ~]$ KERNEL_RELEASE=$(uname -r)
+[nick@host2 ~]$ 
+[nick@host2 ~]$ ls /boot/*$KERNEL_RELEASE*
+/boot/config-5.14.0-70.17.1.el9_0.x86_64
+/boot/initramfs-5.14.0-70.17.1.el9_0.x86_64.img
+/boot/initramfs-5.14.0-70.17.1.el9_0.x86_64kdump.img
+/boot/symvers-5.14.0-70.17.1.el9_0.x86_64.gz
+/boot/System.map-5.14.0-70.17.1.el9_0.x86_64
+/boot/vmlinuz-5.14.0-70.17.1.el9_0.x86_64
+[nick@host2 ~]$ 
+----
+
+Configuration used to compile the kernel source code is in the config file. 
+
+[source,shell]
+----
+[nick@host2 ~]$ head /boot/config-$KERNEL_RELEASE
+#
+# Automatically generated file; DO NOT EDIT.
+# Linux/x86_64 5.14.0-70.17.1.el9_0.x86_64 Kernel Configuration
+#
+CONFIG_CC_VERSION_TEXT="gcc (GCC) 11.2.1 20220127 (Red Hat 11.2.1-9)"
+CONFIG_CC_IS_GCC=y
+CONFIG_GCC_VERSION=110201
+CONFIG_CLANG_VERSION=0
+CONFIG_AS_IS_GNU=y
+CONFIG_AS_VERSION=23502
+[nick@host2 ~]$ 
+----
 
 == kernel packages 
 

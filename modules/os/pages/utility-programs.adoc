@@ -1,0 +1,72 @@
+= run some utility programs
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 13-01-2021
+
+Already run a bunch.
+
+Some utilities are part of the shell, and some are executable files. 
+/usr/bin contains a truck-load. 
+
+
+For descriptions of commmands built into the shell, run `man bash` and search for `SHELL BUILTIN COMMANDS`. 
+
+Confusingly, some builtin commands are wrapped in executable files to slightly change their behaviour. 
+
+
+== utility program files in /usr/bin/
+
+Most files in /usr/bin/ are compiled executables. Some are shell, python and perl scripts, like ssh-copy-id, dnf and json_pp.
+
+. grep
+. locate
+. ls
+. man
+. mkdir
+. mv
+. rmdir
+. tail
+. touch 
+
+== shell builtins 
+
+. bind  
+. exit  
+. history  
+. source  
+
+== shell builtins wrapped in utility programs 
+
+To execute the file, run `/usr/bin/name`. To execute the builtin, run `builtin name`.
+
+These are shell scripts. 
+
+. alias  
+. bg   
+. cd    
+. umask  
+
+These are compiled binaries. 
+
+. echo  
+. kill   
+. test    
+
+== alternative versions 
+
+network utility https://man.openbsd.org/nc.1[netcat] came from BSD, long ago. People from the https://nmap.org/ncat/[NMap project] wrote an updated replacement named ncat.
+
+A user runs the command `nc` to run either netcat or ncat. 
+The alternatives system decides which one runs. 
+
+[source,shell]
+----
+[nick@host2 ~]$ ls -l /usr/bin/nc
+lrwxrwxrwx. 1 root root 20 Jul  3 10:33 /usr/bin/nc -> /etc/alternatives/nc
+[nick@host2 ~]$ 
+[nick@host2 ~]$ ls -l /etc/alternatives/nc
+lrwxrwxrwx. 1 root root 13 Jul  3 10:33 /etc/alternatives/nc -> /usr/bin/ncat
+[nick@host2 ~]$ 
+----
+
+
