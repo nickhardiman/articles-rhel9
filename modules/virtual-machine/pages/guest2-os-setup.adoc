@@ -173,7 +173,7 @@ ip route delete default via 192.168.152.11
 
 Use RHSM (Red Hat Subscription Manager) to entitle this machine to Red Hat's services.
 
-* xref:subscribe-update:host1-rhsm-entitlement.adoc[]
+* xref:install-subscribe:host1-rhsm-entitlement.adoc[]
 
 [source,shell]
 ....

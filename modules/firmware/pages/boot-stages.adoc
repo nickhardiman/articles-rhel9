@@ -31,8 +31,8 @@ Plenty of software runs before any user application runs.
 
 Then it's onto the OS. 
 
-. xref:os:host-kernel.adoc[] 
-. xref:unsorted:boot-systemd.adoc[] 
+. xref:os:kernel-boot.adoc[] 
+. xref:os:systemd-boot.adoc[] 
 
 
 === firmware initializes hardware 

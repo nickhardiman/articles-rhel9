@@ -8,7 +8,7 @@ Plenty of Bash configuration has been done for you by resource files.
 You've got plenty of environment variables (run _env_), shell options (run _shopt_), aliases (_alias_), a umask (_umask_) and a fancy prompt.
 
 
-=== dotfiles 
+== dotfiles 
 
 The home directory contains many configuration files and directories. 
 The exact number varies depending on how many packages were installed. A minimal OS installation may have five, and an OS install that includes Gnome may have ten. 
