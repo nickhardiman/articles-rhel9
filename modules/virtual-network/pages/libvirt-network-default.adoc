@@ -1,4 +1,4 @@
-= examine the libvirt default bridge
+= examine the libvirt default network
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020
@@ -8,6 +8,9 @@ Libvirt creates a dnsmasq configuration file, _/var/lib/libvirt/dnsmasq/(network
 Dnsmasq handles DNS and DHCP queries. 
 Libvirt adds a firewall zone (try running ``sudo firewall-cmd --list-all --zone=libvirt``). 
 And it creates network interfaces.
+
+
+== bridge virbr0
 
 For the _default_ network, libvirt creates a bridge interface named _virbr0_ and a NIC named _virbr0-nic_. 
 Every time a VM starts, libvirt also creates a https://en.wikipedia.org/wiki/TUN/TAP[TAP] interface named something like _tap0_.  
@@ -36,6 +39,8 @@ When a packet is destined for a virtual machine, it's sent to the VM's TAP inter
 
 Most of these components are duplicated for the _private_ network. 
 There is no IP masquerading and forwarding, so there is no communication with the outside world. 
+
+= the libvirt network default
 
 Only the default network exists.
 
