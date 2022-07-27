@@ -29,15 +29,29 @@ Get a terminal ready.
 
 [source,shell]
 ----
-[root@host1 images]# curl --output rhel-8.2-x86_64-dvd.iso --location 'https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-8.2-x86_64-dvd.iso?user=1234&_auth_=1234'
+[root@host1 images]# curl --output rhel-baseos-9.0-x86_64-dvd.iso --location 'https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-baseos-9.0-x86_64-dvd.iso?user=1234&_auth_=1234'
 ----
 
 This file is an 8GB monster. 
 The download takes a while. 
 
+Compare checksums. 
+
+[source,shell]
+----
+[root@host2 images]# sha256sum rhel-baseos-9.0-x86_64-kvm.qcow2 
+92862e085e4d5690cfa57de7155aa29bfdf21feec3d46dd4b61ca63293312af7  rhel-baseos-9.0-x86_64-kvm.qcow2
+[root@host2 images]# 
+[root@host2 images]# 
+----
 
 
 == download the RHEL 9 KVM image
 
 Find _Red Hat Enterprise Linux 9.0 KVM Guest Image_. 
 Repeat the download procedure. 
+
+[source,shell]
+----
+[root@host1 images]# curl --output rhel-baseos-9.0-x86_64-kvm.qcow2 --location 'https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-baseos-9.0-x86_64-kvm.qcow2?user=1234&_auth_=1234'
+----

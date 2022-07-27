@@ -48,5 +48,15 @@ The download takes a while.
 This is a good time for a coffee break.  
 
 
+== check 
 
+Compare checksums. 
+
+[source,shell]
+----
+[root@host2 images]# sha256sum rhel-baseos-9.0-x86_64-kvm.qcow2 
+92862e085e4d5690cfa57de7155aa29bfdf21feec3d46dd4b61ca63293312af7  rhel-baseos-9.0-x86_64-kvm.qcow2
+[root@host2 images]# 
+[root@host2 images]# 
+----
 
