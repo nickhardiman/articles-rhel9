@@ -1,0 +1,53 @@
+= refresh the libvirt pool
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-07-2022
+
+
+Libvirt doesn't notice the new ISO file.
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name   Path
+--------------
+
+[root@host1 ~]# 
+....
+
+== refresh 
+
+Refresh the pool. 
+This tells libvirt to take another look at what's stored in _images_. 
+
+[source,shell]
+....
+[root@host1 ~]# 
+[root@host1 ~]# virsh pool-refresh images
+Pool images refreshed
+
+[root@host1 ~]# 
+....
+
+== check 
+
+The new file is now listed. 
+
+[source,shell]
+....
+[root@host1 ~]# virsh vol-list images
+ Name                      Path
+----------------------------------------------------------------------------
+ rhel-8.3-x86_64-dvd.iso   /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
+
+[root@host1 ~]# 
+[root@host1 ~]# virsh vol-info rhel-8.3-x86_64-dvd.iso images
+Name:           rhel-8.3-x86_64-dvd.iso
+Type:           file
+Capacity:       8.82 GiB
+Allocation:     8.82 GiB
+
+[root@host1 ~]# 
+....
+
+

@@ -2,4 +2,7 @@
 ** xref:libvirt-storage-pool.adoc[]
 ** xref:libvirt-storage-volume-rhel8-iso.adoc[]
 ** xref:libvirt-storage-volume-rhel8-kvm.adoc[]
+** xref:download-rhel9.adoc[]
+** xref:selinux-context.adoc[]
+** xref:libvirt-storage-pool-refresh.adoc[]
 ** xref:libvirt-virtual-machine.adoc[]

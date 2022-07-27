@@ -1,0 +1,43 @@
+= download RHEL 9 ISO and KVM image
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+As with RHEL 8, download the RHEL 9 installer https://en.wikipedia.org/wiki/ISO_9660[ISO] file and add it to libvirt's _images_ storage pool. 
+
+
+
+== download the RHEL 9 installer ISO
+
+Get a terminal ready. 
+
+* Open a terminal on host1. 
+* Use the root account. 
+
+[source,shell]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# 
+----
+
+* Open a web browser. 
+* Sign into the https://access.redhat.com/[customer portal]. 
+* Find the [Download Red Hat Enterprise Linux] page. Downloads > Infrastructure Management > Red Hat Enterprise Linux 
+* Find the entry titled  _Red Hat Enterprise Linux 9.0 Binary DVD_.
+* Right-click the _Download Now_ button and copy the link address. 
+* Paste the link into the terminal, quote it and wrap it in a curl command.
+
+[source,shell]
+----
+[root@host1 images]# curl --output rhel-8.2-x86_64-dvd.iso --location 'https://access.cdn.redhat.com/content/origin/files/sha256/7f/1234/rhel-8.2-x86_64-dvd.iso?user=1234&_auth_=1234'
+----
+
+This file is an 8GB monster. 
+The download takes a while. 
+
+
+
+== download the RHEL 9 KVM image
+
+Find _Red Hat Enterprise Linux 9.0 KVM Guest Image_. 
+Repeat the download procedure. 

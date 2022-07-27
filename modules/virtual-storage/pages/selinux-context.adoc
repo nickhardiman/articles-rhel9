@@ -1,0 +1,39 @@
+= check the SELinux context 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-07-2022
+
+
+If the file was downloaded somewhere else and moved, it may well have a different SELinux file context. 
+
+== virt_image_t
+
+We need the SELinux file type context label __virt_image_t__.
+
+If a file is downloaded to a user's home directory first, then moved, 
+the file has a SELinux file type of __user_home_t__ (or __admin_home_t__ from root's home directory).
+
+[source,shell]
+....
+[root@host1 images]# pwd
+/var/lib/libvirt/images
+[root@host1 images]# 
+[root@host1 images]# ls -lZ
+total 9244672
+-rw-r--r--. 1 root root unconfined_u:object_r:user_home_t:s0 9466544128 Jan 11 14:21 rhel-8.3-x86_64-dvd.iso
+[root@host1 images]# 
+[root@host1 images]# cd
+[root@host1 ~]#
+....
+
+== restorecon 
+
+Fix the file type. 
+
+[source,shell]
+....
+[root@host1 ~]# restorecon -Rv /var/lib/libvirt/images/
+Relabeled /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso from unconfined_u:object_r:user_home_t:s0 to unconfined_u:object_r:virt_image_t:s0
+[root@host1 ~]# 
+....
+
