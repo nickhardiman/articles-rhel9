@@ -1,0 +1,72 @@
+= delete guest1 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+If something goes wrong with the guest1 VM, delete it. 
+
+The process for removing your additions goes like this. 
+
+* Pull the plug on the VM with _virsh destroy_. 
+* Remove libvirt's new VM config with _virsh undefine_. 
+* Remove the new storage volume file with _virsh vol-delete_. For the impatient, you can avoid typing another command by adding another option to virsh undefine: _virsh undefine --nvram --remove-all-storage $HOST_. 
+
+
+=== write a script to delete the VM 
+
+Create a script. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vim vm-guest1-delete.sh
+[root@host1 libvirt]# 
+....
+
+[source,shell]
+....
+HOST=guest1
+virsh destroy $HOST
+virsh undefine --nvram $HOST 
+virsh vol-delete $HOST.qcow2 --pool images
+[root@host1 libvirt]# 
+....
+
+Run. 
+
+[source,shell]
+....
+[root@host2 libvirt]# chmod 754 ./vm-guest1-delete.sh 
+[root@host2 libvirt]# ./vm-guest1-delete.sh 
+Domain 'guest1' destroyed
+
+Domain 'guest1' has been undefined
+
+Vol guest1.qcow2 deleted
+
+[root@host2 libvirt]#  
+....
+
+== check 
+
+Domain is gone. 
+
+[source,shell]
+....
+[root@host2 libvirt]# virsh list --all
+ Id   Name   State
+--------------------
+
+[root@host2 libvirt]# 
+....
+
+Storage volume is gone. 
+
+[source,shell]
+....
+[root@host2 libvirt]# virsh vol-info guest1.qcow2 --pool images
+error: failed to get vol 'guest1.qcow2'
+error: Storage volume not found: no storage vol with matching path 'guest1.qcow2'
+
+[root@host2 libvirt]# 
+....
+

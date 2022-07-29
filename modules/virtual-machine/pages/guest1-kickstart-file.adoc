@@ -3,11 +3,18 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 11-01-2021
 
+Start the process of building guest1. 
+Three files are used. 
+
+* vm-guest1-build.sh - create the new VM
+* vm-guest1-delete.sh - delete the VM
+* vm-guest1-rhel9.ks - a kickstart file for automated install
+
 Create a kickstart file for the virtual machine guest1.
-This machine will be built using a *fresh install* build process, as opposed to a golden image build process. 
+
+This machine is built using a *fresh install* build process, as opposed to a golden image build process. 
 Build a machine and install the OS. 
 Use a kickstart file to automate the process. 
-
 
 
 == a fresh install 
@@ -26,7 +33,7 @@ An alternative process is to use an existing machine's storage file as a _golden
 Another alternative is to install over the network. 
 
 
-== create a kickstart file
+== use the libvirt directory 
 
 Create a new https://en.wikipedia.org/wiki/Kickstart_(Linux)[kickstart] file.
 This file will contain all the configuration instructions for the kickstart program to follow. 
@@ -35,12 +42,35 @@ The naming policy for this file is "__machine_name__.ks".
 The storage policy is to stick everything in one directory off root's home. 
 This kickstart config file goes in the _libvirt_ directory, along with bridge scripts and libvirt XML definitions. 
 
+Use the root account. 
+
 [source,shell]
 ....
-[root@host1 images]# cd
-[root@host1 ~]# mkdir libvirt
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: 
+[root@host1 ~]# 
+....
+
+Use the libvirt directory to hold new scripts and config files. 
+This directory already holds a few network scripts.
+
+[source,shell]
+....
 [root@host1 ~]# cd libvirt
-[root@host1 libvirt]# vi guest1.ks 
+[root@host1 libvirt]#
+[root@host2 libvirt]# ls
+libvirt-service-enable.sh  libvirt-socket-enable.sh
+libvirt-socket-check.sh    libvirt-socket-start.sh
+[root@host2 libvirt]# 
+....
+
+== create a kickstart file
+
+Create the kickstart file for guest1. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vi vm-guest1-rhel8.ks 
 ....
 
 The kickstart content is about 50 lines of text containing dozens of commands. 
@@ -53,9 +83,19 @@ https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/pe
 
 An online https://access.redhat.com/labs/kickstartconfig/[kickstart generator] can create kickstart content. The administrator fills in a form and the generator converts it to kickstart config. 
 
+Add content. 
+
 [source,shell]
 ....
-# kickstart file for guest1.lab.example.com
+# kickstart file
+# https://github.com/nickhardiman/summit_OD1226/blob/main/kickstart_files/kickstart-rhel9-1.ks
+# Kickstart user guide is here.
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9-beta/html-single/performing_an_advanced_rhel_installation/index#kickstart_references
+# This tool creates a kickstart file. 
+# https://access.redhat.com/labs/kickstartconfig/
+
+# command section
+# -----------------------------------
 
 # install
 # don't use graphical install
@@ -67,8 +107,8 @@ firstboot --enable
 
 # l10n (localization)
 lang en_GB.UTF-8
-timezone Europe/London --isUtc
-keyboard uk
+timezone Europe/London --utc
+keyboard --vckeymap=gb
 
 # network
 network  --bootproto=dhcp --device=enp1s0 --ipv6=auto --activate
@@ -77,104 +117,73 @@ network  --hostname=guest1.lab.example.com
 
 # licences and repos
 # And have a look at the "subscription" section, in the post section below. 
-repo --name="AppStream" --baseurl=file:///run/install/repo/AppStream
+#repo --name="AppStream" --baseurl=file:///run/install/repo/AppStream
 eula --agreed
 
 # accounts
+# root and nick, both with password "Password;1".
 # The command "openssl passwd  -6 --salt SQXqGsYna84.3SL5" turns "Password;1" into this. 
 rootpw --iscrypted $6$SQXqGsYna84.3SL5$gJw6v23ZZ7WEITfBoZmyNDsIKeoqhS2Mwfk.KpCRloK7EfxlhL3MAlTCO33fr7QRfoG.GvBH1seWtQqz5v82q1
 user --groups=wheel --name=nick --password=$6$G3GIlnUH.JqcrAQl$I.q7gGoT37tcNnrGiHkeUTBtr8AAuoM/yy3P3FuEpJaSun6clgR8GlvKIbqOTgqNe.fIBV6xZOPiWvsduhXeC/ --iscrypted --gecos="nick"
 
 # storage 
+# The virtual machine has a 30GB disk.
+# All these partitions must fit in that space.
 ignoredisk --only-use=vda
 # Partition clearing information
 clearpart --all --initlabel
 part /boot/efi --fstype="efi"   --ondisk=vda --size=600 --fsoptions="umask=0077,shortname=winnt"
-part pv.217    --fstype="lvmpv" --ondisk=vda --size=40175
 part /boot     --fstype="xfs"   --ondisk=vda --size=1024
-volgroup rhel --pesize=4096 pv.217
-logvol /     --fstype="xfs"  --size=1024  --name=root --vgname=rhel --grow
-logvol swap  --fstype="swap" --size=256   --name=swap --vgname=rhel
+# 28GiB * 1024 = 28672MiB
+part pv.03    --fstype="lvmpv"  --ondisk=vda --size=28672
+volgroup rhel pv.03
+logvol /     --fstype="xfs"  --size=13312  --name=root --vgname=rhel
+logvol /var  --fstype="xfs"  --size=13312  --name=var  --vgname=rhel
+logvol swap  --fstype="swap" --size=256    --name=swap --vgname=rhel
 
 # applications and services 
 # Do not configure the X Window System
 skipx
 services --enabled="chronyd"
+selinux --enforcing
+firewall --enabled --http --ssh
 
-# done
+# after installing the OS
 # skip anaconda's prompt "Installation complete. Press ENTER to quit:"
 reboot
 
+# extra sections 
+# -----------------------------------
 
-# special install sections
-
+# package selection section
+# user guide: 
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9-beta/html/managing_software_with_yum/index
 %packages
-# This is a group of packages. 
-# To view the full list of groups, run
+# This is an environment group of packages.
+# View the full list of groups to choose from by running this command.
 #   dnf group list --hidden
 @^minimal-environment
-# This is a single package.
+# single package
 kexec-tools
-
 %end
 
+# add-on section
+# kdump kernel crash dump mechanism
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9-beta/html-single/performing_an_advanced_rhel_installation/index#addon-com_redhat_kdump_kickstart-commands-for-addons-supplied-with-the-rhel-installation-program
 %addon com_redhat_kdump --enable --reserve-mb='auto'
-
 %end
-
-# password policy (for the anaconda installer, not PAM)
-%anaconda
-pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
-pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
-pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
-%end
+#
 
 # last jobs
 %post --log=/root/ks-post.log
 # subscription
-# use your Red Hat developer account
+# use your Red Hat developer account and your subscription entitlement.
 /usr/sbin/subscription-manager register --username=nick --password='some password!' 
 /usr/sbin/subscription-manager attach --pool=123456789abcdef123456789abcdef12
 # package update
 /usr/bin/dnf -y update 
 %end
-
 ....
 
-
-== check the kickstart file 
-
-The kickstart validation utility _ksvalidator_ provides a static analysis of the new file.
-It's not installed by default. 
-The validator helps to catch mistakes like typos, like this. 
-
-[source,shell]
-....
-[root@host1 libvirt]# ksvalidator guest1.ks 
-The following problem occurred on line 3 of the kickstart file:
-
-Unknown command: ingoredisk
-
-[root@host1 libvirt]# 
-....
-
-Install the kickstart tools package. 
-The package also contains tools _ksflatten_, _ksshell_ and _ksverdiff_.
-
-[source,shell]
-....
-[root@host1 libvirt]# dnf install pykickstart 
-...
-Complete!
-[root@host1 libvirt]# 
-....
-
-Validate the file. 
-No news is good news. 
-
-[source,shell]
-....
-[root@host1 libvirt]# ksvalidator guest1.ks 
-[root@host1 libvirt]# 
-....
+Save your work. 
 

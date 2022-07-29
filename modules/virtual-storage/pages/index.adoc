@@ -10,6 +10,18 @@ Libvirt [manages storage] using pools to store volumes.
 Here the storage pool is a directory, _/var/lib/libvirt/images/_. 
 It's a default location provided by libvirt. 
 Other storage options include an NFS share, an iSCSI target or multipath to a SAN. 
+The first things we put in here are installer ISO and disk image files.
+
+[source,shell]
+----
+[nick@host2 ~]$ sudo ls -lhZ /var/lib/libvirt/images/
+total 21G
+-rw-r--r--. 1 root root unconfined_u:object_r:virt_image_t:s0  11G Jul 27 17:21 rhel-8.6-x86_64-dvd.iso
+-rw-r--r--. 1 root root unconfined_u:object_r:virt_image_t:s0 794M Jul 27 18:08 rhel-8.6-x86_64-kvm.qcow2
+-rw-r--r--. 1 root root unconfined_u:object_r:virt_image_t:s0 8.0G Jul 27 16:57 rhel-baseos-9.0-x86_64-dvd.iso
+-rw-r--r--. 1 root root unconfined_u:object_r:virt_image_t:s0 665M Jul 27 16:38 rhel-baseos-9.0-x86_64-kvm.qcow2
+[nick@host2 ~]$ 
+----
 
 The disk image used by a virtual machine is a storage volume. 
 Install ISO files will also go in here. 

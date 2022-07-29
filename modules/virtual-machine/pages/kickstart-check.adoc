@@ -1,0 +1,43 @@
+= check the kickstart file
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+
+Check the kickstart file. 
+The kickstart validation utility _ksvalidator_ provides a static analysis of the new file.
+It's like a https://en.wikipedia.org/wiki/Lint_(software)[software linter] for kickstart configuration. 
+
+_ksvalidator_ is not installed by default. 
+The validator helps to catch mistakes like typos, like this. 
+
+[source,shell]
+....
+[root@host1 libvirt]# ksvalidator guest1.ks 
+The following problem occurred on line 3 of the kickstart file:
+
+Unknown command: ingoredisk
+
+[root@host1 libvirt]# 
+....
+
+Install the kickstart tools package. 
+The package also contains tools _ksflatten_, _ksshell_ and _ksverdiff_.
+
+[source,shell]
+....
+[root@host1 libvirt]# dnf install pykickstart 
+...
+Complete!
+[root@host1 libvirt]# 
+....
+
+Validate the file. 
+No news is good news. 
+
+[source,shell]
+....
+[root@host1 libvirt]# ksvalidator guest1.ks 
+[root@host1 libvirt]# 
+....
+

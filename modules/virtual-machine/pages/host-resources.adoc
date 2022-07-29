@@ -1,33 +1,54 @@
-== host resources 
+= examine resources
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2022
 
 
-=== host hypervisor 
+Examine host resources (the physical machine). 
+Make a few assumptions about what the guests (virtual machines) need. 
+
+== host hypervisor 
+
+The https://www.redhat.com/en/topics/virtualization/what-is-a-hypervisor[hypervisor] 
+is the system that manages virtual machines. 
 
 * QEMU and KVM 
 * `dnf module install virt` plus other virtualization tools
 * libvirt provides a virtual stack 
 
 
+== host resources 
+
+
+The https://www.redhat.com/en/topics/virtualization/what-is-a-hypervisor[hypervisor] 
+takes CPU, memory and storage resources from the host machine and gives them to virtual machines. 
+These resources can be overprovisioned. 
+The hypervisor can promise to give more resources than it has, expecting virtual machines will not need to take all the resources they have been allocated. 
+It's like a budget airline selling more tickets for a flight than there are seats on a plan, expecting some passengers won't turn up.
+
+
+
 === host CPU 
 
 CPUs can be overprovisioned. 
-Assume an overprovision of 10X is OK.
+
+* *ssume an overprovision of 10X is OK.
+
 4 CPUs x 10 = 40.
 
 
 === host memory 
 
-Memory can be overprovisioned.  
-Hard to calculate. 
-Assume the host1 platform needs 4GB (1GB for OS + 1GB for Gnome + 1GB for libvirt + 1GB other). 
-Assume the guests need ten times as much. 
-40G + 4G does not fit in 32G.
-
-Overprovisioning is riskier than CPU - Memory is protected by the OOM killer.
-
 Memory is allocated when needed. 
 For example, three idle machines, each specified with 2GB memory, probably use 3GB, not 6GB.
+Memory can be overprovisioned.  
+Hard to calculate. 
+Overprovisioning is riskier than CPU - Memory is protected by the OOM killer.
 
+* Assume the host1 platform needs 4GB (1GB for OS + 1GB for Gnome + 1GB for libvirt + 1GB other). 
+* Assume the guests need ten times as much. 
+
+40G + 4G does not fit in 32G.
 
 
 This is top, copied after starting satellite1, capsule1 and isolatedn1.
@@ -55,8 +76,9 @@ Disk is not overprovisioned.
 It can be, but to lessen the strain on the CPU, disks are provisioned in full. 
 No sparse disks, no compression, no encryption.
 
-Assume the host1 platform needs 20G. 
-Assume the guests need ten times that much. 
+* Assume the host1 platform needs 20G. 
+* Assume the guests need ten times that much. 
+
 200G + 20G easily fits in one 500GB SSD. 
 
 

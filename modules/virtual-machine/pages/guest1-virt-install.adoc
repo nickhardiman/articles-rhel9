@@ -7,47 +7,70 @@ Use a *fresh install* process (AKA clean install, or install from scratch).
 Build a machine and install the OS. 
 Use a kickstart file to automate the process. 
 
-This example creates a machine called _guest1_ and installs RHEL 8. 
+This example creates a machine called _guest1_, installs RHEL, configures a few things, and shuts down. 
+Two new libvirt resources are created. 
+
+* libvirt domain guest1
+* libvirt volume guest1.qcow
+
+
+A command called _virt-install_ does the work. Two things are required before the _virt-install_ command is run. 
+
+* RHEL 9 install ISO. File _rhel-baseos-9.0-x86_64-dvd.iso_ is in libvirt's _images_ pool. 
+* kickstart file. This is /root/libvirt/guest1.ks.
+
+
+== display libvirt VMs
+
+[source,shell]
+----
+[root@host2 libvirt]# virsh list --all
+ Id   Name   State
+--------------------
+
+[root@host2 libvirt]# 
+----
+
+== display libvirt networks
 
 The guest1 machine has two interfaces, not one. 
 One interface leads to the home network and onto the Internet, and the other leads to the private network. 
 
 .guest1 has two interfaces 
 ....
-  |  
-  | Internet
   |
-+-+-------------------------------------+
-|                                       |
-|     ISP router                        |
-|                                       |
-+-+-------------------------------------+
-  |
-  | home network 
-  | 192.168.1.0/24
+  | to libvirt's public0 network 
   |
 +-+-------------------------------------+
 | enp1s0                                |
-|    guest1.lab.example.com             |
+|        guest1.lab.example.com         |
 | enp2s0                                |
 +-+-------------------------------------+
   |
-  | privbr0, the private network 
-  | 192.168.152.0/24
+  | to libvirt's private0 network 
   | 
 ....
 
-A command called _virt-install_ does the work. Two things are required before the _virt-install_ command is run. 
+[source,shell]
+----
+[root@host2 libvirt]# virsh net-list --all
+ Name       State    Autostart   Persistent
+---------------------------------------------
+ default    active   no          no
+ private0   active   yes         yes
+ private1   active   yes         yes
+ public0    active   yes         yes
 
-* RHEL 8 install ISO. This file is in libvirt's _images_ pool. 
-* kickstart file. This is /root/libvirt/guest1.ks.
+[root@host2 libvirt]# 
+----
 
 
-
-== the virt-install command 
+== get the virt-install command 
 
 The _virt-install_ command does all the hard work.  
 This tool is part of the _virt-install_ package.
+
+Use the root account and the libvirt directory. 
 
 [source,shell]
 ....
@@ -57,33 +80,46 @@ Complete!
 [root@host1 libvirt]# 
 ....
 
+== write a build script
+
 The command to build a new machine is long, with lots of options. 
 In this example the options are split over several lines, and some values are moved to variables, to make it a little easier to see what's going on. 
+
+Create a shell script to hold the commands. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vim vm-guest1-build.sh
+[root@host1 libvirt]# 
+....
+
+Add content. 
+Copy and paste the variables and virt-install command into the file. 
 
 [source,shell]
 ....
 HOST=guest1
 NEW_DISK=/var/lib/libvirt/images/$HOST.qcow2
-INSTALL_ISO=/var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
-KICKSTART_CONFIG=/root/libvirt/$HOST.ks
+INSTALL_ISO=/var/lib/libvirt/images/rhel-baseos-9.0-x86_64-dvd.iso
+KICKSTART_CONFIG=vm-$HOST-rhel9.ks
 IF1_MAC=52:54:00:00:00:01
 IF2_MAC=52:54:00:00:00:02
 virt-install \
   --name="$HOST" \
   --vcpus=2 \
   --ram=4096 \
-  --disk path=$NEW_DISK,size=50 \
-  --os-variant rhel8.3 \
-  --network network=pubbr0,mac=$IF1_MAC   \
-  --network network=privbr0,mac=$IF2_MAC   \
+  --disk path=$NEW_DISK,size=30 \
+  --os-variant rhel9.0 \
+  --network network=public0,mac=$IF1_MAC   \
+  --network network=private0,mac=$IF2_MAC   \
   --boot uefi,hd,menu=on \
   --location $INSTALL_ISO \
-  --initrd-inject $KICKSTART_CONFIG \
-  --extra-args "inst.ks=file:/$HOST.ks console=tty0 console=ttyS0,115200" \
+  --initrd-inject /root/libvirt/$KICKSTART_CONFIG \
+  --extra-args "inst.ks=file:/$KICKSTART_CONFIG console=tty0 console=ttyS0,115200" \
   --noautoconsole
 ....
 
-* The _--disk_ option creates a new 50GB volume. 
+* The _--disk_ option creates a new 30GB volume. 
 * The _--os-variant_ option takes an OS name and sets a few default values that are good for that OS. 
 The default values for CPU cores and memory are overridden here by the `--vcpus` and `--ram` options. 
 The command `osinfo-query os` lists all the values that can go in here. 
@@ -98,16 +134,13 @@ But here the _--noautoconsole_ option stops that happening.  Connecting to the c
 
 == create a VM 
 
-Copy and paste the variables and virt-install command into a terminal. 
+Run the script. 
 
 [source,shell]
 ----
-[root@host1 libvirt]# HOST=guest1
-...
-[root@host1 libvirt]# virt-install \
->   --name="$HOST" \
-...
->   --noautoconsole
+[root@host2 libvirt]# chmod 754 vm-guest1-build.sh 
+[root@host2 libvirt]# ./vm-guest1-build.sh 
+
 
 Starting install...
 Retrieving file vmlinuz...                        | 8.5 MB  00:00:00     
@@ -118,31 +151,19 @@ the console to complete the installation process.
 [root@host1 libvirt]# 
 ----
 
-
-=== delete the VM 
-
-If something goes wrong, remove your additions. 
-
-* Pull the plug on the VM with _virsh destroy_. 
-* Remove libvirt's new VM config with _virsh undefine_. 
-* Remove the new storage volume file with _virsh vol-delete_. For the impatient, you can avoid typing another command by adding another option to virsh undefine: _virsh undefine --nvram --remove-all-storage $HOST_. 
-
+== view the new volume 
 
 [source,shell]
-....
-[root@host1 libvirt]# virsh destroy $HOST
-Domain guest1 destroyed
+----
+[root@host2 libvirt]# virsh vol-info guest1.qcow2 --pool images
+Name:           guest1.qcow2
+Type:           file
+Capacity:       50.00 GiB
+Allocation:     100.95 MiB
 
-[root@host1 libvirt]# 
-[root@host1 libvirt]# virsh undefine --nvram $HOST 
-Domain guest1 has been undefined
+[root@host2 libvirt]# 
+----
 
-[root@host1 libvirt]# 
-[root@host1 libvirt]#  virsh vol-delete $HOST.qcow2 --pool images
-Vol guest1.qcow2 deleted
-
-[root@host1 libvirt]# 
-....
 
 
 == watch the install 
@@ -168,7 +189,7 @@ After a few seconds, the anaconda install starts.
 ....
 ...
 Starting installer, one moment...
-anaconda 29.19.2.17-1.el8 for Red Hat Enterprise Linux 8.2 started.
+anaconda 34.25.0.29-1.el9_0 for Red Hat Enterprise Linux 9.0 started.
  * installation log files are stored in /tmp during the installation
  * shell is available on TTY2
  * if the graphical installation interface fails to start, try again with the
@@ -235,31 +256,36 @@ Rebooting.
 ....
 
 
-
-== start the new machine 
+== display libvirt VMs
 
 After install completes, the machine is off. 
 
-
 [source,shell]
-....
-[root@host1 libvirt]# virsh list --all
- Id   Name         State
------------------------------
- 1    guest1     shut off
+----
+[root@host2 libvirt]# virsh list --all
+ Id   Name     State
+-------------------------
+ -    guest1   shut off
 
-[root@host1 libvirt]# 
-....
+[root@host2 libvirt]# 
+----
+
+
+== start the new machine 
+
 
 Turn it on. 
 
 [source,shell]
 ....
-[root@host1 libvirt]# virsh start $HOST
+[root@host1 libvirt]# virsh start guest1
 Domain guest1 started
 
 [root@host1 libvirt]# 
 ....
+
+
+== log into the console 
 
 Connect to the console again. 
 This time the login prompt appears. 
@@ -270,11 +296,7 @@ Try logging in.
 ....
 [root@host1 libvirt]# virsh console $HOST
 Connected to domain guest1
-Escape character is ^]
-
-Red Hat Enterprise Linux 8.2 (Ootpa)
-Kernel 4.18.0-193.el8.x86_64 on an x86_64
-
+...
 guest1 login: root
 Password: 
 [root@guest1 ~]# 
