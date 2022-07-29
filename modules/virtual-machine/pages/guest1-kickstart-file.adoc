@@ -180,8 +180,6 @@ kexec-tools
 # use your Red Hat developer account and your subscription entitlement.
 /usr/sbin/subscription-manager register --username=nick --password='some password!' 
 /usr/sbin/subscription-manager attach --pool=123456789abcdef123456789abcdef12
-# package update
-/usr/bin/dnf -y update 
 %end
 ....
 

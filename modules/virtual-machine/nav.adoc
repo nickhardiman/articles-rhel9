@@ -7,7 +7,7 @@
 ** xref:guest1-virt-install.adoc[]
 ** xref:guest1-delete.adoc[]
 ** xref:guest1-os-setup.adoc[]
-** xref:guest1-enp2s0.adoc[]
+** xref:guest1-network.adoc[]
 ** xref:guest2-kickstart-file.adoc[]
 ** xref:guest2-virt-install.adoc[]
 ** xref:guest2-dnsmasq-dhcp.adoc[]

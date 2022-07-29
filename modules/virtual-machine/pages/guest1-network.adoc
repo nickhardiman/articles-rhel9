@@ -1,0 +1,142 @@
+= examine the network 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 15-01-2021
+
+
+The two network interfaces, enp1s0 and enp2s0, are up.
+
+
+== check the DHCP lease for the second interface 
+
+Open another terminal. 
+
+Check on _host1_. 
+
+[source,shell]
+....
+[root@host2 libvirt]#  virsh net-dhcp-leases private0 
+ Expiry Time           MAC address         Protocol   IP address          Hostname   Client ID or DUID
+-----------------------------------------------------------------------------------------------------------
+ 2022-07-29 17:51:56   52:54:00:00:00:02   ipv4       192.168.152.28/24   guest1     01:52:54:00:00:00:02
+
+[root@host2 libvirt]# 
+....
+
+
+== view  guest interfaces 
+
+Use the console to view interface details and check out what IP address was assigned to the first interface. 
+
+[source,shell]
+....
+[root@guest1 ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:00:00:01 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.217/24 brd 192.168.1.255 scope global dynamic noprefixroute enp1s0
+       valid_lft 86313sec preferred_lft 86313sec
+    inet6 2a00:23a8:4b47:fc01:5054:ff:fe00:1/64 scope global dynamic noprefixroute 
+       valid_lft 62207983sec preferred_lft 31103983sec
+    inet6 fdaa:bbcc:ddee:0:5054:ff:fe00:1/64 scope global noprefixroute 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe00:1/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+3: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:00:00:02 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.152.28/24 brd 192.168.152.255 scope global dynamic noprefixroute enp2s0
+       valid_lft 3513sec preferred_lft 3513sec
+    inet6 2001:db8:ca2:3:5054:ff:fe00:2/64 scope global noprefixroute 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe00:2/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+[root@guest1 ~]# 
+....
+
+NetworkManager created a configuration to manage enp2s0, but it is not set to start automatically. 
+
+[source,shell]
+....
+[root@guest1 ~]# nmcli con
+NAME    UUID                                  TYPE      DEVICE 
+enp1s0  e4b64ff6-8b19-4ff8-9944-4aba0048ef18  ethernet  enp1s0 
+enp2s0  ddb86337-5eab-4f29-93d6-fc27541a6c62  ethernet  enp2s0 
+[root@guest1 ~]# 
+....
+
+
+
+== view default routes
+
+NetworkManager created a default network route. 
+General traffic should be pushed out to the Internet, not towards the private network. 
+The only default route should be for enp1s0. 
+
+[source,shell]
+....
+[root@guest1 ~]# ip route list
+default via 192.168.1.254 dev enp1s0 proto dhcp src 192.168.1.217 metric 100 
+192.168.1.0/24 dev enp1s0 proto kernel scope link src 192.168.1.217 metric 100 
+192.168.152.0/24 dev enp2s0 proto kernel scope link src 192.168.152.28 metric 101 
+[root@guest1 ~]# 
+....
+
+
+== never-default
+
+enp2s0 should never be used as the default root. 
+This can be set in config, but it's usually not necessary. 
+The attribute to change is never-default. 
+
+[source,shell]
+....
+[root@guest1 ~]# nmcli con show enp2s0 | grep never-default
+ipv4.never-default:                     no
+ipv6.never-default:                     no
+[root@guest1 ~]# 
+....
+
+Change the attribute. 
+
+[source,shell]
+....
+[root@guest1 ~]# nmcli connection modify enp2s0 ipv4.never-default yes
+[root@guest1 ~]# nmcli connection modify enp2s0 ipv6.never-default yes
+[root@guest1 ~]# 
+....
+
+Restart the connection. 
+
+[source,shell]
+....
+[root@guest1 ~]# nmcli con down enp2s0
+Connection 'enp2s0' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+[root@guest1 ~]# 
+[root@guest1 ~]# nmcli con up enp2s0
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+[root@guest1 ~]# 
+....
+
+
+== check 
+
+Ping Google. 
+
+[source,shell]
+....
+[root@guest1 ~]# ping -c1 8.8.8.8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=10.4 ms
+
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 10.363/10.363/10.363/0.000 ms
+[root@guest1 ~]# 
+....
+
+
