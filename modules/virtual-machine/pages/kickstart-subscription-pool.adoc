@@ -5,6 +5,7 @@ Nick Hardiman
 
 
 If a machine is not registered with Red Hat, it can't use Red Hat repositories. 
+RHEL comes with a utility named subscription-manager, a client which helps customers use the central Red Hat Subscription Management service. 
 
 [source,shell]
 ....

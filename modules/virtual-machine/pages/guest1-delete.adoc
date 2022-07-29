@@ -7,10 +7,11 @@ If something goes wrong with the guest1 VM, delete it.
 
 The process for removing your additions goes like this. 
 
-* Pull the plug on the VM with _virsh destroy_. 
+* Pull the plug on the VM with _virsh destroy_. Despite the dramatic _destroy_ name, this does not delete anything.
 * Remove libvirt's new VM config with _virsh undefine_. 
 * Remove the new storage volume file with _virsh vol-delete_. For the impatient, you can avoid typing another command by adding another option to virsh undefine: _virsh undefine --nvram --remove-all-storage $HOST_. 
 
+ 
 
 === write a script to delete the VM 
 

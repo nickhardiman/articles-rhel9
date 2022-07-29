@@ -4,6 +4,18 @@ Nick Hardiman
 :revdate: 07-03-2021
 
 
+.guest1 and guest2 network interfaces
+----
+            + pubbr0                                + privbr0                              + privbr1
+            |                                       |                                      |
+            |     +--------------------------+      |     +--------------------------+     |     +--------------------------+ 
+            |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |     |  guest3.lab.example.com  | 
+  Internet  |     |                          |      |     |                          |     |     |                          | 
+  <---------+-----+ enp1s0            enp2s0 +------+-----+ enp1s0            enp2s0 +-----+-----+ enp1s0                   |
+            |     |                          |      |     |                          |     |     |                          |
+            |     +--------------------------+      |     +--------------------------+     |     +--------------------------+ 
+----
+
 
 Create another VM like guest2. 
 Instead of installing from scratch, the way _guest1_ and _guest2_ were created, base it on guest2.

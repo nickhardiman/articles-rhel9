@@ -1,0 +1,19 @@
+= delete guest2's new volume 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+
+Delete the new volume.
+
+If you want to remove this new file and start again, delete it with _virsh vol-delete_. 
+Don't use the bash command _rm_ because it removes the file and leaves behind libvirt's configuration about this file. 
+The _vol-delete_ command removes both the file and libvirt's config. 
+
+[source,shell]
+----
+[root@host1 images]# virsh vol-delete $MY_COPY --pool images
+Vol guest2 deleted
+
+[root@host1 images]# 
+----

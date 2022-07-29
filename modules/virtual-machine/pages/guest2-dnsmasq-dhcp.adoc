@@ -11,7 +11,7 @@ set a VM's domain name and IP address using dnsmasq
 ....
 .-------------------------------------.  
 |                                     |
-|  host1                              |
+|  private1                           |
 |                                     |
 |   +----------+        +----------+  |
 |   |          |        |          |  |

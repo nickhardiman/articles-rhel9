@@ -1,275 +1,167 @@
-= create the guest2 VM 
-Nick Hardiman
+= create guest2 using a KVM image
+Nick Hardiman 
 :source-highlighter: highlight.js
-:revdate: 28-11-2020
-
-Use a *fresh install* process (AKA clean install, or install from scratch). 
-Build a machine and install the OS. 
-Use a kickstart file to automate the process. 
-
-This example creates a machine called _guest2_ and installs RHEL 8. 
-
-* xref:guest1-virt-install.adoc[]
+:revdate: 14-01-2021
 
 
-The guest2 machine has two interfaces, not one. 
-One interface leads to the home network and onto the Internet, and the other leads to the private network. 
-
-.guest2 has one interface 
-....
-  |
-+-+-------------------------------------+
-| enp1s0, guest1.lab.example.com        |
-|                                       |
-| enp2s0, guest1.private.example.com    |
-+-+-------------------------------------+
-  |
-  | privbr0, the private network 
-  | 192.168.152.0/24
-  |
-+-+-------------------------------------+
-| enp1s0, guest2.lab.example.com        |
-|                                       |
-|                                       |
-+---------------------------------------+
-....
-
-A command called _virt-install_ does the work. Two things are required before the _virt-install_ command is run. 
-
-* RHEL 8 install ISO. This file is in libvirt's _images_ pool. 
-* kickstart file. This is /root/libvirt/guest2.ks.
+Tell libvirt to create the _guest2_ virtual machine. 
+Use the new disk file that already has the OS installed. 
+The _guest2_ disk image is a customized copy of the golden image.
 
 
+== create the libvirt domain 
 
-== the virt-install command 
+Create a VM using the ready-made _guest2_ disk image. 
 
-The command to build a new machine is long, with lots of options. 
-In this example the options are split over several lines, and some values are moved to variables, to make it a little easier to see what's going on. 
+There are two ways of doing this. 
 
-[source,shell]
-....
-HOST=guest2
-NEW_DISK=/var/lib/libvirt/images/$HOST.qcow2
-INSTALL_ISO=/var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
-KICKSTART_CONFIG=/root/libvirt/$HOST.ks
-IF1_MAC=52:54:00:00:00:01
-virt-install \
-  --name="$HOST" \
-  --vcpus=2 \
-  --ram=4096 \
-  --disk path=$NEW_DISK,size=50 \
-  --os-variant rhel8.3 \
-  --network network=privbr0,mac=$IF1_MAC   \
-  --boot uefi,hd,menu=on \
-  --location $INSTALL_ISO \
-  --initrd-inject $KICKSTART_CONFIG \
-  --extra-args "inst.ks=file:/$HOST.ks console=tty0 console=ttyS0,115200" \
-  --noautoconsole
-....
+* use XML config 
+* use the virt-install command
+
+=== use XML config 
+
+A new VM can be created using a command like ``virsh define my-machine.xml``, 
+similar to the way a storage pool can be created using ``virsh pool-define storage-pool.xml``.
+
+ut the XML configuration that defines a virtual machine is complicated. 
+It's easier to use the ``virt-install`` command to do the hard work. 
 
 
-== create a VM 
+=== use the virt-install command
 
-Copy and paste the variables and virt-install command into a terminal. 
+This ``virt-install`` command is pretty long, so it's split over many lines to make it a little clearer. 
+And the values are parameterized to make them clearer, too.  
+
+These are the values.
+
+[source,bash]
+----
+HOST=guest2 
+CPUS=1
+MEMORY=2048
+POOL=images
+VOLUME=$HOST.qcow2
+OS_VARIANT=rhel8.3
+IF1_MAC=52:54:00:00:00:03
+IF1_BRIDGE=privbr0
+----
+
+This version of the virt-install command is different to the ones used to create _myfirstvm_ and _guest1_. 
+
+[source,bash]
+----
+virt-install   \
+    --name       $HOST   \
+    --vcpus      $CPUS \
+    --memory     $MEMORY \
+    --disk       vol=$POOL/$VOLUME  \
+    --os-variant $OS_VARIANT \
+    --network    bridge:${IF1_BRIDGE},mac=$IF1_MAC   \
+    --import   \
+    --noautoconsole
+----
+
+Here's an explanation of what's going on. 
+
+* --name sets the name that libvirt uses (not the OS hostname). 
+* --vcpus, --ram, --disk - The next three options add resources - 1 CPU, 2048MiB memory and a 10GiB disk.
+* --boot sets the firmware -   UEFI rather than the older BIOS.
+* --os-variant sets up some default values. 
+The command ``osinfo-query os`` lists all the choices. 
+* --network defines the ethernet interface and which libvirt network it's connected to.
+* --import - use the disk to boot the new VM. 
+* --noautoconsole - when the virt-install command kicks off the build of the VM, don't hang around and connect to the console. 
+That's done as a seperate step. 
+
+Read `man virt-install` for all the options (and there are a truck-load). 
+The virt-install tool has a lot of default settings, so there is no need to specify options like `--connect qemu:///system` for the hypervisor and `--graphics spice` for a graphical desktop. 
+
+
+
+Create a new VM using a ready-made disk image.
+Copy and paste the values, then the virt-install command. 
+
+The command is pretty quick. 
 
 [source,shell]
 ----
-[root@host1 libvirt]# HOST=guest2
-...
-[root@host1 libvirt]# virt-install \
->   --name="$HOST" \
-...
->   --noautoconsole
-
+[root@host1 ~]# HOST=guest2 
+[root@host1 ~]# CPUS=1
+[root@host1 ~]# MEMORY=2048
+[root@host1 ~]# POOL=images
+[root@host1 ~]# VOLUME=$HOST.qcow2
+[root@host1 ~]# OS_VARIANT=rhel8.3
+[root@host1 ~]# IF1_MAC=52:54:00:00:00:03
+[root@host1 ~]# IF1_BRIDGE=privbr0
+[root@host1 ~]# virt-install   \
+>     --name       $HOST   \
+>     --vcpus      $CPUS \
+>     --memory     $MEMORY \
+>     --disk       vol=$POOL/$VOLUME  \
+>     --os-variant $OS_VARIANT \
+>     --network    bridge:${IF1_BRIDGE},mac=$IF1_MAC   \
+>     --import   \
+>     --noautoconsole
 Starting install...
-Retrieving file vmlinuz...                        | 8.5 MB  00:00:00     
-Retrieving file initrd.img...                     |  63 MB  00:00:00     
-Allocating 'guest2.qcow2'                         |  50 GB  00:00:00     
-Domain installation still in progress. You can reconnect to 
-the console to complete the installation process.
-[root@host1 libvirt]# 
+Domain creation completed.
+[root@host1 ~]# 
+----
+
+libvirt adds XML configuration 
+
+Now there is a VM.
+
+[source,shell]
+----
+[root@host1 ~]# virsh list --all
+ Id   Name     State
+------------------------
+ 1    guest1   running
+ 6    guest2   running
+
+[root@host1 ~]# 
 ----
 
 
-=== delete the VM 
 
-If something goes wrong, remove your additions. 
+== login with the console 
 
-* Pull the plug on the VM with _virsh destroy_. 
-* Remove libvirt's new VM config with _virsh undefine_. 
-* Remove the new storage volume file with _virsh vol-delete_. For the impatient, you can avoid typing another command by adding another option to virsh undefine: _virsh undefine --nvram --remove-all-storage $HOST_. 
-
+Connect to the console with the ``virsh console`` command.
+Hit the Enter key kbd:[⏎]  to get the _guest2 login_ prompt to appear. 
 
 [source,shell]
-....
-[root@host1 libvirt]# virsh destroy $HOST
-Domain guest2 destroyed
-
-[root@host1 libvirt]# 
-[root@host1 libvirt]# virsh undefine --nvram $HOST 
-Domain guest2 has been undefined
-
-[root@host1 libvirt]# 
-[root@host1 libvirt]#  virsh vol-delete $HOST.qcow2 --pool images
-Vol guest2.qcow2 deleted
-
-[root@host1 libvirt]# 
-....
-
-
-== watch the install 
-
-Use the console to watch progress. 
-
-Hundreds of lines scroll by for two minutes. 
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh console $HOST
-Connected to domain guest2
-Escape character is ^]
-[    3.630006] Freeing initrd memory: 64952K
-[    3.630623] PCI-DMA: Using software bounce buffering for IO (SWIOTLB)
-[    3.631678] software IO TLB: mapped [mem 0x6f0e2000-0x730e2000] (64MB)
-...
-....
-
-After a few seconds, the anaconda install starts. 
-
-[source,shell]
-....
-...
-Starting installer, one moment...
-anaconda 29.19.2.17-1.el8 for Red Hat Enterprise Linux 8.2 started.
- * installation log files are stored in /tmp during the installation
- * shell is available on TTY2
- * if the graphical installation interface fails to start, try again with the
-   inst.text bootoption to start text installation
- * when reporting a bug add logs from /tmp as separate text/plain attachments
-18:48:20 Not asking for VNC because of an automated install
-18:48:20 Not asking for VNC because text mode was explicitly asked for in kickstart
-Starting automated install...
-Generating updated storage configuration
-Checking storage configuration...
-
-================================================================================
-
-================================================================================
-Installation
-
-1) [x] Language settings                 2) [x] Time settings
-       (English (United Kingdom))               (Europe/London timezone)
-3) [x] Installation source               4) [x] Software selection
-       (Local media)                            (Custom software selected)
-5) [x] Installation Destination          6) [x] Kdump
-       (Custom partitioning selected)           (Kdump is enabled)
-7) [x] Network configuration
-       (Wired (enp1s0) connected)
-
-================================================================================
-...
-....
-
-
-After that, packages install. 
-
-[source,shell]
-....
-...
-Installing iwl105-firmware.noarch (415/417)
-Installing iwl1000-firmware.noarch (416/417)
-Installing iwl100-firmware.noarch (417/417)
-Performing post-installation setup tasks
-Configuring filesystem.x86_64
-Configuring crypto-policies.noarch
-Configuring kernel-core.x86_64
-...
-....
-
-Finally the system stops. 
-The _reboot_ command in the kickstart file is ignored. 
-The OS expects the machine to reboot, but libvirt and qemu stop this happening.
-The _qemu-kvm_ process runs with about 60 options (see for yourself with _ps -fwwwC qemu-kvm_), and one of these is  _-no-reboot_ . 
-To find out more, run _man virt-install_ and read about the _--noautoconsole_ option. 
-
-[source,shell]
-....
-...
-[  OK  ] Stopped Remount Root and Kernel File Systems.
-[  OK  ] Reached target Shutdown.
-[  OK  ] Reached target Final Step.
-         Starting Reboot...
-dracut Warning: Killing all remaining processes
-Rebooting.
-[  201.228326] reboot: Restarting system
-
-[root@host1 libvirt]# 
-....
-
-
-
-== start the new machine 
-
-After install completes, the machine is off. 
-
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh list --all
- Id   Name         State
------------------------------
- 1    guest2     shut off
-
-[root@host1 libvirt]# 
-....
-
-Turn it on. 
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh start $HOST
-Domain guest2 started
-
-[root@host1 libvirt]# 
-....
-
-Connect to the console again. 
-This time the login prompt appears. 
-
-Try logging in. 
-
-[source,shell]
-....
-[root@host1 libvirt]# virsh console $HOST
+----
+[root@host1 ~]# virsh console guest2
 Connected to domain guest2
 Escape character is ^]
 
-Red Hat Enterprise Linux 8.2 (Ootpa)
-Kernel 4.18.0-193.el8.x86_64 on an x86_64
+Red Hat Enterprise Linux 8.3 (Ootpa)
+Kernel 4.18.0-240.1.1.el8_3.x86_64 on an x86_64
 
-guest2 login: root
-Password: 
-[root@guest2 ~]# 
-....
+Activate the web console with: systemctl enable --now cockpit.socket
 
-Disconnect from the console with the control and right square bracket keys 
+guest2 login: 
+----
+
+That's enough to prove the virtual machine runs. 
+
+Disconnect from the console. 
+The disconnection command is 
 kbd:[Ctrl + ++]++ ] 
 
-[source,shell]
-....
-[root@guest2 ~]# ^]
-[root@host1 libvirt]# 
-....
-
-== stop the new machine 
-
-The _virsh shutdown_ command tells the OS to power off. 
-It's a graceful shutdown, unlike _virsh destroy_ which is like pulling the plug.
 
 [source,shell]
-....
-[root@host1 libvirt]# virsh shutdown $HOST
-Domain guest2 is being shutdown
+----
+^]
+[root@host1 ~]# 
+----
 
-[root@host1 libvirt]# 
-....
+
+
+== delete the VM
+
+if something goes wrong, clear your work and start again.
+Copy the guest1 delete script, edit the new copy, and change the name from _guest1_ to _guest2_.
+
+* xref:guest1-delete.adoc[]
+

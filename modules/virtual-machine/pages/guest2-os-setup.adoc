@@ -6,25 +6,6 @@ Nick Hardiman
 
 Carry out some first-run sysadmin on the new machine. 
 
-----
-            + pubbr0                                   + privbr0
-            |                                          |  
-            |                                          |     +--------------------------+
-            |                                          |     |  guest2.lab.example.com  |
-            |                                          |     |                          |
-            |                                          |     |                          |
-            |     +-----------------------------+      |     |                          |
-            |     |  guest1.lab.example.com     |      +-----+ enp1s0                   |
-  Internet  |     |                             |      |     +--------------------------+
-  <---------+-----+ enp1s0               enp2s0 +------+
-            |     |                             |      |     +--------------------------+
-            |     |                             |      |     |  guest3.lab.example.com  |
-            |     +-----------------------------+      +-----+ enp1s0                   |
-            |                                          |     |                          |
-            +                                          +     |                          |
-                                                             |                          |
-                                                             +--------------------------+
-----
 
 == connect using SSH 
 
@@ -88,6 +69,9 @@ Disable root login.
 
 
 == proxy 
+
+
+??? squid? 
 
 Use squid on guest1 
 
