@@ -1,0 +1,253 @@
+= AIDE (Advanced Intrusion Detection Environment)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-07-2020
+
+Check file integrity with Aide. 
+
+https://github.com/aide/aide[AIDE (Advanced Intrusion Detection Environment)] 
+is a HIDS (Host-based Intrusion Detection System). 
+The maverick authors didn't follow the IT industry's universal Three Letter Acronym rule when choosing the name.  
+Red Hat provides Aide for 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/system_design_guide/checking-integrity-with-aide_system-design-guide
+[checking file integrity].
+Aide builds a database of files, then checks to see if anything changed. 
+That makes it a useful tool for an administrator who wants to answer questions like these. 
+
+* Has anyone added extended attributes? 
+* Has the ownership changed? 
+* When was it last modified - is it more recent than the date stored in the database?
+
+The answers are clues to help a security administrator find unauthorized changes. An unauthorized change may be the sign of an intruder.
+More clues are better, so Aide can be used as one source of information in a larger security system. 
+
+Aide does not stop anyone making changes or fix any problems. 
+It does report changes, but it does not remediate by reversing the changes.
+Aide has nothing to do with SELinux's mandatory access control, or snort's network traffic analysis, or auditd's tracking of system calls. 
+
+Similar open source products include  
+https://github.com/pilbender/samhain[Samhain], 
+https://github.com/wazuh/wazuh/[Wazuh], and 
+https://github.com/ossec/ossec-hids[OSSEC (Open Source HIDS SECurity)]. 
+Aide is the only file integrity checker packaged up with 
+https://www.redhat.com/en/enterprise-linux-8[RHEL 8]. 
+
+Aide has four parts, like many other Linux applications. Descriptions for these and instructions for use are in man pages (`man 1 aide` and `man 5 aide.conf`), an HTML manual (/usr/share/doc/aide/manual.html), and a help summary (`aide --help`).
+
+* *configuration*. File /etc/aide.conf contains many comments and settings. The default configuration covers a lot of files.
+* *engine*. The compiled C program is /usr/sbin/aide, and the source is on https://github.com/aide/aide/tree/master/src[Github]. There are also a few helper scripts in /usr/share/doc/aide/contrib/.
+* *log*. Reports are written to directory /var/log/aide/.
+* *content*. File /var/lib/aide/aide.db.gz is a compressed CSV file that acts as aide's database.
+
+
+== install 
+
+This work is all done with the root account. 
+
+The Aide package is in the appstream repo. 
+
+Install with `dnf install aide`.
+
+Check the install is OK by running `aide --help`. 
+This prints the version and about 20 usage lines. 
+
+
+
+== configure 
+
+Create a new database. 
+
+The location is specified in the config file, `+@@{DBDIR}/aide.db.new.gz+`  
+(the `+@@{DBDIR}+` part is an Aide variable).
+
+[source,shell]
+....
+[root@guest1 ~]# grep DBDIR /etc/aide.conf
+@@define DBDIR /var/lib/aide
+database=file:@@{DBDIR}/aide.db.gz
+database_out=file:@@{DBDIR}/aide.db.new.gz
+[root@guest1 ~]# 
+....
+
+This must be done regularly. The older a database is, the less it looks like the system, and the longer the report. 
+It doesn't take long before a report becomes unreadable.
+
+
+[source,shell]
+....
+[root@guest1 ~]# aide --init 
+Start timestamp: 2020-07-27 11:34:06 +0100 (AIDE 0.16)
+AIDE initialized database at /var/lib/aide/aide.db.new.gz
+
+Number of entries:	74029
+
+---------------------------------------------------
+The attributes of the (uncompressed) database(s):
+---------------------------------------------------
+
+/var/lib/aide/aide.db.new.gz
+  MD5      : aekwilxkHGu4jOSSBoTFvg==
+  SHA1     : v/LayIZHZRgNIpDym2n9IjwpyWw=
+  RMD160   : RAFRX1Z9PbiXKdqzmG8PqkYBGrQ=
+  TIGER    : VbVCcQpn/dpuJqzGPn8Aqa1bAEhr5Rqm
+  SHA256   : CVxuwg1g674LZfccYw3V/wm5Hn18ufJI
+             86HuPY1vEmw=
+  SHA512   : HfQ/2cOaJSAdur6s+GD50Iv9tdVBe+oC
+             T3bM/FgWgi0PRPMW+Nz7zP4j7kd6sCx9
+             JVkxXw0Tklhq18LPnEZq0Q==
+
+
+End timestamp: 2020-07-27 11:34:28 +0100 (run time: 0m 22s)
+[root@guest1 ~]# 
+....
+
+The Aide check won't find this new database. 
+Copy it to the location listed in the config file. 
+
+[source,shell]
+....
+[root@guest1 ~]# cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+[root@guest1 ~]# 
+....
+
+
+== run 
+
+Aide runs through every item in its database and checks files. 
+This run, on a small system with about 500 packages installed, takes 20 seconds. 
+
+[source,shell]
+....
+[root@guest1 ~]# aide --check
+Start timestamp: 2020-07-27 11:49:11 +0100 (AIDE 0.16)
+AIDE found NO differences between database and filesystem. Looks okay!!
+
+Number of entries:	74029
+
+---------------------------------------------------
+The attributes of the (uncompressed) database(s):
+---------------------------------------------------
+
+/var/lib/aide/aide.db.gz
+  MD5      : aekwilxkHGu4jOSSBoTFvg==
+  SHA1     : v/LayIZHZRgNIpDym2n9IjwpyWw=
+  RMD160   : RAFRX1Z9PbiXKdqzmG8PqkYBGrQ=
+  TIGER    : VbVCcQpn/dpuJqzGPn8Aqa1bAEhr5Rqm
+  SHA256   : CVxuwg1g674LZfccYw3V/wm5Hn18ufJI
+             86HuPY1vEmw=
+  SHA512   : HfQ/2cOaJSAdur6s+GD50Iv9tdVBe+oC
+             T3bM/FgWgi0PRPMW+Nz7zP4j7kd6sCx9
+             JVkxXw0Tklhq18LPnEZq0Q==
+
+
+End timestamp: 2020-07-27 11:49:30 +0100 (run time: 0m 19s)
+[root@guest1 ~]# 
+....
+
+
+
+== test by changing /etc/hosts 
+
+The /etc/hosts file is listed in Aide's config file.
+The other two files shown here, hosts.allow and hosts.deny, are TCP Wrappers files (the https://access.redhat.com/solutions/3906701[tcpwrappers package is no longer available]).
+
+[source,shell]
+....
+[root@guest1 ~]# grep /etc/hosts /etc/aide.conf
+/etc/hosts$      CONTENT_EX
+/etc/hosts.allow$   CONTENT_EX
+/etc/hosts.deny$    CONTENT_EX
+[root@guest1 ~]# 
+....
+
+Add a comment. 
+
+[source,shell]
+....
+[root@guest1 ~]# echo '#' >> /etc/hosts
+[root@guest1 ~]# 
+....
+
+
+Run again. 
+
+The new report shows what's changed. 
+It's possible the results will contain more than one changed file, because 
+the OS makes changes during normal operation.
+For instance, when 
+https://opensource.com/article/17/11/how-use-cron-linux[anacron] 
+runs, it updates files in /var/spool/anacron/.
+
+The run takes a while to run. 
+This command variation cuts down on the runtime (in this system it takes 2 seconds, not 20): `aide --check --limit=/etc/hosts`.
+
+
+
+[source,shell]
+....
+[root@guest1 ~]# aide --check
+Start timestamp: 2020-07-27 12:28:56 +0100 (AIDE 0.16)
+AIDE found differences between database and filesystem!!
+
+Summary:
+  Total number of entries:	74029
+  Added entries:		0
+  Removed entries:		0
+  Changed entries:		1
+
+---------------------------------------------------
+Changed entries:
+---------------------------------------------------
+
+f   ...    .C... : /etc/hosts
+
+---------------------------------------------------
+Detailed information about changes:
+---------------------------------------------------
+
+File: /etc/hosts
+  SHA512   : KbRFbGzUuP5oXh1LZLs6SmFFg/aSmaK0 | S8fGVnSpVcuglPmvVCVDBWfcLeIEQrtB
+             hCjRIt3qPS4Z7d7I3Z3FdJeGJLgvS2EE | NgOcNOp4f1vxtdQWOQrMKTx7vvC2BClu
+             EC026mELug1NDA77Dz5itg==         | cQCJ4BSC3e0T6eAh0aryLA==
+
+
+---------------------------------------------------
+The attributes of the (uncompressed) database(s):
+...
+[root@guest1 ~]# 
+....
+
+This line shows a summary of changes, but it's impossible to decipher without an  explanation.
+
+[source,shell]
+....
+f   ...    .C... : /etc/hosts
+....
+
+The line has two fields, separated by a colon. 
+The first field is a change summary - it's a list of 17 characters. 
+To find out what these 17 characters mean, have a look at the aide.conf manual page (search for _YlZbpugamcinCAXSE_).
+
+Here's how to decipher the summary field for /etc/hosts.
+
+* The first character 'f' means this is a regular file. 
+* The next few characters are ' ' spaces, meaning they are not checked. Fields to check are defined by a rule in the config file, called CONTENT_EX. 
+* The seven '.' characters mean nothing changed. 
+* The 'C' means the checksum changed (file size isn't checked). 
+
+
+== maintenance 
+
+Aide, like any other reporting system, must be handled with care. 
+If it's properly managed, it can satisfy audit requirements. 
+
+If aide isn't managed, it becomes a headache. 
+If a daily cron job mails a report to the security team, but the database is never updated, the report will grow so large it becomes unusable. 
+
+A business process is required to safely store the database, configure aide for different server types, and to regularly update the database.
+This work can be handled by Ansible. 
+
+
+
+
+

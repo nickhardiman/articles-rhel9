@@ -1,0 +1,110 @@
+= trust a CA certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+
+Copy the new CA certificate to the list of trusted certificates. 
+
+
+[source,shell]
+....
+[nick@guest1 ~]# cat /etc/pki/ca-trust/source/README
+This directory /etc/pki/ca-trust/source/ contains CA certificates and 
+trust settings in the PEM file format. The trust settings found here will be
+interpreted with a high priority - higher than the ones found in 
+/usr/share/pki/ca-trust-source/.
+
+=============================================================================
+QUICK HELP: To add a certificate in the simple PEM or DER file formats to the
+            list of CAs trusted on the system:
+
+            Copy it to the
+                    /etc/pki/ca-trust/source/anchors/
+            subdirectory, and run the
+                    update-ca-trust
+            command.
+
+            If your certificate is in the extended BEGIN TRUSTED file format,
+            then place it into the main source/ directory instead.
+=============================================================================
+
+Please refer to the update-ca-trust(8) manual page for additional information.
+[nick@guest1 ~]# 
+[nick@guest1 ~]# ls /etc/pki/ca-trust/source/anchors
+[nick@guest1 ~]# 
+....
+
+== trust the certificate 
+
+Copy the CA certificate to the list of trusted certificates. 
+
+The CA certificate file is certauth/cacert.pem.
+
+[source,shell]
+....
+[nick@guest1 ~]$ cd certauth/
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ sudo cp ./cacert.pem /etc/pki/ca-trust/source/anchors/
+[sudo] password for nick: 
+[nick@guest1 certauth]$ 
+....
+
+Update the list of trusted CA certificates. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ sudo update-ca-trust
+[nick@guest1 certauth]$ 
+....
+
+This adds the certificate to a few lists of trusted certificates. 
+There are actually a few lists, stored in the _/etc/pki/_ directory tree. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ grep -R ca.lab.example.com /etc/pki
+Binary file /etc/pki/ca-trust/extracted/edk2/cacerts.bin matches
+Binary file /etc/pki/ca-trust/extracted/java/cacerts matches
+/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt:# ca.lab.example.com
+/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:# ca.lab.example.com
+/etc/pki/ca-trust/extracted/pem/email-ca-bundle.pem:# ca.lab.example.com
+/etc/pki/ca-trust/extracted/pem/objsign-ca-bundle.pem:# ca.lab.example.com
+/etc/pki/ca-trust/source/anchors/cacert.pem:        Issuer: C=UK, ST=mystate, O=myorg, OU=myou, CN=ca.lab.example.com
+/etc/pki/ca-trust/source/anchors/cacert.pem:        Subject: C=UK, ST=mystate, O=myorg, OU=myou, CN=ca.lab.example.com
+Binary file /etc/pki/java/cacerts matches
+/etc/pki/tls/cert.pem:# ca.lab.example.com
+/etc/pki/tls/certs/ca-bundle.crt:# ca.lab.example.com
+/etc/pki/tls/certs/ca-bundle.trust.crt:# ca.lab.example.com
+grep: /etc/pki/consumer/key.pem: Permission denied
+grep: /etc/pki/consumer/cert.pem: Permission denied
+grep: /etc/pki/rsyslog: Permission denied
+[nick@guest1 certauth]$ 
+....
+
+
+=== remove the trusted certificate 
+
+If things go wrong, this process removes the certificate. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ sudo rm  /etc/pki/ca-trust/source/anchors/cacert.pem
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ sudo update-ca-trust
+[nick@guest1 certauth]$ 
+....
+
+Check. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ grep -R ca.lab.example.com /etc/pki
+grep: /etc/pki/consumer/key.pem: Permission denied
+grep: /etc/pki/consumer/cert.pem: Permission denied
+grep: /etc/pki/rsyslog: Permission denied
+[nick@guest1 certauth]$ 
+....
+
+
+

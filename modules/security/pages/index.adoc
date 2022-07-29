@@ -1,0 +1,13 @@
+= security
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+Create a CA (Certificate Authority) on the guest1 VM. 
+If we install servers, we can give them certificates signed by this CA.  
+
+* PKI (Public Key Infrastructure)
+* aide, a poor man's tripwire
+* auditd, track system events, alert on suspicious activity.
+
+

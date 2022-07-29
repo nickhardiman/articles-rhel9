@@ -1,0 +1,275 @@
+= auditd 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 27-07-2020
+
+
+Report on events using the Linux Audit system. 
+
+Audit version 3 is installed on RHEL 8.
+There is nothing to configure for the basic system - it's  already running. 
+The audit daemon is running, the systemd unit is enabled, and the config works. 
+
+The audit daemon config file /etc/audit/auditd.conf has dozens of settings.
+There are no help comments - to find out what these settings are, read `man 5 auditd.conf`. 
+
+Events are added to the log file, /var/log/audit/audit.log
+Rules can be added to meet compliance requirements. 
+
+== theory 
+
+This article has a fair bit of theory before getting to the fun CLI action, because writing an audit rule and reading an audit log message take some  effort. 
+
+
+=== a syscall 
+
+Audit can describe when syscalls are used.  
+A syscall (system call) is a command sent by an application to the kernel. 
+It's the low-level plumbing that many developers need and many users care nothing about.
+
+There are hundreds of syscalls. 
+For instance, the *chmod* syscall changes file mode bits. 
+The user command /usr/bin/chmod uses this syscall.
+
+See the full list by running `ausyscall --dump`.
+Each syscall is described in the reference manual, but syscall man pages aren't installed by default. 
+Get these pages by running `dnf install man-pages`.
+Syscalls are in section 2 of the manual, so `man 2 chmod` shows how to use the chmod syscall and `man 1 chmod` describes the user command.
+
+
+=== the audit.rules file
+
+Audit gets its monitoring and reporting instructions from /etc/audit/audit.rules.
+Instead of adding rules straight to this file, audit comes with 
+https://github.com/linux-audit/audit-userspace/tree/master/rules[many sample rule files] 
+and a utility called *augenrules*, which builds the _audit.rules_ file. 
+
+The audit package includes dozens of sample files, in directory /usr/share/audit/sample-rules/.
+Administrators pick files they are interested in, copy them to the /etc/audit/rules.d/ directory, and run `augenrules`.
+
+Rule order is important. When audit is checking events, it starts reading rules from the top, and stops when it finds a matching rule (similar to the way a firewall uses rules). 
+Each file name starts with a number - the first is 10-base-config.rules and the last is 99-finalize.rules.
+
+Some files contain rules that help with compliance. 
+Admins interested in 
+https://en.wikipedia.org/wiki/Common_Criteria[Common Criteria] certification can pick the files for Operating System Protection Profile (OSPP) v4.2, which start with _30-ospp-v42-_. 
+There are also files for the 
+https://en.wikipedia.org/wiki/Payment_Card_Industry_Data_Security_Standard[Payment Card Industry Data Security Standard (PCI DSS)] and files for the 
+https://en.wikipedia.org/wiki/Security_Technical_Implementation_Guide[Security Technical Implementation Guide (STIG)].
+
+
+
+=== an audit rule 
+
+The audit rules come in 3 varieties: control, file, and syscall.
+The syntax has a learning curve. 
+
+`-D` is a *control rule*. 
+It means _delete all rules_. 
+The first few files in /usr/share/audit/sample-rules/ contain control rules. 
+
+`-w /etc/hosts -p wa -k system-locale` is a *file rule*. 
+It means _log anything trying to write to /etc/hosts or change its attributes, and add a key to the message_. 
+In in /usr/share/audit/sample-rules/, the files 30-nispom.rules and 30-stig.rules contain a lot of file rules. 
+
+`-a never,user -F subj_type=crond_t` is a *syscall rule*. 
+It means _never record user-space events from cron jobs_. 
+`subj_type` is a rule field. See `man 8 auditctl` for a list of these fields.
+Most rules in /usr/share/audit/sample-rules/ are syscall rules. 
+
+
+== add a new rule  
+
+Tell auditd to watch the file /etc/hosts, view its log, and run a report. 
+
+Much of this work is done as root. 
+
+
+=== use the root account
+
+Instead of typing `sudo` for every command, be lazy and start a root session.
+
+[source,shell]
+....
+[nick@guest3 ~]$ sudo su -
+[sudo] password for nick: 
+Last login: Tue Jul 28 06:49:13 EDT 2020 on pts/0
+[root@guest3 ~]# 
+....
+
+
+=== check before changing
+
+Start a second session.
+Watch the audit log. 
+
+An audit message can be long, with dozens of fields.
+These messages don't appear in the systemd journal. 
+
+
+[source,shell]
+....
+[nick@host1 ~]$ ssh nick@g3
+Activate the web console with: systemctl enable --now cockpit.socket
+
+This system is not registered to Red Hat Insights. See https://cloud.redhat.com/
+To register this system, run: insights-client --register
+
+Last login: Tue Jul 28 06:47:06 2020 from 192.168.122.1
+[nick@guest3 ~]$ 
+[nick@guest3 ~]$ sudo tail -f /var/log/audit/audit.log
+type=SYSCALL msg=audit(1595952178.392:193): arch=c000003e syscall=257 success=yes exit=5 a0=ffffff9c a1=55bcfa99bc40 a2=441 a3=1b6 items=2 ppid=1519 pid=1520 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=1 comm="bash" exe="/usr/bin/bash" subj=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 key="system-locale"ARCH=x86_64 SYSCALL=openat AUID="nick" UID="root" GID="root" EUID="root" SUID="root" FSUID="root" EGID="root" SGID="root" FSGID="root"
+....
+
+Return to the first session. 
+View the rules file. 
+
+[source,shell]
+....
+[root@guest3 ~]# cat /etc/audit/audit.rules 
+## This file is automatically generated from /etc/audit/rules.d
+-D
+-b 8192
+-f 1
+--backlog_wait_time 60000
+
+[root@guest3 ~]# 
+....
+
+
+=== tell audit to watch /etc/hosts
+
+Add a rule. 
+
+This new file must end in _.rules_.
+Running `augenrules` creates a new _/etc/audit/audit.rules_ file. 
+
+The log In the second session doesn't show any messages. 
+
+[source,shell]
+....
+[root@guest3 ~]# cd /etc/audit/rules.d/
+[root@guest3 rules.d]# 
+[root@guest3 rules.d]# echo "-w /etc/hosts -p wa -k my-rule-key" > my-hosts-watch.rules
+[root@guest3 rules.d]# 
+[root@guest3 rules.d]# cd
+[root@guest3 ~]# 
+[root@guest3 ~]# augenrules 
+[root@guest3 ~]# 
+....
+
+Restart auditd. 
+The systemd unit command `systemctl stop auditd.service` doesn't work. 
+Use the old System V _service_ script instead. 
+
+In the second session, many messages are added to the log, from `type=DAEMON_END` to `type=SERVICE_START`.
+
+[source,shell]
+....
+[root@guest3 ~]# service auditd stop
+Stopping logging:                                          [  OK  ]
+[root@guest3 ~]# 
+[root@guest3 ~]# systemctl start auditd
+[root@guest3 ~]# 
+....
+
+
+== cause an event  
+
+Add a comment line. 
+
+[source,shell]
+....
+[root@guest3 ~]# echo "#" >> /etc/hosts 
+[root@guest3 ~]# 
+....
+
+In the second session,  more messages appear. 
+One of the fields is the key defined by our rule, `key="my-rule-key"`.
+
+[source,shell]
+....
+type=SYSCALL msg=audit(1595954310.661:283): arch=c000003e syscall=257 success=yes exit=5 a0=ffffff9c a1=55bcfa99ca60 a2=441 a3=1b6 items=2 ppid=1519 pid=1520 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=1 comm="bash" exe="/usr/bin/bash" subj=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 key="my-rule-key"ARCH=x86_64 SYSCALL=openat AUID="nick" UID="root" GID="root" EUID="root" SUID="root" FSUID="root" EGID="root" SGID="root" FSGID="root"
+type=CWD msg=audit(1595954310.661:283): cwd="/root"
+type=PATH msg=audit(1595954310.661:283): item=0 name="/etc/" inode=16797825 dev=fc:03 mode=040755 ouid=0 ogid=0 rdev=00:00 obj=system_u:object_r:etc_t:s0 nametype=PARENT cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0OUID="root" OGID="root"
+type=PATH msg=audit(1595954310.661:283): item=1 name="/etc/hosts" inode=17200106 dev=fc:03 mode=0100644 ouid=0 ogid=0 rdev=00:00 obj=system_u:object_r:net_conf_t:s0 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0OUID="root" OGID="root"
+type=PROCTITLE msg=audit(1595954310.661:283): proctitle="-bash"
+....
+
+That's the end of log viewing. 
+Stop watching the log and close the second session. 
+
+
+== view a report 
+
+The raw audit log is hard to follow. 
+There are a few utilities that help to report on what's happened. 
+
+Running `ausearch -k my-rule-key` displays all the lines from the log that contain that key, plus other related lines. 
+
+Running `aureport` gives a summary of everything that's happened, from authentication attempts to syscalls. 
+`aureport -f` lists all the file events. 
+some files, like the https://man7.org/linux/man-pages/man8/ldconfig.8.html[dynamic library cache] _/etc/ld.so.cache_, change every few minutes so this list can be thousands of lines long.
+
+Running ausearch and aureport together gives a short summary. 
+
+[source,shell]
+....
+[root@guest3 ~]# ausearch -k my-rule-key | aureport -f 
+
+File Report
+===============================================
+# date time file syscall success exe auid event
+===============================================
+1. 07/28/2020 12:38:30 /etc/hosts 257 yes /usr/bin/bash 1000 283
+[root@guest3 ~]# 
+....
+
+
+
+== log events to syslog
+
+It is possible, but not necessarily a good idea, to copy audit messages to syslog. 
+
+Audit comes with two plugins. 
+Each one has its own config file, in the /etc/audit/plugins.d/ directory. 
+
+* *af_unix* can send messages to a unix domain socket, and it is disabled. 
+* *sedispatch* looks for SELinux events, and is enabled. 
+
+Two more plugins are available.
+
+* audisp-remote sends messages to a remote audit service, for centralized logging. 
+* audisp-syslog sends messages to syslog 
+
+Install these with `dnf install audispd-plugins`.
+
+Neither of these extra plugins are enabled by default. 
+
+[source,shell]
+....
+[root@guest3 ~]# grep active /etc/audit/plugins.d/*
+/etc/audit/plugins.d/af_unix.conf:active = no
+/etc/audit/plugins.d/au-remote.conf:active = no
+/etc/audit/plugins.d/sedispatch.conf:active = yes
+/etc/audit/plugins.d/syslog.conf:active = no
+[root@guest3 ~]#
+....
+
+Change the configuration to send messages to journald and onto syslog.
+
+. Edit syslog.conf  
+. Change `active = no` to `active = yes`.
+. Restart auditd with `service auditd stop` and `systemctl start auditd`.
+
+Now, messages are written in /var/log/audit/audit.log and to journald's socket (/dev/log). Journald copies them to syslog, and syslog copies them to the /var/log/messages file. 
+
+Check with `tail -f /var/log/audit/audit.log`, `journalctl -f` and `tail -f /var/log/messages`.
+Yep, loads of messages everywhere. 
+
+
+== what's it good for?
+
+The audit system is all about leaving a trail. 
+It's got a learning curve - the rules and logs are tricky to read, and you can easily generate a lot of useless noise. 
+Getting it right in a mission-critical environment means being able to prove compliance and highlighting security violations. 

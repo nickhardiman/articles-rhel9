@@ -1,0 +1,248 @@
+= create a CA certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+
+Create a CA certificate to trust. 
+The name in the certificate is _ca.lab.example.com_. 
+
+== an X.509 certificate 
+
+A certificate is many configuration settings stored in a file. 
+Config includes public key, name and expiry date. 
+The file is cryptographically signed to prove who it was issued by.
+
+== certificate signing 
+
+The CA uses its own key pair. 
+The private key signs all the server certificates. 
+The public key is contained in a CA certificate and distributed to all clients. 
+
+== create a private key and CSR 
+
+Create the key and CSR. 
+Key size is 2048 bits. 
+
+If the key is stolen, lost or expires, all certificates must be revoked and re-issued. 
+
+
+[source,bash]
+....
+openssl req \
+  -new \
+  -newkey rsa:2048 \
+  -passout file:cakey.pass \
+  -keyout private/cakey.pem \
+  -out careq.pem \
+  -config ./openssl.cnf \
+  -subj "/C=UK/ST=mystate/O=myorg/OU=myou/CN=ca.lab.example.com"
+....
+
+The -subj option is a subject. 
+It acts like a name and address.
+The attribute CN is the name (CN stands for Common Name) and C, ST, O and OU form the address.
+The CA will only manage certificates with the same address.
+
+This command creates two more files. 
+
+* private/cakey.pem, the private key file
+* careq.pem, the CSR
+
+The file names are set in the config file openssl.cnf. 
+The key file must be kept secret. 
+It is encrypted using the password and cipher DES3. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ openssl req \
+>   -new \
+>   -newkey rsa:2048 \
+>   -passout file:cakey.pass \
+>   -keyout private/cakey.pem \
+>   -out careq.pem \
+>   -config ./openssl.cnf \
+>   -subj "/C=UK/ST=mystate/O=myorg/OU=myou/CN=ca.lab.example.com"
+Generating a RSA private key
+....+++++
+............+++++
+writing new private key to 'private/cakey.pem'
+-----
+[nick@guest1 certauth]$
+....
+
+== view the key file 
+
+Look at the new key file. 
+
+The file content is in https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail[PEM (Privacy-Enhanced Mail)] format. 
+It's plain text that can be displayed, cut-and-pasted, and sent in e-mails. 
+
+The PEM format was invented for e-mails, hence the name. 
+The original format was called https://en.wikipedia.org/wiki/X.690#DER_encoding[DER (Distinguished Encoding Rules)] and was binary. 
+Sending binary code through the mail didn't really work so a base64-encoded version was created.   
+
+The header and footer lines describe what this is. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ cat private/cakey.pem 
+-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIFHDBOBgkqhkiG9w0BBQ0wQTApBgkqhkiG9w0BBQwwHAQI82b+kdcb7usCAggA
+MAwGCCqGSIb3DQIJBQAwFAYIKoZIhvcNAwcECGmEpDUd+8FuBIIEyJOTZ6Ip9cE9
+/H/CwWZkpk3Yv2leMtCi0O879wZ6UbqTGYSFfBNHdqW4BbyfIkis4i3XctW0Nn8e
+...
+MhcEjeVjdRY37CoaLDsUNtr836tx6KFZuHHy91wV2XwDaMfZi3ToPBppBAaVdSPa
+SBCmwZZ4m5k75yYROWMJMF1MQmG34mqOi5x+zfkonWUBHERnYY+Dc6f353C7X1xM
+2aOHH9029JRKGUeRscFErg==
+-----END ENCRYPTED PRIVATE KEY-----
+[nick@guest1 certauth]$ 
+....
+
+
+== view the CSR file 
+
+It's PEM format again.
+
+[source,shell]
+....
+[nick@guest1 certauth]$ cat careq.pem 
+-----BEGIN CERTIFICATE REQUEST-----
+MIICoDCCAYgCAQAwWzELMAkGA1UEBhMCVUsxEDAOBgNVBAgMB215c3RhdGUxDjAM
+BgNVBAoMBW15b3JnMQ0wCwYDVQQLDARteW91MRswGQYDVQQDDBJjYS5sYWIuZXhh
+bXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDLUbR8VwbE
+...
+Q0PwTJFVXw1pxPzgwbVAW+DAazOg3RHyxi/n850tcUqoD1kuNAJ8l+A903GdoWOE
+AMRd84ZN3m7TFQhLx7RKgsJTA7570/cIge01M6jv4Q/FJyYI8n7h+k917fU3EnYU
+eb8n4Q==
+-----END CERTIFICATE REQUEST-----
+[nick@guest1 certauth]$ 
+....
+
+Decode the CSR. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ openssl req -in careq.pem -text
+Certificate Request:
+    Data:
+        Version: 1 (0x0)
+        Subject: C = UK, ST = mystate, O = myorg, OU = myou, CN = ca.lab.example.com
+...
+AMRd84ZN3m7TFQhLx7RKgsJTA7570/cIge01M6jv4Q/FJyYI8n7h+k917fU3EnYU
+eb8n4Q==
+-----END CERTIFICATE REQUEST-----
+[nick@guest1 certauth]$ 
+....
+
+
+== make a self-signed CA certificate
+
+Sign your first certificate. 
+
+[source,shell]
+....
+openssl ca \
+  -create_serial \
+  -out cacert.pem \
+  -days 365 \
+  -passin file:cakey.pass \
+  -keyfile private/cakey.pem \
+  -selfsign \
+  -extensions v3_ca \
+  -config ./openssl.cnf \
+  -infiles careq.pem
+....
+
+This displays what is about to be signed. 
+
+The attributes from that -subj option appear in the middle. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ openssl ca \
+>   -create_serial \
+>   -out cacert.pem \
+>   -days 365 \
+>   -passin file:cakey.pass \
+>   -keyfile private/cakey.pem \
+>   -selfsign \
+>   -extensions v3_ca \
+>   -config ./openssl.cnf \
+>   -infiles careq.pem
+Using configuration from ./openssl.cnf
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 1 (0x1)
+        Validity
+            Not Before: Feb  1 17:45:55 2021 GMT
+            Not After : Feb  1 17:45:55 2022 GMT
+        Subject:
+            countryName               = UK
+            stateOrProvinceName       = mystate
+            organizationName          = myorg
+            organizationalUnitName    = myou
+            commonName                = ca.lab.example.com
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                92:75:37:21:03:E0:A5:D3:4D:B6:01:53:8F:A8:81:90:43:20:63:78
+            X509v3 Authority Key Identifier: 
+                keyid:92:75:37:21:03:E0:A5:D3:4D:B6:01:53:8F:A8:81:90:43:20:63:78
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+Certificate is to be certified until Feb  1 17:45:55 2022 GMT (365 days)
+Sign the certificate? [y/n]:
+....
+
+Sign the certificate and update the database. 
+This database is our set of new CA files, not something like postgres.
+
+[source,shell]
+....
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+[nick@guest1 certauth]$ 
+....
+
+This creates a few more files. 
+
+* newcerts/01.pem, the new CA certificate 
+* index.txt.old, a backup of index.txt 
+* index.txt.attr
+
+This file is updated. 
+
+* index.txt contains a line describing the new signed certificate. 
+
+
+== view the CA certificate
+
+The certificate is self-signed because the issuer and subject lines are the same. 
+The certificate is a CA certificate because it says _CA:TRUE_.
+
+[source,shell]
+....
+[nick@guest1 certauth]$ openssl x509 -in newcerts/01.pem -noout -text
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = UK, ST = mystate, O = myorg, OU = myou, CN = ca.lab.example.com
+        Validity
+            Not Before: Feb  1 17:45:55 2021 GMT
+            Not After : Feb  1 17:45:55 2022 GMT
+        Subject: C = UK, ST = mystate, O = myorg, OU = myou, CN = ca.lab.example.com
+...
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+...
+[nick@guest1 certauth]$ 
+....
+

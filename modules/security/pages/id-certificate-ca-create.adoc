@@ -1,0 +1,118 @@
+= create a Certificate Authority
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+Set up a Certificate Authority. 
+Using a CA to sign certificates are one way of creating trust. 
+It's not the only way - different processes are set up in different ways. 
+
+* Web sites use server certificates signed by CA companies.
+* SSH uses key pairs. Pretty much nobody adds certificates to SSH.
+* Different types of certificate have appeared over the years - host certificates, user certificates, wildcard certificates, Extended Validation certificates and so on. 
+
+This process sets up the required files in an ordinary user's home directory. 
+
+== a server certificate 
+
+The process for adding a certificate to a service goes something like this. 
+
+. User collects information about the service to be secured. 
+. User creates a key pair - a private key and public key, for asymmetric cryptography. 
+Asymmetric cryptography is the set of mathematical algorithms that do the encryption and decryption). 
+. User creates a CSR (Certificate Signing Request) containing the public key and a few other values. 
+. User sends the CSR to a CA (Certificate Authority).
+. CA signs the certificate, with more fancy asymmetric cryptography. 
+. CA sends the certificate back to the user.
+. User adds the signed certificate to the service. 
+
+== a CA certificate 
+
+The CA uses its own key pair. 
+The private key signs all the server certificates. 
+The public key is contained in a CA certificate and distributed to all clients. 
+
+
+== create a CA 
+
+Use your account and home directory. 
+
+There is a pki directory set up for root to use, in /etc/pki/. 
+
+It's a pretty verbose process. 
+The commands have many options, and the responses contain a lot of text. 
+
+== make some files 
+
+Make a directory to store the work. 
+
+Add some subdirectories and files. 
+
+* certreqs contains CSRs waiting to be signed 
+* crl contains certificate revocation lists (not covered here)
+* private contains the private key 
+* newcerts contains certificates that have been signed
+* index.txt is a list of certificates that have been issued
+* cakey.pass is the password need to decrypt the private key
+* serial is how many certificates have been issued. Each certificate gets a serial number. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ mkdir certauth
+[nick@guest1 ~]$ cd certauth/
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ mkdir {certreqs,crl,private,newcerts}
+[nick@guest1 certauth]$ chmod 700 private/
+[nick@guest1 certauth]$ touch index.txt
+[nick@guest1 certauth]$ echo 01 > serial
+[nick@guest1 certauth]$ echo 'private key password' > cakey.pass
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ ls -F
+cakey.pass  certreqs/  crl/  index.txt  newcerts/  private/  serial
+[nick@guest1 certauth]$ 
+....
+
+== create a configuration file
+
+The default configuration file is openssl.cnf.
+Openssl looks for this file in the /etc/pki/tls directory. 
+
+[source,shell]
+....
+[nick@control1 ~]$ openssl version -d
+OPENSSLDIR: "/etc/pki/tls"
+[nick@control1 ~]$ 
+....
+
+This is fine if the root user is doing all the work, but this process uses a regular user.
+Create a configuration file by copying the original.
+The original config file is almost - but not quite - ready to use. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ cp /etc/pki/tls/openssl.cnf .
+[nick@guest1 certauth]$ vi ./openssl.cnf 
+....
+
+Find this dir line. 
+There are two lines starting with dir. 
+This one is in the _[ CA_default ]_ section. 
+Don't bother changing the one in the _[ tsa_config1 ]_ section - that's for a Time-Stamp Authority, and we aren't making one of those. 
+ 
+[source,INI]
+....
+[ CA_default ]
+
+dir             = /etc/pki/CA           # Where everything is kept
+....
+
+Change the directory to _this directory_. 
+
+[source,INI]
+....
+dir             = .           # Where everything is kept
+....
+
+That's it. 
+There is no service to restart. 
+
