@@ -13,7 +13,7 @@ The process for removing your additions goes like this.
 
  
 
-=== write a script to delete the VM 
+== write a script to delete the VM 
 
 Create a script. 
 

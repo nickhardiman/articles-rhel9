@@ -1,0 +1,118 @@
+= add the private.example.com domain 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-07-2022
+
+
+Add the domain _private.example.com_ before adding the name _guest2.private.example.com_.
+
+dnsmasq has a security feature that ignores DNS domains it doesn't recognize. 
+The private0 configuration has no domain, so adding a full FQDN for the VM (_guest2.private.example.com_) won't work. 
+Journalctl would show an error like this. 
+
+[source,shell]
+....
+May 29 18:17:15 host.private.example.com dnsmasq-dhcp[2380]: Ignoring domain private.example.com for DHCP host name guest2
+....
+
+
+Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
+
+
+== edit libvirt config
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-edit private0
+....
+
+virsh fires up the vi editor and displays this. 
+
+[source,xml]
+....
+<network>
+  <name>private0</name>
+  <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
+  <bridge name='private0' stp='on' delay='0'/>
+  <mac address='52:54:00:23:0f:f9'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+== add the domain
+
+Add a domain by adding this line between the network tags:   
+ ``<domain name='private.example.com' localOnly='yes'/>``.
+
+The file now looks like this. 
+
+[source,xml]
+....
+<network>
+  <name>private0</name>
+  <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
+  <bridge name='private0' stp='on' delay='0'/>
+  <mac address='52:54:00:23:0f:f9'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+Save and exit. 
+
+
+== restart the network
+
+Check its state before and after - it changes from _inactive_ to _active_. 
+
+[source,shell]
+....
+Network private0 XML configuration edited.
+
+[nick@host1 ~]$ sudo virsh net-destroy private0
+Network private0 destroyed
+
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name                 State      Autostart     Persistent
+----------------------------------------------------------
+ private0              inactive   yes           yes
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-start private0
+Network private0 started
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name      State      Autostart   Persistent
+----------------------------------------------
+ default   active     yes         yes
+ private0   active     yes         yes
+ public0   active     yes         yes
+
+[nick@host1 ~]$ 
+....
+
+Virsh updates the dnsmasq config.
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep private.example.com /var/lib/libvirt/dnsmasq/private0.conf
+local=/private.example.com/
+domain=private.example.com
+[nick@host1 ~]$ 
+....
+
+

@@ -17,7 +17,10 @@ Nick Hardiman
             |     +--------------------------+      |     +--------------------------+     |
 ----
 
-Thi machine has two network interfaces, enp1s0 and enp2s0.
+
+== display interface settings
+
+This machine has two network interfaces, enp1s0 and enp2s0.
 Only one of the network interfaces is up.
 
 [source,shell]
@@ -88,7 +91,8 @@ Check the interface.
 [nick@guest2 ~]$ 
 ....
 
-Check the DHCP lease. 
+
+== check the DHCP lease
 
 Open another terminal. 
 

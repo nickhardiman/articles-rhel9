@@ -1,4 +1,4 @@
-= copy the KVM image
+= copy the KVM image for guest2
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020

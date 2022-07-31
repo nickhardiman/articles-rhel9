@@ -1,4 +1,4 @@
-= examine a KVM image using libguestfs-tools 
+= examine the RHEL KVM image
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020
@@ -21,11 +21,8 @@ The _guest1_ VM is a fresh install, using a kickstart file to automate the proce
 
 == install utilities on host1
 
-Before creating this VM, collect content and tools on _host1_.
-
-* xref:virtual-network:libvirt-storage-volume-rhel8-kvm.adoc[]
-
-This process uses the _virt-filesystems_, _virt-resize_ and _virt-customize_ utilities from the _libguestfs-tools_ package.
+Examining the KVM image and copying it use a few utilities: _virt-filesystems_, _virt-resize_ and _virt-customize_. 
+These are part of the _libguestfs-tools_ package.
 
 [source,shell]
 ----
