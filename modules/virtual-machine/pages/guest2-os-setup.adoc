@@ -13,7 +13,7 @@ Copy your public key for easier login.
 
 [source,shell]
 ....
-ssh-copy-id root@guest1
+ssh-copy-id root@guest2
 ....
 
 SSH from your workstation to the machine. 
@@ -73,7 +73,7 @@ Disable root login.
 
 ??? squid? 
 
-Use squid on guest1 
+Use squid on guest2 
 
 [source,shell]
 ....
@@ -110,23 +110,23 @@ default via 192.168.152.11 dev eth0
 [root@guest2 ~]# 
 ....
 
-IP forwarding on guest1 
+IP forwarding on guest2 
 
 [source,shell]
 ....
-[root@guest1 ~]# cat /proc/sys/net/ipv4/ip_forward
+[root@guest2 ~]# cat /proc/sys/net/ipv4/ip_forward
 0
-[root@guest1 ~]# 
-[root@guest1 ~]# sysctl net.ipv4.ip_forward=1
+[root@guest2 ~]# 
+[root@guest2 ~]# sysctl net.ipv4.ip_forward=1
 net.ipv4.ip_forward = 1
-[root@guest1 ~]# 
+[root@guest2 ~]# 
 ....
 
 Check 
 
 [source,shell]
 ....
-[root@guest2 ~]# ping -c1 192.168.1.217 # enp1s0 on guest1
+[root@guest2 ~]# ping -c1 192.168.1.217 # enp1s0 on guest2
 PING 192.168.1.217 (192.168.1.217) 56(84) bytes of data.
 64 bytes from 192.168.1.217: icmp_seq=1 ttl=64 time=0.372 ms
 
@@ -174,11 +174,11 @@ The kickstart process registered this machine with Red Hat and entitled it to re
 
 [source,shell]
 ....
-[root@guest1 ~]# dnf -y update
+[root@guest2 ~]# dnf -y update
 ...
-[root@guest1 ~]# systemctl reboot
-Connection to guest1 closed by remote host.
-Connection to guest1 closed.
+[root@guest2 ~]# systemctl reboot
+Connection to guest2 closed by remote host.
+Connection to guest2 closed.
 workstation:~ nick$ 
 ....
 

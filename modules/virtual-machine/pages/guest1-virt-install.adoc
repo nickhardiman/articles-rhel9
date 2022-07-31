@@ -22,13 +22,35 @@ A command called _virt-install_ does the work. Two things are required before th
 
 == display libvirt VMs
 
+There are plenty of commands to run as root here. 
+
+Use the root account. 
+
 [source,shell]
 ----
-[root@host2 libvirt]# virsh list --all
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: 
+[root@host1 ~]# 
+----
+
+There are no VMs yet. 
+
+[source,shell]
+----
+[root@host2 ~]# virsh list --all
  Id   Name   State
 --------------------
 
-[root@host2 libvirt]# 
+[root@host2 ~]# 
+----
+
+[source,shell]
+----
+[root@host2 ~]# virsh list --all
+ Id   Name   State
+--------------------
+
+[root@host2 ~]# 
 ----
 
 == display libvirt networks
@@ -53,7 +75,7 @@ One interface leads to the home network and onto the Internet, and the other lea
 
 [source,shell]
 ----
-[root@host2 libvirt]# virsh net-list --all
+[root@host2 ~]# virsh net-list --all
  Name       State    Autostart   Persistent
 ---------------------------------------------
  default    active   no          no
@@ -61,7 +83,7 @@ One interface leads to the home network and onto the Internet, and the other lea
  private1   active   yes         yes
  public0    active   yes         yes
 
-[root@host2 libvirt]# 
+[root@host2 ~]# 
 ----
 
 
@@ -74,16 +96,25 @@ Use the root account and the libvirt directory.
 
 [source,shell]
 ....
-[root@host1 libvirt]# dnf install virt-install
+[root@host1 ~]# dnf install virt-install
 ...
 Complete!
-[root@host1 libvirt]# 
+[root@host1 ~]# 
 ....
 
 == write a build script
 
 The command to build a new machine is long, with lots of options. 
 In this example the options are split over several lines, and some values are moved to variables, to make it a little easier to see what's going on. 
+
+Use the libvirt directory. 
+This directory holds a few scripts used to create the libvirt networks. 
+
+[source,shell]
+....
+[root@host1 ~]# cd libvirt
+[root@host1 libvirt]# 
+....
 
 Create a shell script to hold the commands. 
 

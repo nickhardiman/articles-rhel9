@@ -33,46 +33,77 @@ It's easier to use the ``virt-install`` command to do the hard work.
 This ``virt-install`` command is pretty long, so it's split over many lines to make it a little clearer. 
 And the values are parameterized to make them clearer, too.  
 
+There are plenty of commands to run as root here. 
+
+Use the root account. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: 
+[root@host1 ~]# 
+----
+
+Use the libvirt directory. 
+This directory holds a few scripts used to create the libvirt networks. 
+
+[source,shell]
+....
+[root@host1 ~]# cd libvirt
+[root@host1 libvirt]# 
+....
+
 Create a shell script to hold the commands. 
 
 [source,shell]
 ....
-[root@host1 libvirt]# vim vm-guest1-build.sh
+[root@host1 libvirt]# vim vm-guest2-build.sh
 [root@host1 libvirt]# 
 ....
 
 Add content. 
 Copy and paste the variables into the file. 
 
+This is a little different from the list for guest1. 
+This specifies bridges, not libvirt networks. 
+It also specifies image pool rather than path to the image file. 
 [source,bash]
 ----
-HOST=guest2 
+HOST=guest2
 CPUS=1
 MEMORY=2048
 POOL=images
+POOL=images
 VOLUME=$HOST.qcow2
-OS_VARIANT=rhel8.3
-IF1_MAC=52:54:00:00:00:03
-IF1_BRIDGE=public0
-IF2_MAC=52:54:00:00:00:03
-IF2_BRIDGE=private0
+OS_VARIANT=rhel9.0
+IF1_MAC=52:54:00:01:00:03
+IF1_BRIDGE=pubbr0
+IF2_MAC=52:54:00:02:00:02
+IF2_BRIDGE=privbr0
 ----
 
 Copy and paste the virt-install command into the file. 
 
 This version of the virt-install command is different to the ones used to create _myfirstvm_ and _guest1_. 
 
+This is a little different from the command for guest1. 
+* no need for initrd-inject or extra-args. 
+* memory instead of ram. 
+* the options all have equals and quoted arguments. 
+
 [source,bash]
 ----
-virt-install   \
-    --name       $HOST   \
-    --vcpus      $CPUS \
-    --memory     $MEMORY \
-    --disk       vol=$POOL/$VOLUME  \
-    --os-variant $OS_VARIANT \
-    --network    bridge:${IF1_BRIDGE},mac=$IF1_MAC   \
-    --import   \
-    --noautoconsole
+virt-install \
+  --name="$HOST" \
+  --vcpus=2 \
+  --memory=4096 \
+  --disk=vol=$POOL/$VOLUME  \
+  --os-variant=$OS_VARIANT \
+  --network="bridge:${IF1_BRIDGE},mac=$IF1_MAC"   \
+  --network="bridge:${IF2_BRIDGE},mac=$IF2_MAC"   \
+  --boot="uefi,hd,menu=on" \
+  --import   \
+  --noautoconsole
 ----
 
 Here's an explanation of what's going on. 
@@ -90,35 +121,17 @@ That's done as a seperate step.
 Read `man virt-install` for all the options (and there are a truck-load). 
 The virt-install tool has a lot of default settings, so there is no need to specify options like `--connect qemu:///system` for the hypervisor and `--graphics spice` for a graphical desktop. 
 
-
-
-Create a new VM using a ready-made disk image.
-Copy and paste the values, then the virt-install command. 
-
-The command is pretty quick. 
+Run the script. 
 
 [source,shell]
 ----
-[root@host1 ~]# HOST=guest2 
-[root@host1 ~]# CPUS=1
-[root@host1 ~]# MEMORY=2048
-[root@host1 ~]# POOL=images
-[root@host1 ~]# VOLUME=$HOST.qcow2
-[root@host1 ~]# OS_VARIANT=rhel8.3
-[root@host1 ~]# IF1_MAC=52:54:00:00:00:03
-[root@host1 ~]# IF1_BRIDGE=privbr0
-[root@host1 ~]# virt-install   \
->     --name       $HOST   \
->     --vcpus      $CPUS \
->     --memory     $MEMORY \
->     --disk       vol=$POOL/$VOLUME  \
->     --os-variant $OS_VARIANT \
->     --network    bridge:${IF1_BRIDGE},mac=$IF1_MAC   \
->     --import   \
->     --noautoconsole
+[root@host2 libvirt]# chmod 754 vm-guest2-build.sh 
+[root@host2 libvirt]# 
+[root@host2 libvirt]# ./vm-guest2-build.sh 
+
 Starting install...
 Domain creation completed.
-[root@host1 ~]# 
+[root@host2 libvirt]# 
 ----
 
 libvirt adds XML configuration 

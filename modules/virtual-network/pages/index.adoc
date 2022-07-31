@@ -51,5 +51,41 @@ Not sure about
 * HA cluster
 
 
+== guest interfaces, names and addresses
+
+Guests get the next available MAC address and IP address from this table. 
+This means we can take a MAC address from something like an `arp` command and find out more details about it from here. 
+
+This doesn't mean we can build extra clues into our names and addresses.
+For instance, if guest1 has a MAC address and an IP address that both end in 1, that would be an easy clue for which address belongs to which name. But we can't do that with this scheme. 
+
+* hosts attached to pubbr0 get their names and addresses from the home network router. 
+* host1 is a physical PC with a real-world MAC address. 
+* The guest MAC addresses are created by our virt-install commands. 
+* guest1 has two interfaces and a modern interface naming convention. 
+* guest2 also has two interfaces but ???
+
+
+.bridges
+[%header,format=csv]
+|===
+name,         interface, MAC,               IP,             domain
+*public0*,    *pubbr0*,  52:54:00:00:00:01, 192.168.1.1,    lab.example.com
+*private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
+*private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
+
+.guests attached to bridges
+[%header,format=csv]
+|===
+name,         interface, MAC,               IP,             domain
+*public0*,    *pubbr0*,  52:54:00:00:00:01, 192.168.1.1,    lab.example.com
+host1,        enp1s0,    12:34:56:12:34:56, 192.168.1.35,   home.network
+guest1,       enp1s0,    52:54:00:00:00:02, 192.168.1.217,  lab.example.com
+*private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
+guest1,       enp2s0,    52:54:00:01:00:02, 192.168.152.2,  private.example.com
+guest2,       eth1,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
+*private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
+guest2,       eth2,      52:54:00:02:00:02, 192.168.152.3,  private.example.com
+guest3,       eth1,      52:54:00:02:00:03, 192.168.162.2,  private.example.com
 
 

@@ -12,7 +12,7 @@ Nick Hardiman
             |     +--------------------------+      |     +--------------------------+     |
             |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |
   Internet  |     |                          |      |     |                          |     |
-  <---------+-----+ enp1s0            enp2s0 +------+-----+ enp1s0            enp2s0 +-----+
+  <---------+-----+ enp1s0            enp2s0 +------+-----+ eth0                eth1 +-----+
             |     |                          |      |     |                          |     |
             |     +--------------------------+      |     +--------------------------+     |
 ----
@@ -20,31 +20,40 @@ Nick Hardiman
 
 == display interface settings
 
-This machine has two network interfaces, enp1s0 and enp2s0.
-Only one of the network interfaces is up.
+This machine has two network interfaces, eth0 and eth1.
+Guest1 has enp1s0 and enp2s0.
+
 
 [source,shell]
 ....
-[nick@guest2 ~]$ ip addr
+[root@guest2 ~]# ip a
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
        valid_lft forever preferred_lft forever
     inet6 ::1/128 scope host 
        valid_lft forever preferred_lft forever
-2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
-    link/ether 52:54:00:00:00:01 brd ff:ff:ff:ff:ff:ff
-    inet 192.168.1.217/24 brd 192.168.1.255 scope global dynamic noprefixroute enp1s0
-       valid_lft 86169sec preferred_lft 86169sec
-    inet6 2a00:23c8:1d05:1e00:8750:d339:eb3c:f6b5/64 scope global dynamic noprefixroute 
-       valid_lft 315359973sec preferred_lft 315359973sec
-    inet6 fdaa:bbcc:ddee:0:9e7f:3e3d:a419:1886/64 scope global noprefixroute 
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:01:00:03 brd ff:ff:ff:ff:ff:ff
+    altname enp1s0
+    inet 192.168.1.84/24 brd 192.168.1.255 scope global dynamic noprefixroute eth0
+       valid_lft 85948sec preferred_lft 85948sec
+    inet6 2a00:23a8:4b47:fc01:7be6:bae2:6eb1:174d/64 scope global dynamic noprefixroute 
+       valid_lft 62207990sec preferred_lft 31103990sec
+    inet6 fdaa:bbcc:ddee:0:d917:6b72:adb7:a3fb/64 scope global noprefixroute 
        valid_lft forever preferred_lft forever
-    inet6 fe80::5be1:424b:e11b:afe3/64 scope link noprefixroute 
+    inet6 fe80::11e3:af21:a7be:c17e/64 scope link noprefixroute 
        valid_lft forever preferred_lft forever
-3: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
-    link/ether 52:54:00:00:00:02 brd ff:ff:ff:ff:ff:ff
-[nick@guest2 ~]$ 
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:02:00:02 brd ff:ff:ff:ff:ff:ff
+    altname enp2s0
+    inet 192.168.152.114/24 brd 192.168.152.255 scope global dynamic noprefixroute eth1
+       valid_lft 3151sec preferred_lft 3151sec
+    inet6 2001:db8:ca2:3:efdc:2d50:178e:e68d/64 scope global noprefixroute 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::7e15:d95e:6a56:b8b4/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+[root@guest2 ~]# 
 ....
 
 NetworkManager created a configuration to manage enp2s0, but it is not set to start automatically. 
