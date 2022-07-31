@@ -41,26 +41,44 @@ First create an empty qcow2 image file.
 The command _virsh vol-create-as_ needs a pool name, the new file name and how big the volume should be. 
 If you can't remember your pool name, run _virsh pool-list_ to check.
 
+Use the root account. 
+
+[source,shell]
+----
+[nick@host2 ~]$ sudo su -
+[sudo] password for nick: 
+[root@host2 ~]# 
+[root@host2 ~]# cd  /var/lib/libvirt/images/
+[root@host2 images]# 
+----
+
+Create a file in qcow2 format. 
+
 [source,shell]
 ----
 [root@host1 images]# MY_COPY=guest2.qcow2
-[root@host1 images]# SIZE=300G
+[root@host1 images]# SIZE=30G
 [root@host1 images]# virsh vol-create-as --format qcow2 images $MY_COPY $SIZE
 Vol guest2 created
 
 [root@host1 images]# 
 ----
 
-This huge 300G volume is compressed down into a tiny file. 
+== check the file size 
+
+This big 30G volume is compressed down into a tiny file. 
 This is called a sparse volume. 
-The whole 300 GiB is not allocated now - space is added later, when it is required.
+The whole 30 GiB is not allocated now - space is added later, when it is required.
+
 
 [source,shell]
 ----
 [root@host1 images]# ls -lh $MY_COPY
--rw-------. 1 root root 197K Feb 24 19:40 guest2.qcow2
+-rw-------. 1 root root 193K Feb 24 19:40 guest2.qcow2
 [root@host1 images]# 
 ----
+
+== check libvirt's storage pool
 
 It doesn't take long for libvirt to notice the new file and add config to its volume inventory. 
 
@@ -68,25 +86,25 @@ List libvirt's config with this _virsh vol-info_ command.
 
 [source,shell]
 ----
-[root@host1 images]# virsh vol-info guest2.qcow2 images
+[root@host2 images]# virsh vol-info guest2.qcow2 images
 Name:           guest2.qcow2
 Type:           file
-Capacity:       300.00 GiB
-Allocation:     200.00 KiB
+Capacity:       30.00 GiB
+Allocation:     196.00 KiB
 
-[root@host1 images]# 
+[root@host2 images]# 
 ----
 
-List all the volumes with `virsh vol-list images`.
 If the new file isn't there, try running `virsh pool-refresh images`.
-
 
 
 
 == copy the golden image
 
 Fill up the new volume using the _virt_resize_ command. 
-This doesn't actually resize one file in-place - it reads one file and overwrites a second file. 
+Expand the root filesystem to use the extra space. 
+
+The _virt_resize_ utility doesn't actually resize one file in-place - it reads one file and overwrites a second file. 
 Virt_resize expands the volume in the second file while it's copying.
 
 Libvirt does come with a volume copying command, _virsh vol-clone_. It can make a new copy, but it can't change its size. 
@@ -96,7 +114,7 @@ Libvirt does come with a volume copying command, _virsh vol-clone_. It can make 
 [root@host1 images]# MY_COPY=guest2.qcow2
 [root@host1 images]# GOLDEN_IMAGE=rhel-baseos-9.0-x86_64-kvm.qcow2 
 [root@host1 images]# 
-[root@host1 images]# virt-resize --expand /dev/sda3 $GOLDEN_IMAGE $MY_COPY 
+[root@host2 images]# virt-resize --expand /dev/sda4 $GOLDEN_IMAGE $MY_COPY
 [   0.0] Examining rhel-baseos-9.0-x86_64-kvm.qcow2
 **********
 
@@ -106,32 +124,33 @@ Summary of changes:
 
 /dev/sda2: This partition will be left alone.
 
-/dev/sda3: This partition will be resized from 9.9G to 299.9G.  The 
-filesystem xfs on /dev/sda3 will be expanded using the ‘xfs_growfs’ 
+/dev/sda3: This partition will be left alone.
+
+/dev/sda4: This partition will be resized from 9.3G to 29.3G.  The 
+filesystem xfs on /dev/sda4 will be expanded using the ‘xfs_growfs’ 
 method.
 
 **********
-[   5.7] Setting up initial partition table on guest2.qcow2
-[  16.6] Copying /dev/sda1
-[  16.7] Copying /dev/sda2
-[  16.8] Copying /dev/sda3
- 100% ⟦▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒⟧ 00:00
-[  27.4] Expanding /dev/sda3 using the ‘xfs_growfs’ method
+[   6.9] Setting up initial partition table on guest2.qcow2
+[  21.8] Copying /dev/sda1
+[  21.8] Copying /dev/sda2
+[  22.0] Copying /dev/sda3
+[  22.6] Copying /dev/sda4
+ 100% ⟦▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒⟧ 00:00
+[  31.9] Expanding /dev/sda4 using the ‘xfs_growfs’ method
 
 Resize operation completed with no errors.  Before deleting the old disk, 
 carefully check that the resized disk boots and works correctly.
-[root@host1 images]# 
+[root@host2 images]# 
 ----
 
 The file is much bigger now, but still a fraction of its defined size. 
 
 [source,shell]
 ----
-[root@host1 images]# ls -lh
-total 3.6G
--rw-r--r--. 1 qemu qemu 1.3G Nov 23 16:23 rhel-baseos-9.0-x86_64-kvm.qcow2
--rw-------. 1 root root 2.3G Nov 23 17:16 guest2.qcow2
-[root@host1 images]# 
+[root@host2 images]# ls -lh guest2.qcow2 
+-rw-------. 1 root root 1.2G Jul 31 15:05 guest2.qcow2
+[root@host2 images]# 
 ----
 
 
@@ -140,15 +159,16 @@ total 3.6G
 This image has no root password and no other accounts, so we can't log in.
 Change this and a few other things with the ``virt-customize`` command.
 
-Check out that insecure password. 
+Create your own root password and store it in a password manager. 
 
+Customize the image. 
 
 [source,shell]
 ----
 virt-customize \
   --add            guest2.qcow2  \
   --root-password  password:'x%5ckA-1'  \
-  --hostname       guest2.private.example.com  \
+  --hostname       guest2.lab.example.com  \
   --timezone       'Europe/London'  \
   --selinux-relabel
 ----
@@ -158,11 +178,11 @@ It prints an activity log, along with seconds elapsed.
 
 [source,shell]
 ----
-[nick@host ~]$ virt-customize --add guest-images/guest2.qcow2 --root-password password:'x%5ckA-1' --hostname guest2.private.example.com
+[nick@host ~]$ virt-customize --add guest-images/guest2.qcow2 --root-password password:'x%5ckA-1' --hostname guest2.lab.example.com
 [   0.0] Examining the guest ...
 [   4.6] Setting a random seed
 [   4.6] Setting the machine ID in /etc/machine-id
-[   4.6] Setting the hostname: guest2.private.example.com
+[   4.6] Setting the hostname: guest2.lab.example.com
 [   4.6] Setting the timezone: Europe/London
 [   4.7] Setting passwords
 [   5.9] SELinux relabelling

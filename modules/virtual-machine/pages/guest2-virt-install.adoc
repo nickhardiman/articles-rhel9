@@ -1,11 +1,12 @@
-= create guest2 using a KVM image
+= create guest2 using the KVM image
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 14-01-2021
 
 
 Tell libvirt to create the _guest2_ virtual machine. 
-Use the new disk file that already has the OS installed. 
+
+Use the ready-made _guest2_ disk image. 
 The _guest2_ disk image is a customized copy of the golden image.
 
 
@@ -18,7 +19,7 @@ There are two ways of doing this.
 * use XML config 
 * use the virt-install command
 
-=== use XML config 
+== use XML config 
 
 A new VM can be created using a command like ``virsh define my-machine.xml``, 
 similar to the way a storage pool can be created using ``virsh pool-define storage-pool.xml``.
@@ -27,12 +28,21 @@ ut the XML configuration that defines a virtual machine is complicated.
 It's easier to use the ``virt-install`` command to do the hard work. 
 
 
-=== use the virt-install command
+== write a virt-install script
 
 This ``virt-install`` command is pretty long, so it's split over many lines to make it a little clearer. 
 And the values are parameterized to make them clearer, too.  
 
-These are the values.
+Create a shell script to hold the commands. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vim vm-guest1-build.sh
+[root@host1 libvirt]# 
+....
+
+Add content. 
+Copy and paste the variables into the file. 
 
 [source,bash]
 ----
@@ -43,8 +53,12 @@ POOL=images
 VOLUME=$HOST.qcow2
 OS_VARIANT=rhel8.3
 IF1_MAC=52:54:00:00:00:03
-IF1_BRIDGE=privbr0
+IF1_BRIDGE=public0
+IF2_MAC=52:54:00:00:00:03
+IF2_BRIDGE=private0
 ----
+
+Copy and paste the virt-install command into the file. 
 
 This version of the virt-install command is different to the ones used to create _myfirstvm_ and _guest1_. 
 

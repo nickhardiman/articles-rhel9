@@ -3,61 +3,69 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020
 
-Examine on Red Hat's ready-made KVM image, rhel-baseos-9.0-x86_64-kvm.qcow2. 
+Look inside Red Hat's ready-made KVM image, rhel-baseos-9.0-x86_64-kvm.qcow2. 
 We will use this image to create a new storage volume, _guest2.qcow2_.
 
 
-== a golden image 
+== install utilities
 
-Creating a VM using a golden image is quicker than a fresh install. 
-Creating many VMs using a golden image does not mean they are all identical - Each new image is edited to make a few configuration changes. 
-A new machine may need a unique MAC address, host name and private key. 
-A golden image is often a base OS, rather than a complete installation. 
-It contains a minimal set of packages, ready to extend for business applications. 
-
-An alternative process is a _fresh install_, where all packages are  installed  from scratch onto an empty volume.
-The _guest1_ VM is a fresh install, using a kickstart file to automate the process. 
-
-
-== install utilities on host1
-
-Examining the KVM image and copying it use a few utilities: _virt-filesystems_, _virt-resize_ and _virt-customize_. 
-These are part of the _libguestfs-tools_ package.
+Examine the KVM image with utilities _virt-inspector_ and _virt-filesystems_.
+Copy it with a few more utilities: _virt-filesystems_, _virt-resize_ and _virt-customize_. 
+These are part of the _guestfs-tools_ package.
 
 [source,shell]
 ----
-[root@host1 images]# dnf provides virt-filesystems
-Updating Subscription Management repositories.
-Last metadata expiration check: 1:06:54 ago on Sun 07 Mar 2021 19:38:32 GMT.
-libguestfs-tools-c-1:1.38.4-10.module+el8.0.0+3075+09be6b65.x86_64 : System administration tools for virtual machines
-Repo        : rhel-8-for-x86_64-appstream-rpms
+[nick@host2 ~]$ dnf provides virt-inspector
+Not root, Subscription Management repositories not updated
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+guestfs-tools-1.46.1-6.el9.x86_64 : Tools to access and modify virtual machine disk images
+Repo        : rhel-9-for-x86_64-appstream-rpms
 Matched from:
-Filename    : /usr/bin/virt-filesystems
+Filename    : /usr/bin/virt-inspector
 
-...(another half dozen results for newer package versions)...
-
-libguestfs-tools-c-1:1.40.2-25.module+el8.3.0+7421+642fe24f.x86_64 : System administration tools for virtual machines
-Repo        : rhel-8-for-x86_64-appstream-rpms
-Matched from:
-Filename    : /usr/bin/virt-filesystems
-
-[root@host1 images]# 
+[nick@host2 ~]$ 
 ----
-
-
-== examine the golden image 
 
 Install the _libguestfs-tools_ package. 
 
 [source,shell]
 ----
-sudo dnf install libguestfs-tools
+sudo dnf install guestfs-tools
 ----
 
+List utilities this package provides. 
+
+[source,shell]
+----
+[nick@host2 ~]$ rpm -ql guestfs-tools | grep /usr/bin/
+/usr/bin/virt-alignment-scan
+/usr/bin/virt-builder
+/usr/bin/virt-builder-repository
+/usr/bin/virt-cat
+/usr/bin/virt-customize
+/usr/bin/virt-df
+/usr/bin/virt-diff
+/usr/bin/virt-edit
+/usr/bin/virt-filesystems
+/usr/bin/virt-format
+/usr/bin/virt-get-kernel
+/usr/bin/virt-index-validate
+/usr/bin/virt-inspector
+/usr/bin/virt-log
+/usr/bin/virt-ls
+/usr/bin/virt-make-fs
+/usr/bin/virt-resize
+/usr/bin/virt-sparsify
+/usr/bin/virt-sysprep
+/usr/bin/virt-tail
+[nick@host2 ~]$ 
+----
+
+== use virt-inspector
+
 View the partitions inside the _rhel-baseos-9.0-x86_64-kvm.qcow2_ file. 
-
-
-=== use virt-inspector
 
 The _virt-inspector_ utility can display this information. 
 The command `virt-inspector rhel-baseos-9.0-x86_64-kvm.qcow2` displays a lot of information about this file. 
@@ -66,37 +74,43 @@ It's a long XML document, mostly describing installed packages.
 
 [source,shell]
 ----
-[root@host1 images]# virt-inspector rhel-baseos-9.0-x86_64-kvm.qcow2
+[nick@host2 ~]$ virt-inspector /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
 <?xml version="1.0"?>
 <operatingsystems>
   <operatingsystem>
-    <root>/dev/sda3</root>
+    <root>/dev/sda4</root>
 
 ...(thousands of lines of XML)...
 
+twZoi5BMAwMbqepJn5D+TVGq7kA09KCwiy1Ztm1mQ/p7ZCkpKSkpKSkpKSkpKSkpcfE/4FVa
 6yrQieoAAAAASUVORK5CYII=</icon>
   </operatingsystem>
 </operatingsystems>
-[root@host1 images]# 
+[nick@host2 ~]$ 
 ----
 
 Use XPATH to display the filesystem part of the XML document. 
 
 [source,XML]
 ----
-[root@host1 images]# virt-inspector -a rhel-baseos-9.0-x86_64-kvm.qcow2 | virt-inspector --xpath '//filesystems'
+[nick@host2 ~]$ virt-inspector -a /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2 | virt-inspector --xpath '//filesystems'
 <filesystems>
   <filesystem dev="/dev/sda2">
     <type>vfat</type>
-    <uuid>F537-0F4F</uuid>
+    <uuid>7B77-95E7</uuid>
   </filesystem>
   <filesystem dev="/dev/sda3">
     <type>xfs</type>
+    <label>boot</label>
+    <uuid>5e75a2b9-1367-4cc8-bb38-4d6abc3964b8</uuid>
+  </filesystem>
+  <filesystem dev="/dev/sda4">
+    <type>xfs</type>
     <label>root</label>
-    <uuid>fe1e8b67-e41b-44b8-bcfe-e0ec966784ac</uuid>
+    <uuid>fb535add-9799-4a27-b8bc-e8259f39a767</uuid>
   </filesystem>
 </filesystems>
-[root@host1 images]# 
+[nick@host2 ~]$ 
 ----
 
 
@@ -106,32 +120,41 @@ Use the _virt-filesystems_ command to display a list of partitions.
 
 [source,shell]
 ----
-[root@host1 ~]# cd /var/lib/libvirt/images/
-[root@host1 images]# 
-[root@host1 images]# virt-filesystems --parts --add rhel-baseos-9.0-x86_64-kvm.qcow2  
+[nick@host2 ~]$ virt-filesystems --parts --add  /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
 /dev/sda1
 /dev/sda2
 /dev/sda3
-[root@host1 images]# 
+/dev/sda4
+[nick@host2 ~]$ 
 ----
 
-
 Take a closer look at those partitions by listing file systems. 
-The root file system is _/dev/sda3_, which is nearly 10GiB in size (10629414912 bytes). 
+The root file system is _/dev/sda4_, which is about 9 GiB in size (take 9990811648 bytes,  divide by 1024 for KiB, and divide by 1024 again for MiB, and finally divide by 1024 for GiB. Try running `echo "9990811648 / 1024 / 1024 / 1024" | bc` on the CLI). 
 
-The file is about at tenth the size of this partition. 
+
+[source,shell]
+----
+[nick@host2 ~]$ virt-filesystems --filesystems --long  --add  /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+Name       Type        VFS   Label  Size        Parent
+/dev/sda2  filesystem  vfat  -      209489920   -
+/dev/sda3  filesystem  xfs   boot   518684672   -
+/dev/sda4  filesystem  xfs   root   9990811648  -
+[nick@host2 ~]$ 
+----
+
+The file is a fraction the size of this partition. 
+It's only 696582144 bytes, which is about 665 mebibytes. 
 A https://en.wikipedia.org/wiki/Qcow[QCOW] file can be compressed to save space. 
 
 [source,shell]
 ----
-[root@host1 images]# virt-filesystems --filesystems --long --add rhel-baseos-9.0-x86_64-kvm.qcow2 
-Name       Type        VFS   Label  Size         Parent
-/dev/sda2  filesystem  vfat  -      104857600    -
-/dev/sda3  filesystem  xfs   root   10629414912  -
-[root@host1 images]# 
-[root@host1 images]# ls -lh rhel-baseos-9.0-x86_64-kvm.qcow2
--rw-r--r--. 1 qemu qemu 1.3G Nov 23 16:23 rhel-baseos-9.0-x86_64-kvm.qcow2
-[root@host1 images]# 
+[nick@host2 ~]$ ls -l  /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+-rw-r--r--. 1 root root 696582144 Jul 27 16:38 /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+[nick@host2 ~]$ 
+[nick@host2 ~]$ ls -lh  /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+-rw-r--r--. 1 root root 665M Jul 27 16:38 /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+[nick@host2 ~]$ 
 ----
+
 
 

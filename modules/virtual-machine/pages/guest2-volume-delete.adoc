@@ -3,10 +3,9 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 29-07-2022
 
+If things are going wrong with the new image, remove this new file and start again.
+Delete the file with _virsh vol-delete_. 
 
-Delete the new volume.
-
-If you want to remove this new file and start again, delete it with _virsh vol-delete_. 
 Don't use the bash command _rm_ because it removes the file and leaves behind libvirt's configuration about this file. 
 The _vol-delete_ command removes both the file and libvirt's config. 
 
@@ -16,4 +15,20 @@ The _vol-delete_ command removes both the file and libvirt's config.
 Vol guest2 deleted
 
 [root@host1 images]# 
+----
+
+Check. 
+
+[source,shell]
+----
+[root@host2 images]# virsh vol-list images
+ Name                               Path
+----------------------------------------------------------------------------------
+ guest1.qcow2                       /var/lib/libvirt/images/guest1.qcow2
+ rhel-8.6-x86_64-dvd.iso            /var/lib/libvirt/images/rhel-8.6-x86_64-dvd.iso
+ rhel-8.6-x86_64-kvm.qcow2          /var/lib/libvirt/images/rhel-8.6-x86_64-kvm.qcow2
+ rhel-baseos-9.0-x86_64-dvd.iso     /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-dvd.iso
+ rhel-baseos-9.0-x86_64-kvm.qcow2   /var/lib/libvirt/images/rhel-baseos-9.0-x86_64-kvm.qcow2
+
+[root@host2 images]# 
 ----
