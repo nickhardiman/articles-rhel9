@@ -1,4 +1,4 @@
-= use guest2's image to create guest3 
+= clone guest2's image to create guest3 
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 07-03-2021

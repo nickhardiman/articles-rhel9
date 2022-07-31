@@ -8,6 +8,7 @@
 ** xref:guest1-delete.adoc[]
 ** xref:guest1-os-setup.adoc[]
 ** xref:guest1-network.adoc[]
+** xref:guest2-volume-examine.adoc[]
 ** xref:guest2-volume-create.adoc[]
 ** xref:guest2-volume-delete.adoc[]
 ** xref:guest2-virt-install.adoc[]

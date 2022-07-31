@@ -1,12 +1,13 @@
-= create guest2.qcow2 using libguestfs-tools 
+= copy the KVM image
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020
 
+
 Create a new storage volume, _guest2.qcow2_.
 Base it on Red Hat's ready-made KVM image, rhel-baseos-9.0-x86_64-kvm.qcow2. 
 This KVM image acts as a base image, or template, from which we can make many more images. 
-The original image - the template that we copy - is called a golden image. 
+The original base image - the template that we copy - is called a golden image, after https://en.wikipedia.org/wiki/Mastering_(audio)[master audio] recordings. Which were, ironically, never gold. 
 
 This is the procedure for making a customized copy. 
 After this, we can build a new virtual machine using this copy.
@@ -28,126 +29,6 @@ It contains a minimal set of packages, ready to extend for business applications
 
 An alternative process is a _fresh install_, where all packages are  installed  from scratch onto an empty volume.
 The _guest1_ VM is a fresh install, using a kickstart file to automate the process. 
-
-
-== install utilities on host1
-
-Before creating this VM, collect content and tools on _host1_.
-
-* xref:virtual-network:libvirt-storage-volume-rhel8-kvm.adoc[]
-
-This process uses the _virt-filesystems_, _virt-resize_ and _virt-customize_ utilities from the _libguestfs-tools_ package.
-
-[source,shell]
-----
-[root@host1 images]# dnf provides virt-filesystems
-Updating Subscription Management repositories.
-Last metadata expiration check: 1:06:54 ago on Sun 07 Mar 2021 19:38:32 GMT.
-libguestfs-tools-c-1:1.38.4-10.module+el8.0.0+3075+09be6b65.x86_64 : System administration tools for virtual machines
-Repo        : rhel-8-for-x86_64-appstream-rpms
-Matched from:
-Filename    : /usr/bin/virt-filesystems
-
-...(another half dozen results for newer package versions)...
-
-libguestfs-tools-c-1:1.40.2-25.module+el8.3.0+7421+642fe24f.x86_64 : System administration tools for virtual machines
-Repo        : rhel-8-for-x86_64-appstream-rpms
-Matched from:
-Filename    : /usr/bin/virt-filesystems
-
-[root@host1 images]# 
-----
-
-
-== examine the golden image 
-
-Install the _libguestfs-tools_ package. 
-
-[source,shell]
-----
-sudo dnf install libguestfs-tools
-----
-
-View the partitions inside the _rhel-baseos-9.0-x86_64-kvm.qcow2_ file. 
-
-
-=== use virt-inspector
-
-The _virt-inspector_ utility can display this information. 
-The command `virt-inspector rhel-baseos-9.0-x86_64-kvm.qcow2` displays a lot of information about this file. 
-In fact, it produces a vast amount of data  - far more than required here.
-It's a long XML document, mostly describing installed packages. 
-
-[source,shell]
-----
-[root@host1 images]# virt-inspector rhel-baseos-9.0-x86_64-kvm.qcow2
-<?xml version="1.0"?>
-<operatingsystems>
-  <operatingsystem>
-    <root>/dev/sda3</root>
-
-...(thousands of lines of XML)...
-
-6yrQieoAAAAASUVORK5CYII=</icon>
-  </operatingsystem>
-</operatingsystems>
-[root@host1 images]# 
-----
-
-Use XPATH to display the filesystem part of the XML document. 
-
-[source,XML]
-----
-[root@host1 images]# virt-inspector -a rhel-baseos-9.0-x86_64-kvm.qcow2 | virt-inspector --xpath '//filesystems'
-<filesystems>
-  <filesystem dev="/dev/sda2">
-    <type>vfat</type>
-    <uuid>F537-0F4F</uuid>
-  </filesystem>
-  <filesystem dev="/dev/sda3">
-    <type>xfs</type>
-    <label>root</label>
-    <uuid>fe1e8b67-e41b-44b8-bcfe-e0ec966784ac</uuid>
-  </filesystem>
-</filesystems>
-[root@host1 images]# 
-----
-
-
-=== use virt-filesystems
-
-Use the _virt-filesystems_ command to display a list of partitions. 
-
-[source,shell]
-----
-[root@host1 ~]# cd /var/lib/libvirt/images/
-[root@host1 images]# 
-[root@host1 images]# virt-filesystems --parts --add rhel-baseos-9.0-x86_64-kvm.qcow2  
-/dev/sda1
-/dev/sda2
-/dev/sda3
-[root@host1 images]# 
-----
-
-
-Take a closer look at those partitions by listing file systems. 
-The root file system is _/dev/sda3_, which is nearly 10GiB in size (10629414912 bytes). 
-
-The file is about at tenth the size of this partition. 
-A https://en.wikipedia.org/wiki/Qcow[QCOW] file can be compressed to save space. 
-
-[source,shell]
-----
-[root@host1 images]# virt-filesystems --filesystems --long --add rhel-baseos-9.0-x86_64-kvm.qcow2 
-Name       Type        VFS   Label  Size         Parent
-/dev/sda2  filesystem  vfat  -      104857600    -
-/dev/sda3  filesystem  xfs   root   10629414912  -
-[root@host1 images]# 
-[root@host1 images]# ls -lh rhel-baseos-9.0-x86_64-kvm.qcow2
--rw-r--r--. 1 qemu qemu 1.3G Nov 23 16:23 rhel-baseos-9.0-x86_64-kvm.qcow2
-[root@host1 images]# 
-----
-
 
 
 == create an empty qcow2 image 
