@@ -56,23 +56,43 @@ Add some subdirectories and files.
 * cakey.pass is the password need to decrypt the private key
 * serial is how many certificates have been issued. Each certificate gets a serial number. 
 
+Connect to guest1.
+
+Write a script to create required files. 
+
 [source,shell]
 ....
-[nick@guest1 ~]$ mkdir certauth
-[nick@guest1 ~]$ cd certauth/
-[nick@guest1 certauth]$ 
-[nick@guest1 certauth]$ mkdir {certreqs,crl,private,newcerts}
-[nick@guest1 certauth]$ chmod 700 private/
-[nick@guest1 certauth]$ touch index.txt
-[nick@guest1 certauth]$ echo 01 > serial
-[nick@guest1 certauth]$ echo 'private key password' > cakey.pass
-[nick@guest1 certauth]$ 
+vim certauth.sh
+....
+
+Add content. 
+
+[source,shell]
+....
+mkdir certauth
+cd certauth/
+mkdir {certreqs,crl,private,newcerts}
+chmod 700 private/
+touch index.txt
+echo 01 > serial
+echo 'private key password' > cakey.pass
+cp /etc/pki/tls/openssl.cnf .
+....
+
+Run and check. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ ./certauth.sh 
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ [nick@guest1 ~]$ cd certauth
 [nick@guest1 certauth]$ ls -F
-cakey.pass  certreqs/  crl/  index.txt  newcerts/  private/  serial
+cakey.pass  crl/       newcerts/    private/
+certreqs/   index.txt  openssl.cnf  serial
 [nick@guest1 certauth]$ 
 ....
 
-== create a configuration file
+== edit the configuration file
 
 The default configuration file is openssl.cnf.
 Openssl looks for this file in the /etc/pki/tls directory. 
@@ -87,14 +107,16 @@ OPENSSLDIR: "/etc/pki/tls"
 This is fine if the root user is doing all the work, but this process uses a regular user.
 Create a configuration file by copying the original.
 The original config file is almost - but not quite - ready to use. 
+This file has hundreds of lines. 
+We only need to change one. 
 
 [source,shell]
 ....
-[nick@guest1 certauth]$ cp /etc/pki/tls/openssl.cnf .
 [nick@guest1 certauth]$ vi ./openssl.cnf 
 ....
 
-Find this dir line. 
+Find this _dir_ line.
+
 There are two lines starting with dir. 
 This one is in the _[ CA_default ]_ section. 
 Don't bother changing the one in the _[ tsa_config1 ]_ section - that's for a Time-Stamp Authority, and we aren't making one of those. 

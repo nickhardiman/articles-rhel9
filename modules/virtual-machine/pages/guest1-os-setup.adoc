@@ -24,25 +24,39 @@ This depends on what your home network equipment is.
 * Watch network traffic. Run _sudo tcpdump -nn ether host 52:54:00:00:00:01_ on _host1_ and wait for something to happen. 
 This is proper network admin. 
 
+
 == connect using SSH 
 
 Copy your public key for easier and safer login. 
 
 [source,shell]
 ....
-ssh-copy-id nick@guest1
+ssh-copy-id nick@192.168.1.214
 ....
 
 SSH from your workstation to the machine. 
+
 
 == harden security  
 
 Anyone on the home network can get at this machine, so security is an issue. 
 
+It's possible, although unlikely, that root can login remotely, using SSH. 
+This isn't possible with the default on RHEL 9.
+
+[source,shell]
+----
+[root@guest1 ~]# grep PermitRootLogin /etc/ssh/sshd_config
+#PermitRootLogin prohibit-password
+# the setting of "PermitRootLogin without-password".
+[root@guest1 ~]# 
+----
+
 Disable root login. 
 
 * Use the root account. 
 * Edit /etc/ssh/sshd_config.
+* Find PermitRootLogin.
 * Change PermitRootLogin to no.
 * Restart the service with _systemctl reload sshd.service_
 
@@ -62,3 +76,14 @@ workstation:~ nick$
 ....
 
 Wait a minute and log in again. 
+
+
+== add some optional packages  
+
+[source,shell]
+....
+[root@guest1 ~]# dnf -y install vim tree
+...
+....
+
+

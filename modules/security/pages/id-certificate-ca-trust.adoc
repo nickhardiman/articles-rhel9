@@ -6,6 +6,7 @@ Nick Hardiman
 
 Copy the new CA certificate to the list of trusted certificates. 
 
+There is a handy README buried in the pki directory. 
 
 [source,shell]
 ....
@@ -59,6 +60,9 @@ Update the list of trusted CA certificates.
 ....
 
 This adds the certificate to a few lists of trusted certificates. 
+
+== check 
+
 There are actually a few lists, stored in the _/etc/pki/_ directory tree. 
 
 [source,shell]
@@ -83,7 +87,7 @@ grep: /etc/pki/rsyslog: Permission denied
 ....
 
 
-=== remove the trusted certificate 
+== remove the trusted certificate 
 
 If things go wrong, this process removes the certificate. 
 
@@ -95,16 +99,7 @@ If things go wrong, this process removes the certificate.
 [nick@guest1 certauth]$ 
 ....
 
-Check. 
 
-[source,shell]
-....
-[nick@guest1 certauth]$ grep -R ca.lab.example.com /etc/pki
-grep: /etc/pki/consumer/key.pem: Permission denied
-grep: /etc/pki/consumer/cert.pem: Permission denied
-grep: /etc/pki/rsyslog: Permission denied
-[nick@guest1 certauth]$ 
-....
 
 
 

@@ -7,6 +7,19 @@ Nick Hardiman
 Create a CA certificate to trust. 
 The name in the certificate is _ca.lab.example.com_. 
 
+This procedure creates these files in certauth/. 
+
+* private/cakey.pem 
+* careq.pem
+* newcerts/01.pem, the new CA certificate 
+* index.txt.old, a backup of index.txt 
+* index.txt.attr
+
+And updates this one. 
+
+* index.txt contains a line describing the new signed certificate. 
+
+
 == an X.509 certificate 
 
 A certificate is many configuration settings stored in a file. 
@@ -20,6 +33,8 @@ The private key signs all the server certificates.
 The public key is contained in a CA certificate and distributed to all clients. 
 
 == create a private key and CSR 
+
+Use the certauth directory. 
 
 Create the key and CSR. 
 Key size is 2048 bits. 
@@ -70,6 +85,7 @@ writing new private key to 'private/cakey.pem'
 -----
 [nick@guest1 certauth]$
 ....
+
 
 == view the key file 
 
