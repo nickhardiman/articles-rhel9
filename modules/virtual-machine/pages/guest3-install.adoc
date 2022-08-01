@@ -6,6 +6,18 @@ Nick Hardiman
 Build guest3. 
 This is the first machine running RHEL 8.
 
+.guest1 and guest2 network interfaces
+----
+            + pubbr0                                + privbr0                              + privbr1
+            |                                       |                                      |
+            |                                       |     +--------------------------+     | 
+   Internet |     +--------------------------+      |     |  guest2.lab.example.com  |     |     +--------------------------+
+  <---------+     | guest1.lab.example.com   |      +-----+ eth0                eth1 +-----+     |  guest3.lab.example.com  | 
+            +-----+ enp1s0            enp2s0 +------+     |                          |     +-----+ enp1s0            enp2s0 |
+            |     |                          |      |     +--------------------------+     |     |                          |
+            |     +--------------------------+      |                                      |     +--------------------------+ 
+----
+
 This process is a compressed version of the process that built guest1. 
 Three files are used. 
 

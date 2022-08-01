@@ -7,6 +7,9 @@ We can connect to the new machine using the console.
 
 == connect using the console
 
+The console is handy, but the rendering can be offputting. 
+The size of your terminal window may be much bigger than the size of the virtual server's console terminal.
+
 Connect to the console with the ``virsh console`` command.
 Hit the Enter key kbd:[⏎]  to get the _guest2 login_ prompt to appear. 
 
