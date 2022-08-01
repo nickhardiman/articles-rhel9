@@ -1,0 +1,104 @@
+= push an image with podman
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 02-02-2021
+
+Push the 
+https://www.redhat.com/en/blog/introducing-red-hat-universal-base-image[Red Hat Universal Base Image 8 (ubi8)] 
+from local storage to the registry. 
+
+
+== podman images  
+
+Check our local image store. 
+If it's empty, follow these instructions. 
+
+* xref:container-pull.adoc[]
+
+[source,shell]
+----
+[nick@guest1 cert]$ podman images
+REPOSITORY                           TAG     IMAGE ID      CREATED      SIZE
+registry.access.redhat.com/ubi8/ubi  latest  3269c37eae33  7 weeks ago  208 MB
+[nick@guest1 cert]$ 
+----
+
+== podman login 
+
+Login. 
+
+[source,shell]
+----
+[nick@guest1 cert]$ podman login -u openshift -p redhat docker-registry.lab.example.com:5000
+Login Succeeded!
+[nick@guest1 cert]$ 
+----
+
+This stores a temporary authorization token. 
+For a description of what the $XDG_RUNTIME_DIR variable is, see the https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html[XDG Base Directory Specification].
+
+[source,shell]
+----
+[nick@guest1 cert]$ cat  $XDG_RUNTIME_DIR/containers/auth.json 
+{
+	"auths": {
+		"docker-registry.lab.example.com:5000": {
+			"auth": "b3BlbnNoaWZ0OnJlZGhhdA=="
+		}
+	}
+}[nick@guest1 cert]$ 
+----
+
+
+== podman tag 
+
+Tag the image, to let podman know where it's going to be pushed to. 
+
+[source,shell]
+----
+[nick@guest1 cert]$ podman tag registry.access.redhat.com/ubi8/ubi:latest docker-registry.lab.example.com:5000/ubi8/ubi:latest
+[nick@guest1 cert]$ 
+[nick@guest1 cert]$ podman images
+REPOSITORY                                     TAG     IMAGE ID      CREATED      SIZE
+registry.access.redhat.com/ubi8/ubi            latest  3269c37eae33  7 weeks ago  208 MB
+docker-registry.lab.example.com:5000/ubi8/ubi  latest  3269c37eae33  7 weeks ago  208 MB
+[nick@guest1 cert]$ 
+----
+
+== podman push 
+
+Push the image. 
+
+
+[source,shell]
+----
+[nick@guest1 cert]$ podman push docker-registry.lab.example.com:5000/ubi8/ubi:latest
+Getting image source signatures
+Copying blob eb7bf34352ca done  
+Copying blob 92538e92de29 done  
+Copying config 3269c37eae done  
+Writing manifest to image destination
+Storing signatures
+[nick@guest1 cert]$ 
+----
+
+
+== check your work 
+
+Check the file system. 
+
+[source,shell]
+----
+[nick@guest1 cert]$ ls /var/registry/storage/docker/registry/v2/repositories/
+ubi8
+[nick@guest1 cert]$
+----
+
+Check the API. 
+
+[source,shell]
+----
+[nick@guest1 cert]$ curl -u openshift:redhat  https://docker-registry.lab.example.com:5000/v2/_catalog
+{"repositories":["ubi8/ubi"]}
+[nick@guest1 cert]$ 
+----

@@ -1,0 +1,42 @@
+= run a container 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-01-2021
+
+
+Read the image, create a container and get it to do something. 
+
+An ubi8 container doesn't run anything interesting on its own.
+It will start, do nothing, then immediately stop.
+Give it something to do by adding a command on the end of the _run_ command. 
+
+== run a container 
+
+These commands create a container and run one command. 
+When the command exits, so does the container. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman run registry.access.redhat.com/ubi8/ubi whoami
+root
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ podman run registry.access.redhat.com/ubi8/ubi cat /etc/os-release
+NAME="Red Hat Enterprise Linux"
+VERSION="8.2 (Ootpa)"
+...
+REDHAT_SUPPORT_PRODUCT="Red Hat Enterprise Linux"
+REDHAT_SUPPORT_PRODUCT_VERSION="8.2"
+[nick@guest1 ~]$ 
+----
+
+View the current and previous container runs. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman ps -a
+CONTAINER ID  IMAGE                                       COMMAND               CREATED             STATUS                         PORTS  NAMES
+7a73eb22ed9c  registry.access.redhat.com/ubi8/ubi:latest  whoami                About a minute ago  Exited (0) About a minute ago         vigorous_curran
+2f5eda39392c  registry.access.redhat.com/ubi8/ubi:latest  cat /etc/os-relea...  About a minute ago  Exited (0) About a minute ago         great_liskov
+[nick@guest1 ~]$ 
+----
+

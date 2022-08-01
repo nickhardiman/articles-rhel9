@@ -1,0 +1,56 @@
+= copy an image as a tar file
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-01-2021
+
+
+Copy image to a tar file. 
+
+[source,shell]
+----
+[root@guest1 ~]# buildah push localhost/myperl:latest oci-archive:/tmp/myperl.tar:myperl:latest
+Getting image source signatures
+Copying blob 49a32583556c done  
+Copying config 3b64d9df0d done  
+Writing manifest to image destination
+Storing signatures
+[root@guest1 ~]# 
+[root@guest1 ~]# ls -lh /tmp/myperl.tar 
+-rw-r--r--. 1 root root 184M Feb 15 12:34 /tmp/myperl.tar
+[root@guest1 ~]# 
+----
+
+Copy the tar file from guest1 to guest2. 
+
+[source,shell]
+----
+[root@guest1 ~]# scp /tmp/myperl.tar 192.168.127.55:/tmp/
+root@192.168.127.55's password: 
+myperl.tar                                    100%  184MB 402.8MB/s   00:00    
+[root@guest1 ~]# 
+----
+
+Swap to guest2.
+
+Copy the tar file to image storage. 
+
+
+[source,shell]
+----
+[root@guest2 ~]# podman load --input /tmp/myperl.tar 
+Getting image source signatures
+Copying blob 54fb84799bde done  
+Copying config 3b64d9df0d done  
+Writing manifest to image destination
+Storing signatures
+Loaded image(s): localhost/myperl:latest
+[root@guest2 ~]# 
+[root@guest2 ~]# podman images 
+REPOSITORY        TAG     IMAGE ID      CREATED      SIZE
+localhost/myperl  latest  3b64d9df0def  2 hours ago  557 MB
+[root@guest2 ~]# 
+----
+
+
+
+

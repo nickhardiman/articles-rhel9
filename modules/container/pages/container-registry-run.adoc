@@ -1,0 +1,211 @@
+= run a container registry
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+After all the preparations to run the docker registry, we can download an image and fire up a container. 
+
+
+== download and run in the foreground
+
+Start the registry. 
+
+For more information, run _man podman-run_.
+
+[source,shell]
+----
+podman run \
+  --name=docker-registry \
+  --publish=5000:5000 \
+  --restart=always \
+  --volume=/var/registry/storage:/var/lib/registry:z \
+  --volume=/var/registry/auth:/auth:z \
+  --volume=/var/registry/cert:/cert:z \
+  --env="REGISTRY_AUTH=htpasswd" \
+  --env="REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+  --env="REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
+  --env="REGISTRY_HTTP_TLS_CERTIFICATE=/cert/domain.cer" \
+  --env="REGISTRY_HTTP_TLS_KEY=/cert/domain.key" \
+  docker.io/library/registry:2
+----
+
+Use the root account. 
+
+Run the command. 
+
+Podman copies the remote image. 
+
+[source,shell]
+----
+[root@guest1 ~]# podman run \
+...
+Trying to pull docker.io/library/registry:2...
+Getting image source signatures
+Copying blob 0a6724ff3fcd done  
+----
+
+Podman finishes the copy and starts the container. 
+The container is running in the foreground, so STDIN, STDOUT and STDERR are connected to the terminal. 
+This means activity log messages start to appear. 
+
+[source,shell]
+----
+...
+Copying config 678dfa38fc done  
+Writing manifest to image destination
+Storing signatures
+dc94370bfd6e02fb4a5fccae78e376ca411cd2e9565d3ba50dbdd750bd1d5d3e
+time="2021-01-30T20:34:36.981656671Z" level=warning msg="No HTTP secret provided - generated random secret. This may cause problems with uploads if multiple registries are behind a load-balancer. To provide a shared secret, fill in http.secret in the configuration file or set the REGISTRY_HTTP_SECRET environment variable." go.version=go1.11.2 instance.id=676d2855-28cb-4724-a8ad-6f5cf8c2b572 service=registry version=v2.7.1 
+time="2021-01-30T20:34:36.982269444Z" level=info msg="redis not configured" go.version=go1.11.2 instance.id=676d2855-28cb-4724-a8ad-6f5cf8c2b572 service=registry version=v2.7.1 
+time="2021-01-30T20:34:36.981743287Z" level=info msg="Starting upload purge in 46m0s" go.version=go1.11.2 instance.id=676d2855-28cb-4724-a8ad-6f5cf8c2b572 service=registry version=v2.7.1 
+time="2021-01-30T20:34:36.991058679Z" level=info msg="using inmemory blob descriptor cache" go.version=go1.11.2 instance.id=676d2855-28cb-4724-a8ad-6f5cf8c2b572 service=registry version=v2.7.1 
+time="2021-01-30T20:34:36.991733179Z" level=info msg="listening on [::]:5000, tls" go.version=go1.11.2 instance.id=676d2855-28cb-4724-a8ad-6f5cf8c2b572 service=registry version=v2.7.1 
+----
+
+
+
+== check 
+
+Open a second terminal.
+View image and container. 
+
+[source,shell]
+----
+[root@guest1 ~]# podman images
+REPOSITORY                  TAG     IMAGE ID      CREATED      SIZE
+docker.io/library/registry  2       678dfa38fcfa  6 weeks ago  26.8 MB
+[root@guest1 ~]#
+[root@guest1 ~]# podman ps
+CONTAINER ID  IMAGE                         COMMAND               CREATED         STATUS             PORTS                   NAMES
+95cb637073ce  docker.io/library/registry:2  /etc/docker/regis...  42 seconds ago  Up 42 seconds ago  0.0.0.0:5000->5000/tcp  docker-registry
+[root@guest1 ~]# 
+----
+
+View the listening process and address. 
+It's bound to all addresses. 
+
+[source,shell]
+----
+[root@guest1 ~]# ss -tlnp
+State             Recv-Q            Send-Q                          Local Address:Port                          Peer Address:Port            
+LISTEN            0                 128                                   0.0.0.0:5000                               0.0.0.0:*                users:(("runc",pid=5786,fd=5),("conmon",pid=5785,fd=5),("podman",pid=5751,fd=16),("podman",pid=5751,fd=15))                                 
+----
+
+
+== use the API
+
+Make a normal request.
+
+[source,shell]
+----
+[root@guest1 ~]# curl -u openshift:redhat  https://docker-registry.lab.example.com:5000/v2/_catalog
+{"repositories":[]}
+[root@guest1 ~]# 
+----
+
+Try without a user name and password. 
+The reply's HTTP headers show the error https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401[401 (unauthorized]). 
+
+[source,shell]
+----
+[root@guest1 cert]# curl --head  https://docker-registry.lab.example.com:5000/v2/_catalog
+HTTP/2 401 
+content-type: application/json; charset=utf-8
+docker-distribution-api-version: registry/2.0
+www-authenticate: Basic realm="Registry Realm"
+x-content-type-options: nosniff
+content-length: 145
+date: Tue, 02 Feb 2021 17:42:38 GMT
+
+[root@guest1 cert]# 
+----
+
+
+== view log messages 
+
+Swap back to the first terminal.
+More activity log messages have appeared. 
+
+[source,shell]
+----
+time="2021-02-01T15:57:04.653338049Z" level=info msg="authorized request" go.version=go1.11.2 http.request.host="docker-registry.lab.example.com:5000" http.request.id=9c96281d-af30-4a70-a18d-38fda016b68a http.request.method=GET http.request.remoteaddr="192.168.1.217:36782" http.request.uri="/v2/_catalog" http.request.useragent="curl/7.61.1" 
+time="2021-02-01T15:57:04.653498616Z" level=info msg="response completed" go.version=go1.11.2 http.request.host="docker-registry.lab.example.com:5000" http.request.id=9c96281d-af30-4a70-a18d-38fda016b68a http.request.method=GET http.request.remoteaddr="192.168.1.217:36782" http.request.uri="/v2/_catalog" http.request.useragent="curl/7.61.1" http.response.contenttype="application/json; charset=utf-8" http.response.duration=3.601072ms http.response.status=200 http.response.written=20 #
+...
+time="2021-02-02T17:47:03.364638009Z" level=warning msg="error authorizing context: basic authentication challenge for realm "Registry Realm": invalid authorization credential" go.version=go1.11.2 http.request.host="docker-registry.lab.example.com:5000" http.request.id=a2ed92a1-72fc-4b3c-bc29-ece429ce17dd http.request.method=HEAD http.request.remoteaddr="192.168.1.217:34372" http.request.uri="/v2/_catalog" http.request.useragent="curl/7.61.1" 
+192.168.1.217 - - [02/Feb/2021:17:47:03 +0000] "HEAD /v2/_catalog HTTP/2.0" 401 145 "" "curl/7.61.1"
+----
+
+== stop the container 
+
+Interrupt the running container with  
+kbd:[Ctrl + C ] 
+
+[source,shell]
+----
+^C
+[root@guest1 ~]# 
+[root@guest1 ~]# podman ps -a
+CONTAINER ID  IMAGE                         COMMAND               CREATED        STATUS                     PORTS                   NAMES
+f340bc84ca02  docker.io/library/registry:2  /etc/docker/regis...  5 minutes ago  Exited (2) 13 seconds ago  0.0.0.0:5000->5000/tcp  docker-registry
+[root@guest1 ~]# 
+----
+
+
+== run detached  
+
+Start the container. 
+This time the container runs in detached mode. 
+
+[source,shell]
+----
+[root@guest1 ~]# podman start f340bc84ca02
+f340bc84ca02
+[root@guest1 ~]# 
+[root@guest1 ~]# podman ps -a
+CONTAINER ID  IMAGE                         COMMAND               CREATED        STATUS            PORTS                   NAMES
+f340bc84ca02  docker.io/library/registry:2  /etc/docker/regis...  6 minutes ago  Up 5 seconds ago  0.0.0.0:5000->5000/tcp  docker-registry
+[root@guest1 ~]# 
+----
+
+== delete 
+
+If something goes wrong, clean up. 
+Stop the container, remove the stopped container and remove the downloaded image. 
+
+The container can be addressed by its ID or name - _f340bc84ca02_ or _docker-registry_   both work. 
+It's the same story for the image - _678dfa38fcfa_ or _docker.io/library/registry:2_.
+
+[source,shell]
+----
+[root@guest1 ~]# podman stop f340bc84ca02
+f340bc84ca022a9dc7a85b7d2d5eca5e554c8315f177f242057df7e68fac18f7
+[root@guest1 ~]# 
+[root@guest1 ~]# podman rm f340bc84ca02
+f340bc84ca022a9dc7a85b7d2d5eca5e554c8315f177f242057df7e68fac18f7
+[root@guest1 ~]# 
+[root@guest1 ~]# podman rmi docker.io/library/registry:2
+Untagged: docker.io/library/registry:2
+Deleted: 678dfa38fcfa349ccbdb1b6d52ac113ace67d5746794b36dfbad9dd96a9d1c43
+[root@guest1 ~]# 
+----
+
+== run on system startup 
+
+Use podman and systemd to enable the service. 
+Instructions are here. 
+
+* xref:container-systemd.adoc 
+
+The command summary is here. 
+
+[source,shell]
+----
+CONTAINER=docker-registry
+UNIT=$CONTAINER.service
+podman generate systemd $CONTAINER > /etc/systemd/system/$UNIT
+systemctl daemon-reload
+systemctl stop $UNIT
+systemctl start $UNIT
+systemctl status $UNIT
+systemctl enable $UNIT
+----

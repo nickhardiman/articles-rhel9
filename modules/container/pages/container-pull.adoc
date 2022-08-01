@@ -1,0 +1,77 @@
+= pull an image with podman
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-01-2021
+
+
+Red Hat provides a 
+https://catalog.redhat.com/software/containers/explore[library of container images]. 
+All kinds of container images are stored there.
+The image 
+https://www.redhat.com/en/blog/introducing-red-hat-universal-base-image[Red Hat Universal Base Image 8 (ubi8)] 
+is a stripped-down version of RHEL 8 that's ready to customize and run.
+Pull this from the Internet to local storage.
+
+== check local storage  
+
+Check our local image store. 
+It's empty. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman images
+REPOSITORY   TAG   IMAGE ID   CREATED   SIZE
+[nick@guest1 ~]$ 
+----
+
+== download the image 
+
+Get a local copy of the ubi8 image.
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman pull registry.access.redhat.com/ubi8/ubi
+Trying to pull registry.access.redhat.com/ubi8/ubi...
+Getting image source signatures
+Copying blob 78afc5364ad2 done
+Copying blob 58e1deb9693d done
+Copying config 8e0b0194b7 done
+Writing manifest to image destination
+Storing signatures
+8e0b0194b7e1142c76aa26d71264d3561fab1b039fd3c49d9083dc9d3f42068f
+[nick@guest1 ~]$ 
+----
+
+== check 
+
+View the local store. 
+
+Is the store still empty? No, there's the image, named after the place we pulled it from. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman images 
+REPOSITORY                            TAG      IMAGE ID       CREATED       SIZE
+registry.access.redhat.com/ubi8/ubi   latest   8e0b0194b7e1   6 weeks ago   211 MB
+[nick@guest1 ~]$ 
+----
+
+This container image is not the same as a VM image. 
+A VM image is a single file, while a container image is a complicated mass of layer files and config. 
+Have a look in your storage directory (`ls $HOME/.local/share/containers/storage/`) to see just how complicated. 
+
+
+== delete the image 
+
+This image will be used to run a container, so there is no need to remove it. 
+
+If something goes wrong, clean up with the command _podman rmi_. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ podman rmi registry.access.redhat.com/ubi8/ubi:latest
+Untagged: registry.access.redhat.com/ubi8/ubi:latest
+Deleted: 8e0b0194b7e1142c76aa26d71264d3561fab1b039fd3c49d9083dc9d3f42068f
+[nick@guest1 ~]$ 
+----
+

@@ -1,0 +1,41 @@
+= copy an image with skopeo
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-01-2021
+
+
+
+The `skopeo` command works with images and registries. 
+
+== inspect
+
+Use skopeo to display the configuration of the new image. 
+The output is JSON. 
+
+There's also a warning that is safe to ignore. 
+
+[source,shell]
+----
+[root@guest1 ~]# skopeo inspect containers-storage:localhost/myperl
+WARN[0000] Not using native diff for overlay, this may cause degraded performance for building images: kernel has CONFIG_OVERLAY_FS_REDIRECT_DIR enabled 
+{
+    "Name": "localhost/myperl",
+    "Digest": "sha256:ad1cdb93acc4cb1ff1be777e3a2f32d7fcdb2b463186835d9e8b8c8872da07cf",
+    "RepoTags": [],
+    "Created": "2020-08-08T13:25:48.158373762Z",
+    "DockerVersion": "",
+    "Labels": {
+        "io.buildah.version": "1.14.9",
+        "name": "myperlservice"
+    },
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Layers": [
+        "sha256:46b9422120aa6fa311f055098b780cba442ecf7f7c26c2c5735d6cd28a8dcd42"
+    ],
+    "Env": null
+}
+[root@guest1 ~]# 
+----
+
+

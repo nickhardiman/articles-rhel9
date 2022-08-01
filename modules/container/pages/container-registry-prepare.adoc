@@ -1,0 +1,141 @@
+= prepare for a container registry
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+We're going to run a docker registry named _docker-registry.lab.example.com_ on guest1. 
+There's a lot to do before running the docker registry. 
+
+* Set up storage. 
+* Add user accounts. 
+* Add _docker-registry.lab.example.com_ to DNS.
+* Create a server certificate.
+* Open the firewall. 
+
+Setting up a service often requires preparation similar to this. 
+
+
+== set up storage 
+
+Create a few folders for registry files.
+Start with these two. 
+
+* /var/registry/ - This parent directory holds most registry files. 
+A few things are not stored in here. For instance, podman stores the registry container in _/var/lib/containers/storage/_.
+* /var/registry/storage - This directory stores the registry's content, not podman's. 
+
+[source,shell]
+----
+[root@guest1 ~]# mkdir /var/registry
+[root@guest1 ~]# cd /var/registry/
+[root@guest1 registry]# 
+[root@guest1 registry]# mkdir storage
+[root@guest1 registry]# 
+----
+
+
+== add user accounts
+
+Create an htpasswd file. 
+
+See 
+link:id-htpasswd-file.adoc[]
+
+[source,shell]
+----
+[root@guest1 registry]# mkdir auth
+[root@guest1 registry]# 
+----
+
+Store in /var/registry/auth/htpasswd
+
+[source,shell]
+----
+[root@guest1 registry]# mkdir auth 
+[root@guest1 registry]# cd auth/
+[root@guest1 auth]# htpasswd -bBc htpasswd openshift redhat
+Adding password for user openshift
+[root@guest1 auth]# 
+----
+
+
+
+
+== add _docker-registry.lab.example.com_ to DNS 
+
+Create a new FQDN _docker-registry.lab.example.com_.
+This isn't really a separate host with its own address  - it's another name for guest1.lab.example.com. 
+
+Don't show this to an experienced sysadmin - they will look at you like you've just peed on their desk.  
+There are better ways to manage records, such as https://bind9.readthedocs.io/en/v9_16_5/advanced.html#dynamic-update[dynamic update].
+
+
+Add a CNAME record. 
+
+[source,shell]
+----
+[root@guest1 ~]# echo "docker-registry IN CNAME guest1" >> /var/named/lab.example.com-records
+[root@guest1 ~]#  
+----
+
+Restart the server. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl restart named
+[root@guest1 ~]# 
+----
+
+Check. 
+
+[source,shell]
+----
+[root@guest1 named]# host docker-registry.lab.example.com
+docker-registry.lab.example.com is an alias for guest1.lab.example.com.
+guest1.lab.example.com has address 192.168.1.217
+[root@guest1 named]# 
+----
+
+
+
+== create a server certificate 
+
+Use the server name _docker-registry.lab.example.com_.
+
+Follow these instructions, but change the SERVER line. 
+For the web server, this variable was set to _www.lab.example.com_. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ SERVER=docker-registry.lab.example.com
+....
+
+* xref:security:id-certificate-ca-certificate.adoc[]
+
+Store the certificate and private key in these files. 
+
+* /var/registry/cert/domain.cer
+* /var/registry/cert/domain.key
+
+[source,shell]
+----
+[nick@guest1 ~]$ SERVER=docker-registry.lab.example.com
+[nick@guest1 ~]$ cd ~/cert/
+[nick@guest1 cert]$ sudo cp $SERVER.cer /var/registry/cert/domain.cer
+[sudo] password for nick: 
+[nick@guest1 cert]$ sudo cp $SERVER.key /var/registry/cert/domain.key
+[nick@guest1 cert]$ 
+----
+
+== open the firewall 
+
+[source,shell]
+----
+[root@guest1 ~]# firewall-cmd --add-service docker-registry 
+success
+[root@guest1 ~]# firewall-cmd --add-service docker-registry --permanent
+success
+[root@guest1 ~]# 
+----
+
+

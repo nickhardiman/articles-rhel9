@@ -1,0 +1,42 @@
+= list with buildah and podman
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 15-02-2021
+
+The buildah and podman projects are separate, but complementary. The buildah and podman tools can do some of the same tasks, like creating an image, pulling from a registry and listing images. 
+
+== list images 
+
+The two commands `buildah images` and `podman images` do the same thing. 
+
+[source,shell]
+----
+[root@guest1 ~]# buildah images
+REPOSITORY         TAG      IMAGE ID       CREATED          SIZE
+localhost/myperl   latest   3b64d9df0def   27 minutes ago   557 MB
+[root@guest1 ~]# 
+[root@guest1 ~]# podman images
+REPOSITORY        TAG     IMAGE ID      CREATED         SIZE
+localhost/myperl  latest  3b64d9df0def  27 minutes ago  557 MB
+[root@guest1 ~]# 
+----
+
+The commands `buildah containers` and `buildah ps` both list running containers, but they list different sets of running containers. 
+The command _buildah ps_ lists buildah's working containers, and _podman ps_ lists podman containers.
+https://podman.io/blogs/2018/10/31/podman-buildah-relationship.html[Each project has a separate internal representation of a container that is not shared]. 
+
+
+== list containers 
+
+[source,shell]
+----
+[root@guest1 ~]# buildah ps
+CONTAINER ID  BUILDER  IMAGE ID     IMAGE NAME                       CONTAINER NAME
+4ddfba6f2b2e     *                  scratch                          working-container
+[root@guest1 ~]# 
+[root@guest1 ~]# podman ps
+CONTAINER ID  IMAGE   COMMAND  CREATED  STATUS  PORTS   NAMES
+[root@guest1 ~]# 
+----
+
+

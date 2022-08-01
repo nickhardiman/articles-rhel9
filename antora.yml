@@ -38,4 +38,6 @@ nav:
 - modules/mail/nav.adoc 
 - modules/web/nav.adoc 
 - modules/storage/nav.adoc 
-
+- modules/developer/nav.adoc 
+- modules/cgroup/nav.adoc 
+- modules/container/nav.adoc 

@@ -1,0 +1,105 @@
+= view a registry auth token
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-01-2021
+
+Some registries are open and others require authorization. 
+
+The https://github.com/llvm/llvm-project[LLVM project] provides a toolkit for compiling and running code. 
+The toolkit is installed in a container, 
+https://catalog.redhat.com/software/containers/detail/5b9c1244bed8bd6ee8196343[rhel8/llvm-toolset]. 
+It can be downloaded from the Red Hat registry _registry.redhat.io_.
+But only authorized users - people who log in - can download.
+Anonymous downloads are not allowed. 
+
+Log into Red Hat's central store at _registry.redhat.io_, and view the auth token.
+
+
+== search images 
+
+Some parts of registry.redhat.io are password-protected. 
+You can search for a container anonymously, but you must log in before pulling one.  
+
+[source,shell]
+---- 
+[nick@guest1 ~]$ podman search llvm-toolset
+INDEX        NAME                                                         DESCRIPTION                                       STARS   OFFICIAL   AUTOMATED
+redhat.com   registry.access.redhat.com/devtools/llvm-toolset-7-rhel7     This is a llvm-toolset-7 base image.              0                  
+redhat.com   registry.access.redhat.com/devtools/llvm-toolset-rhel7       Platform for building projects with clang/ll...   0                  
+redhat.com   registry.access.redhat.com/devtools/llvm-toolset-6.0-rhel7   LLVM Toolset                                      0                  
+redhat.io    registry.redhat.io/rhel8/llvm-toolset                        The LLVM back-end compiler and core librarie...   0                  
+redhat.io    registry.redhat.io/devtools/llvm-toolset-7-rhel7             This is a llvm-toolset-7 base image.              0                  
+redhat.io    registry.redhat.io/devtools/llvm-toolset-rhel7               Platform for building projects with clang/ll...   0                  
+redhat.io    registry.redhat.io/devtools/llvm-toolset-6.0-rhel7           LLVM Toolset                                      0                  
+docker.io    docker.io/centos/llvm-toolset-7-centos7                      Platform for building projects with clang/ll...   3                  
+docker.io    docker.io/redislabsmodules/llvm-toolset                                                                        0                  
+[nick@guest1 ~]$ 
+----
+
+
+
+== log in
+
+Use your developer account to copy a container. 
+
+If you don't log in, you can't get this image. 
+Instead, you get this error. 
+It complains about not being able to fid an _auth token_.
+
+[source,shell]
+---- 
+[nick@guest1 ~]$ podman pull registry.redhat.io/rhel8/llvm-toolset
+Trying to pull registry.redhat.io/rhel8/llvm-toolset...
+  unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials. Further instructions can be found here: https://access.redhat.com/RegistryAuthentication
+Error: error pulling image "registry.redhat.io/rhel8/llvm-toolset": unable to pull registry.redhat.io/rhel8/llvm-toolset: unable to pull image: Error initializing source docker://registry.redhat.io/rhel8/llvm-toolset:latest: unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials. Further instructions can be found here: https://access.redhat.com/RegistryAuthentication
+[nick@guest1 ~]$ 
+----
+
+== auth.json 
+
+The auth token is stored in a config file, /run/user/(UID)/containers/auth.json.
+The auth token is a copy of your login credentials (username and password).
+
+The /run directory is stored in memory. 
+When you first boot up your machine, this _auth.json_ file does not exist. 
+The command `podman login` creates it for you.
+
+The account _nick_ has the UID 1000. 
+
+[source,shell]
+---- 
+[nick@guest1 ~]$ ls /run/user/1000/containers/auth.json
+ls: cannot access '/run/user/1000/containers/auth.json': No such file or directory
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ podman login registry.redhat.io
+Username: myuser
+Password: mypassword
+Login Succeeded!
+[nick@guest1 ~]$ 
+----
+
+== view the auth token 
+
+Your credentials are not stored in plain text, but they aren't securely encrypted either. 
+Security comes from directory permissions - only your user can see what's stored in the /run/user/(UID)/ directory. 
+Credentials are stored in a base64-encoded string. 
+
+Decode this string with the command `base64 -d`.
+
+[source,shell]
+---- 
+[nick@guest1 ~]$ ls -ld /run/user/1000
+drwx------. 7 nick nick 160 Aug 10 06:25 /run/user/1000
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ cat /run/user/1000/containers/auth.json
+{
+	"auths": {
+		"registry.redhat.io": {
+			"auth": "bXl1c2VyOm15cGFzc3dvcmQK"
+		}
+	}
+}[nick@guest1 ~]$ 
+[nick@guest1 ~]$ echo bXl1c2VyOm15cGFzc3dvcmQK  | base64 -d
+myuser:mypassword[nick@guest1 ~]$ 
+----
+

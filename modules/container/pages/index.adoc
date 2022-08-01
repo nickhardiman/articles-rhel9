@@ -1,0 +1,11 @@
+= container
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+
+Install container tools. 
+Pull  image Red Hat Universal Base Image 8 (ubi8) from the Internet to local storage.
+Read the image, create a container and get it to do something.
+Build a new container from scratch using buildah.
+Create a container registry and add the new container.
