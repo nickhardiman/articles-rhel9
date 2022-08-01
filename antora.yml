@@ -34,4 +34,5 @@ nav:
 - modules/virtual-storage/nav.adoc 
 - modules/virtual-machine/nav.adoc 
 - modules/security/nav.adoc 
+- modules/dns/nav.adoc 
 

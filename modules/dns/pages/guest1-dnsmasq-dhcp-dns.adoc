@@ -1,0 +1,256 @@
+= set IP address and DNS in privbr0 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+Set the _guest1_ VM's domain name and IP address.
+This is for the second interface _enp2s0_ only. 
+
+Edit libvirt's privbr0 network configuration. 
+Libvirt will in turn edit dnsmasq's configuration.
+
+
+== desired settings 
+
+When the guest VM boots up, it is given the address 192.168.152...er...something. 
+The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
+This DHCP setup isn't great if you want a static IP address. 
+We don't want an IP address that may change. 
+
+Instead of searching for whatever was allocated after every boot, it's easier to assign fixed names and addresses. 
+These are the settings we want. 
+
+* MAC address: *52:54:00:00:00:02*
+* IP address: *192.168.152.100*
+* FQDN: *guest1.private.example.com*
+
+Use dnsmasq to fix the IP address _192.168.152.100_ and the 
+https://en.wikipedia.org/wiki/Fully_qualified_domain_name[FQDN (Fully Qualified Domain Name)] _guest1.private.example.com_.
+
+
+== stop the guest1 VM
+
+Changing network details while the machine is running can stop the interface working.
+
+[source,shell]
+....
+virsh shutdown guest1
+....
+
+Check the current state of guest1 with ``virsh dominfo guest1``.
+
+
+== assign a name and address
+
+Add an XML tag to the network's configuration.
+
+This dnsmasq config file can't be edited directly because it's created by libvirt - any changes would be overwritten. 
+Instead, use ``virsh`` commands to add config. 
+
+
+=== add the "private.example.com" domain 
+
+Add the domain _private.example.com_ before adding the name _guest1.private.example.com_.
+
+dnsmasq has a security feature that ignores DNS domains it doesn't recognize. 
+The privbr0 configuration has no domain, so adding a full FQDN for the VM (_guest1.private.example.com_) won't work. Journalctl would show an error like this. 
+
+[source,shell]
+....
+May 29 18:17:15 host.private.example.com dnsmasq-dhcp[2380]: Ignoring domain private.example.com for DHCP host name guest1
+....
+
+Add a domain by editing the XML configuration and adding the line ``<domain name='private.example.com' localOnly='yes'/>``.
+
+Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
+
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-edit privbr0
+....
+
+virsh fires up the vi editor. 
+Add the _domain_ line. 
+
+[source,xml]
+....
+<network>
+  <name>privbr0</name>
+  <uuid>12345678-85ed-4742-a2b6-3ef57346f165</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:74:ca:3c'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+  </ip>
+</network>
+....
+
+Save and exit. 
+
+[source,shell]
+....
+Network privbr0 XML configuration edited.
+....
+
+
+== restart the network 
+
+Restart the network. Check its state before and after - it changes from _inactive_ to _active_. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-destroy privbr0
+Network privbr0 destroyed
+
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name                 State      Autostart     Persistent
+----------------------------------------------------------
+ privbr0              inactive   yes           yes
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-start privbr0
+Network privbr0 started
+
+[nick@host1 ~]$ 
+[nick@host1 ~]$ sudo virsh net-list --all
+ Name                 State      Autostart     Persistent
+----------------------------------------------------------
+ privbr0              active     yes           yes
+
+[nick@host1 ~]$ 
+....
+
+Virsh updates the dnsmasq config.
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep private.example.com /var/lib/libvirt/dnsmasq/privbr0.conf
+local=/private.example.com/
+domain=private.example.com
+[nick@host1 ~]$ 
+....
+
+
+
+=== add the FQDN and IPv4 address to libvirt's config
+
+Use virsh net-update, which doesn't require a network restart. 
+The command contains the line of XML to be added. 
+The name in the _name_ attribute matches the hostname set by the ``virt-customize`` command.
+The ``--live`` and ``--config`` options make sure both the current configuration and the stored config are updated.
+
+[source,shell]
+....
+sudo virsh net-update privbr0 add ip-dhcp-host \
+    "<host  mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />" \
+    --live \
+    --config
+....
+
+Add the host line. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-update privbr0 add ip-dhcp-host "<host mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />" --live --config
+Updated network privbr0 persistent config and live state
+[nick@host1 ~]$ 
+....
+
+You can remove this line by replacing ``add`` with ``delete``. 
+
+
+=== add the FQDN and IPv4 address to the host 
+
+Libvirt knows about your new machine, but your host machine has no idea.
+
+Add a line to /etc/hosts. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo bash -c 'echo "192.168.152.100 guest1 guest1.private.example.com" >> /etc/hosts'
+[nick@host1 ~]$ 
+....
+
+
+=== start the guest1 VM 
+
+Start with ``virsh start guest1``.
+
+
+== check your work 
+
+=== watch the activity log
+
+When the _guest1_ VM starts, it uses DHCP to obtain an IP address.
+The guest VM starts by broadcasting a 'looking for DHCP server' message and gets an answer from dnsmasq on the host machine. 
+You can see the conversation taking place using ``journalctl``.
+
+[source,shell]
+....
+[nick@host1 ~]$ journalctl -f
+...
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(privbr0) 192.168.152.27 52:54:00:00:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPNAK(privbr0) 192.168.152.27 52:54:00:00:00:02 static lease available
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPDISCOVER(privbr0) 192.168.152.27 52:54:00:00:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPOFFER(privbr0) 192.168.152.100 52:54:00:00:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(privbr0) 192.168.152.100 52:54:00:00:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPACK(privbr0) 192.168.152.100 52:54:00:00:00:02 guest1
+....
+
+
+=== resolve the name 
+
+Look up the new name using dnsmasq's DNS server. 
+Dnsmasq services for privbr0 only listen to the network address, 192.168.152.1. 
+
+[source,shell]
+....
+[nick@host1 ~]$ host guest1.private.example.com 192.168.152.1
+Using domain server:
+Name: 192.168.152.1
+Address: 192.168.152.1#53
+Aliases: 
+
+guest1.private.example.com has address 192.168.152.100
+[nick@host1 ~]$ 
+....
+
+
+=== ping the interface 
+
+Can the host find it?
+
+This is good. 
+
+[source,shell]
+....
+[nick@host1 ~]$ ping -c1 192.168.152.100
+PING 192.168.152.100 (192.168.152.100) 56(84) bytes of data.
+64 bytes from guest1 (192.168.152.100): icmp_seq=1 ttl=64 time=0.226 ms
+
+--- 192.168.152.100 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.226/0.226/0.226/0.000 ms
+[nick@host1 ~]$ 
+....
+
+This is bad. 
+
+[source,shell]
+....
+[root@host1 ~]# ping -c1 192.168.152.100
+PING 192.168.152.100 (192.168.152.100) 56(84) bytes of data.
+From 192.168.152.1 icmp_seq=1 Destination Host Unreachable
+
+--- 192.168.152.100 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+[root@host1 ~]# 
+....
+
+
+

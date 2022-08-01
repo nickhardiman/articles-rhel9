@@ -1,0 +1,241 @@
+= add a zone and forward requests 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+
+Add configuration and content to Bind. 
+This sets up Bind to do this work. 
+
+Answer questions about the _lab.example.com_ domain. Bind is authoritative for this domain, so it hands over records for hosts like guest1.lab.example.com. 
+
+This is a simple config that does not cover anything fancy like DNSSEC or split DNS. 
+
+==  current zone files 
+
+Bind already has some zones defined. 
+The details are in files in the /var/named/ directory, such as named.ca which lists servers for the root domain. 
+These files are in the named group. 
+
+The https://en.wikipedia.org/wiki/Sticky_bit[sticky bit] is set on the named directory.
+The sticky bit provides a little bit of extra security. 
+The named files can't be removed by named. 
+
+[source,shell]
+----
+[root@guest1 ~]# cd /var/named/
+[root@guest1 named]# 
+[root@guest1 named]# ls -la 
+total 28
+drwxrwx--T.  5 root  named  177 Dec  3 17:57 .
+drwxr-xr-x. 21 root  root  4096 Dec  2 16:50 ..
+drwxrwx---.  2 named named   23 Dec  2 16:55 data
+drwxrwx---.  2 named named   60 Dec  3 17:57 dynamic
+-rw-r-----.  1 root  named 2253 Aug 21 11:12 named.ca
+-rw-r-----.  1 root  named  152 Aug 21 11:12 named.empty
+-rw-r-----.  1 root  named  152 Aug 21 11:12 named.localhost
+-rw-r-----.  1 root  named  168 Aug 21 11:12 named.loopback
+drwxrwx---.  2 named named    6 Aug 21 11:12 slaves
+[root@guest1 named]# 
+----
+
+
+== a zone 
+
+A zone is a set of names and addresses for a domain like _lab.example.com_. 
+The name server is authoritative for a zone - it's got the answers.
+Here, the zone and domain are the same. 
+In more complex setups, a domain can be split into many zones, managed by many name servers.  
+
+Bind's config has _zone_ options which tell Bind where these files are. 
+One zone option is in /etc/named.conf.
+
+[source,shell]
+----
+zone "." IN {
+	type hint;
+	file "named.ca";
+};
+----
+
+More zone options are in /etc/named.rfc1912.zones.
+https://tools.ietf.org/html/rfc1912[RFC 1912] is about "Common DNS Operational and Configuration Errors" and says "certain zones should always be present".
+The file _/etc/named.rfc1912.zones_ config file ticks that box. 
+
+
+
+== add zone files
+
+Add a zone file that describes lab.example.com, and another for matching IP addresses. 
+
+These files contain many https://en.wikipedia.org/wiki/List_of_DNS_record_types
+[types of DNS record], from A to SOA.
+
+
+[source,shell]
+----
+[root@guest1 ~]# cd /var/named/
+[root@guest1 named]# 
+[root@guest1 named]# vi lab.example.com-records
+----
+
+These are the records for forward DNS. 
+The zone is _lab.example.com_.
+Each line contains one record, except for the big SOA record at the top.
+The fields in each record are spaced out to make the file look more like a table (that's another suggestion from https://tools.ietf.org/html/rfc1912[RFC 1912]). 
+
+[source,dns]
+----
+$TTL 3H
+@    IN SOA    @ root.lab.example.com (
+                    0    ; serial
+                    1D    ; refresh
+                    1H    ; retry
+                    1W    ; expire
+                    3H )    ; minimum
+; these records are names and addresses for lab.example.com
+             IN NS   dns1
+             A       192.168.1.217
+             AAAA    2a00:23c8:1d05:1e00:5054:ff:fe00:1
+; these records are names and addresses for (HOST).lab.example.com
+dns1         IN A    192.168.1.217
+guest1       IN A    192.168.1.217
+----
+
+These are the records for reverse DNS. 
+The zone is _1.168.192.in-addr.arpa_.
+
+Add these to a new file named _192.168.1-records_.
+
+[source,dns]
+----
+$TTL 3H
+@    IN SOA    @ root.lab.example.com (
+                    0    ; serial
+                    1D    ; refresh
+                    1H    ; retry
+                    1W    ; expire
+                    3H )    ; minimum
+            IN NS   dns1.lab.example.com.
+217         IN PTR dns1.lab.example.com.
+217         IN PTR guest1.lab.example.com.
+----
+
+
+Change the group to match the other files. 
+[source,shell]
+----
+[root@guest1 named]# chown .named lab.example.com-records 192.168.1-records 
+[root@guest1 named]# 
+----
+
+No need to change the SELinux file type.
+The new files inherit _named_zone_t_ from the directory.
+
+
+=== edit /etc/named.conf 
+
+Tell Bind where the new zone records are. 
+Add these options to the bottom of /etc/named.conf.
+
+The first line is a comment. 
+Run _man named.conf_ to find out more ways to add a comment. 
+
+[source,shell]
+----
+// my lab 
+
+zone "lab.example.com" IN {
+  type master;
+  file "lab.example.com-records";
+};
+
+zone "1.168.192.in-addr.arpa" IN {
+  type master;
+  file "192.168.1-records";
+};
+----
+
+Check the new config. 
+Tell _named_ to re-read this new config.
+
+[source,shell]
+----
+[root@guest1 named]# named-checkconf /etc/named.conf
+[root@guest1 named]# 
+[root@guest1 named]# systemctl reload named.service
+[root@guest1 named]# 
+----
+
+
+== check your work 
+
+Check a few types of record, to make sure DNS is OK. 
+
+Start with the https://en.wikipedia.org/wiki/SOA_record[SOA (Start Of Authority) records]. 
+There are two of these - one for the _lab.example.com_ zone and one for the _1.168.192.in-addr.arpa_ zone. 
+
+[source,shell]
+----
+[root@guest1 named]# host -t SOA lab.example.com localhost
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+lab.example.com has SOA record lab.example.com. root.lab.example.com.lab.example.com. 0 86400 3600 604800 10800
+[root@guest1 named]# 
+[root@guest1 named]# host -t SOA 1.168.192.in-addr.arpa localhost
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+1.168.192.in-addr.arpa has SOA record 1.168.192.in-addr.arpa. root.lab.example.com.1.168.192.in-addr.arpa. 0 86400 3600 604800 10800
+[root@guest1 named]#
+----
+
+Check the NS records. 
+
+[source,shell]
+----
+[root@guest1 named]# host -t NS lab.example.com localhost
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+lab.example.com name server dns1.lab.example.com.
+[root@guest1 named]# 
+[root@guest1 named]# host -t NS 1.168.192.in-addr.arpa localhost 
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+1.168.192.in-addr.arpa name server dns1.lab.example.com.
+[root@guest1 named]# 
+----
+
+Check one of the A records and the matching PTR record. 
+
+[source,shell]
+----
+[root@guest1 named]# host guest1.lab.example.com localhost
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+guest1.lab.example.com has address 192.168.1.217
+[root@guest1 named]# host 192.168.1.217 localhost
+Using domain server:
+Name: localhost
+Address: ::1#53
+Aliases: 
+
+217.1.168.192.in-addr.arpa domain name pointer dns1.lab.example.com.
+217.1.168.192.in-addr.arpa domain name pointer guest1.lab.example.com.
+[root@guest1 named]# 
+----
+

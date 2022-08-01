@@ -1,0 +1,126 @@
+= view the dnsmasq IP pool
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+
+
+.VMs use dnsmasq services 
+....
+.-------------------------------------.  
+|                                     |
+|  host1                              |
+|                                     |
+|   +----------+        +----------+  |
+|   |          |        |          |  |
+|   |  guest1  | DHCP   | dnsmasq  |  |
+|   |          +------->|          |  |
+|   |          |        |          |  |
+|   |          | DNS    |          |  |
+|   |          +------->|          |  |
+|   +----------+        +----------+  |
+.-------------------------------------.  
+....
+
+
+RHEL 8 includes a complete system for managing VMs (virtual machines) - the KVM hypervisor, QEMU machine emulator and libvirt tools. 
+The libvirt daemon uses http://www.thekelleys.org.uk/dnsmasq/doc.html[dnsmasq] to provide 
+https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol[DHCP] 
+and https://en.wikipedia.org/wiki/Domain_Name_System[DNS] services. 
+
+When the guest1 VM boots up, the second network interface is given the IP address 192.168.152...er...something. 
+The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
+
+
+== dnsmasq services 
+
+libvirtd controls dnsmasq services, not systemd. 
+One pair of processes - a parent and child - are started for each libvirt network that needs DHCP.
+The _pubbr0_ network doesn't use dnsmasq.
+The _default_ and _privbr0_ networks do.
+
+Running the command ``systemctl status dnsmasq`` says dnsmasq isn't running. 
+
+[source,shell]
+....
+[root@host1 libvirt]# ps -fwwC dnsmasq
+UID          PID    PPID  C STIME TTY          TIME CMD
+dnsmasq     2077       1  0 08:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+root        2078    2077  0 08:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/default.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+dnsmasq    16756       1  0 20:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/privbr0.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+root       16757   16756  0 20:16 ?        00:00:00 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/privbr0.conf --leasefile-ro --dhcp-script=/usr/libexec/libvirt_leaseshelper
+[root@host1 libvirt]# 
+[root@host1 ~]# systemctl status dnsmasq
+● dnsmasq.service - DNS caching server.
+   Loaded: loaded (/usr/lib/systemd/system/dnsmasq.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+[root@host1 ~]# 
+....
+
+
+== DHCP lease 
+
+The DHCP lease is stored in a status file. 
+
+[source,shell]
+....
+[root@host1 ~]# cat /var/lib/libvirt/dnsmasq/privbr0.status
+[
+  {
+    "ip-address": "192.168.152.28",
+    "mac-address": "52:54:00:00:00:02",
+    "hostname": "guest1",
+    "client-id": "01:52:54:00:00:00:02",
+    "expiry-time": 1610486851
+  }
+]
+[root@host1 ~]# 
+....
+
+== check the IP pool 
+
+The dnsmasq server uses the config file at /var/lib/libvirt/dnsmasq/default.conf. This ``dhcp-range`` line tells dnsmasq what IP pool to manage. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep dhcp-range /var/lib/libvirt/dnsmasq/default.conf
+dhcp-range=192.168.152.2,192.168.152.254
+[nick@host1 ~]$ 
+....
+
+libvirt writes that dnsmasq configuration after reading its own network configuration.
+You can see libvirt's configuration  using the ``virsh net-dumpxml`` command.
+There are about 20 lines of XML that define the network.
+These are all listed further down. 
+
+Here's the libvirt config that creates dnsmasq's _dhcp-range_ line. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-dumpxml default
+...
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+...
+[nick@host1 ~]$ 
+....
+
+
+== view reserved IP addresses 
+
+These are IP addresses leased from the pool. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-dhcp-leases privbr0 
+[sudo] password for nick: 
+ Expiry Time           MAC address         Protocol   IP address          Hostname   Client ID or DUID
+-----------------------------------------------------------------------------------------------------------
+ 2021-01-12 21:27:31   52:54:00:00:00:02   ipv4       192.168.152.28/24   guest1     01:52:54:00:00:00:02
+
+[nick@host1 ~]$ 
+....
+
+
+

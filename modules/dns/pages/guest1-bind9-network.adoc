@@ -1,0 +1,308 @@
+= allow network access to Bind 9 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+
+https://www.isc.org/bind/[ISC Bind] only answers local queries.
+Configure it to answer queries from the network. 
+
+Tell Bind9 to forward questions it can't answer to the home network's DNS server. 
+
+These changes turn Bind into an https://us-cert.cisa.gov/ncas/alerts/TA13-088A[open DNS resolver]. 
+That means it's not fit to be used on the Internet, because bad guys can use an open resolver to help with a DDoS (Distributed Denial of Service) attack. 
+An open DNS resolver is OK in a development network like this, which is far from Internet baddies. 
+
+.Bind9 on guest1 
+....
+  |  
+  | Internet
+  |
++-+-------------------------------------+
+|                                       |
+|     ISP router                        |
+|                                       |
++-+-------------------------------------+
+  |
+  | Bind9 forwards requests it can't answer  
+  | to the home network's DNS
+  |
++-+-------------------------------------+
+| enp1s0                                |
+|    Bind9 on guest1.lab.example.com    |
+| enp2s0                                |
++-+-------------------------------------+
+  |
+
+....
+
+
+== fix the IP address of interface enp1s0 
+
+A DNS name server needs a fixed IP address. 
+
+The interface _enp1s0_ has an address randomly picked from a pool by the home network's DHCP service. 
+This is probably a modem or router supplied by the ISP.
+In these examples, the IPv4 address is _192.168.1.217_. 
+
+Make the change permanent, so you can rely on using this IP address. 
+
+No two companies set up their machines in the same way, so finding out how to manage the DHCP router can be a little painful.  
+The ISP's router probably includes a web interface for administration. 
+
+
+== named only listens on lo 
+
+The new name server only responds to requests from guest1. 
+It is listening to the localhost interface _lo_, not the two network interfaces - _lo_ and _enp1s0_. 
+_127.0.0.1_ is the loopback interface's IPv4 address and _[::1]_ is the IPv6 address. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ ss  -l '( sport = :domain or dport = :domain )'
+Netid  State    Recv-Q   Send-Q     Local Address:Port       Peer Address:Port  
+udp    UNCONN   0        0              127.0.0.1:domain          0.0.0.0:*     
+udp    UNCONN   0        0                  [::1]:domain             [::]:*     
+tcp    LISTEN   0        10             127.0.0.1:domain          0.0.0.0:*     
+tcp    LISTEN   0        10                 [::1]:domain             [::]:*     
+[nick@guest1 ~]$ 
+....
+
+The config file contains https://bind9.readthedocs.io/en/latest/reference.html?highlight=listen-on#interfaces[listen-on] options.
+These tell Bind to listen only to the loopback interface, so the rest of the network can't talk to it. 
+
+[source,shell]
+----
+[root@guest1 ~]# grep listen-on /etc/named.conf 
+  listen-on port 53 { 127.0.0.1; };
+	listen-on-v6 port 53 { ::1; };
+[root@guest1 ~]# 
+----
+
+https://bind9.readthedocs.io/en/latest/reference.html?highlight=allow-query#access-control[Access control] also prevents the network using Bind. 
+
+[source,shell]
+----
+[root@guest1 ~]# grep allow- /etc/named.conf
+	allow-query     { localhost; };
+[root@guest1 ~]# 
+----
+
+
+
+== listen to all interfaces 
+
+Make Bind listen to the network address. 
+This requires changing both the Bind config and firewalld's config. 
+
+* The IPv4 default is to listen to all interfaces. 
+* The IPv6 default is not to listen. 
+
+Edit the configuration. 
+
+[source,shell]
+----
+[root@guest1 ~]# vi /etc/named.conf
+----
+
+Comment out the IPv4 line. 
+
+[source,shell]
+----
+  #listen-on port 53 { 127.0.0.1; };
+  listen-on-v6 port 53 { ::1; };
+----
+
+Check the change is OK. 
+
+This is good. 
+
+[source,shell]
+----
+[root@guest1 ~]# named-checkconf /etc/named.conf
+[root@guest1 ~]# 
+----
+
+This is bad. The problem here is a https://en.wikipedia.org/wiki/Fat-finger_error[fat-finger error]: *~* instead of *#*. 
+
+[source,shell]
+----
+[root@guest1 ~]# named-checkconf /etc/named.conf
+/etc/named.conf:11: unknown option '~listen-on'
+[root@guest1 ~]# 
+----
+
+
+Tell Bind 9 to re-read its configuration. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl reload named
+[root@guest1 ~]# 
+----
+
+Bind starts listening to all interfaces. 
+
+* the IPv4 address _192.168.1.217_ was issued by the home network's DHCP service to enp1s0. 
+* the IPv4 address 192.168.152.100 was issued by dnsmasq's DHCP service to enp2s0.
+
+[source,shell]
+----
+[root@guest1 ~]# ss -ln | grep :53
+udp                UNCONN              0                    0                                                          192.168.152.100:53               0.0.0.0:*                                                                               
+udp                UNCONN              0                    0                                                            192.168.1.217:53               0.0.0.0:*                                                                               
+udp                UNCONN              0                    0                                                                127.0.0.1:53               0.0.0.0:*                                                                               
+udp                UNCONN              0                    0                                                                    [::1]:53                  [::]:*                                                                               
+tcp                LISTEN              0                    10                                                         192.168.152.100:53               0.0.0.0:*                                                                               
+tcp                LISTEN              0                    10                                                           192.168.1.217:53               0.0.0.0:*                                                                               
+tcp                LISTEN              0                    10                                                               127.0.0.1:53               0.0.0.0:*                                                                               
+tcp                LISTEN              0                    10                                                                   [::1]:53                  [::]:*                                                                               
+[root@guest1 ~]# 
+----
+
+Check. 
+
+[source,shell]
+----
+[root@guest1 ~]# host www.google.com  192.168.1.217
+Using domain server:
+Name: 192.168.1.217
+Address: 192.168.1.217#53
+Aliases: 
+
+www.google.com has address 216.58.210.36
+www.google.com has IPv6 address 2a00:1450:4009:800::2004
+[root@guest1 ~]# 
+----
+
+
+== allow requests through the firewall 
+
+Check DNS. 
+Try a lookup from host _host1_. 
+
+Nothing happens, then the attempt times out. 
+
+[source,shell]
+----
+[nick@host1 ~]$ host www.google.com 192.168.1.217
+...(big pause)...
+;; connection timed out; no servers could be reached
+[nick@host1 ~]$ 
+----
+
+Edit the firewall on guest1. 
+
+[source,shell]
+----
+[root@guest1 ~]# firewall-cmd --add-service=dns
+success
+[root@guest1 ~]# firewall-cmd --add-service=dns --permanent
+success
+[root@guest1 ~]# 
+----
+
+Try again from host1. 
+
+This time the reply is instant, but it's refused. 
+Bind has a security feature that only allows queries from localhost. 
+That's the next thing to change. 
+
+[source,shell]
+----
+[nick@host1 ~]$ host www.google.com 192.168.1.217
+Using domain server:
+Name: 192.168.1.217
+Address: 192.168.1.217#53
+Aliases: 
+
+Host www.google.com not found: 5(REFUSED)
+[nick@host1 ~]$ 
+----
+
+
+== change access control 
+
+Bind has many https://bind9.readthedocs.io/en/latest/reference.html?highlight=listen-on#access-control[access control] options, and most of them start with _allow-_.
+The only one included in the default config file is _allow-query_. 
+
+Edit the configuration with `vi /etc/named.conf`. 
+
+The default is to allow all queries, so comment out the statement. 
+
+[source,shell]
+----
+	#allow-query     { localhost; };
+----
+
+Reload the configuration with _systemctl reload named_.
+
+Check again from host1. 
+
+[source,shell]
+----
+[nick@host1 ~]$ host www.google.com 192.168.1.217
+Using domain server:
+Name: 192.168.1.217
+Address: 192.168.1.217#53
+Aliases: 
+
+www.google.com has address 216.58.212.196
+www.google.com has IPv6 address 2a00:1450:4009:80a::2004
+[nick@host1 ~]$ 
+----
+
+Bind is now talking to the network. 
+
+
+== forward requests to the home router 
+
+Find the IP address of the ISP's router. 
+In this example, it's 192.168.1.254. 
+
+Edit the config file.
+
+Find the options section. 
+
+[source,shell]
+----
+[root@guest1 ~]# vi /etc/named.conf 
+
+//
+// named.conf
+//
+// Provided by Red Hat bind package to configure the ISC BIND named(8) DNS
+// server as a caching only nameserver (as a localhost DNS resolver only).
+//
+// See /usr/share/doc/bind*/sample/ for example named configuration files.
+//
+
+options {
+        #listen-on port 53 { 127.0.0.1; };
+        listen-on-v6 port 53 { ::1; };
+...
+----
+
+Add a forwarders directive in that options section.
+
+[source,shell]
+----
+options {
+        forwarders { 192.168.1.254; };
+        #listen-on port 53 { 127.0.0.1; };
+        listen-on-v6 port 53 { ::1; };
+----
+
+Look for syntax errors, reload and try a new search. 
+
+[source,shell]
+----
+[root@guest1 ~]# named-checkconf 
+[root@guest1 ~]# systemctl reload named
+[root@guest1 ~]# 
+[root@guest1 ~]# dig @localhost +short www.alta-vista.com
+rc.yahoo.com.
+src.g03.yahoodns.net.
+212.82.100.150
+[root@guest1 ~]# 
+----

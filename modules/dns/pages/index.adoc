@@ -1,0 +1,48 @@
+= DNS (Domain Name Service)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+
+.VMs use dnsmasq services 
+....
+.-------------------------------------.  
+|                                     |
+|  host1                              |
+|                                     |
+|   +----------+        +----------+  |
+|   |          |        |          |  |
+|   |  guest1  | DHCP   | dnsmasq  |  |
+|   |          +------->|          |  |
+|   |          |        |          |  |
+|   |          | DNS    |          |  |
+|   |          +------->|          |  |
+|   +----------+        +----------+  |
+.-------------------------------------.  
+....
+
+
+RHEL 8 includes a complete system for managing VMs (virtual machines) - the KVM hypervisor, QEMU machine emulator and libvirt tools. 
+The libvirt daemon uses http://www.thekelleys.org.uk/dnsmasq/doc.html[dnsmasq] to provide 
+https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol[DHCP] 
+and https://en.wikipedia.org/wiki/Domain_Name_System[DNS] services. 
+
+== dnsmasq processes 
+
+There's a dnsmasq running for the public0 network, another for private0 and a third for private1. 
+Each one expects to be the main source of names and addresses for its network. 
+
+libvirtd controls dnsmasq, not systemd. 
+
+
+== dnsmasq's addresses come from the DHCP IP pool
+
+When the guest1 VM boots up, the second network interface is given the IP address 192.168.152...er...something. 
+The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
+
+== dnsmasq's names come from the DNS service 
+
+guest1's first interface, enp1s0, has the FQDN guest1.lab.lab.example.com.guest1's second interface, enp2s0, has guest1.private.lab.example.com.
+Or at least it will do, after we edit libvirt’s private0 network configuration. Libvirt will in turn edit dnsmasq’s configuration.
+
+
