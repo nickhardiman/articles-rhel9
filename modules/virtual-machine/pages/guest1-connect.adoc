@@ -1,0 +1,151 @@
+= connect to guest1
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 28-11-2020
+
+We can connect to the new machine using the console. 
+
+== connect using the console
+
+Connect to the console with the ``virsh console`` command.
+Hit the Enter key kbd:[⏎]  to get the _guest2 login_ prompt to appear. 
+
+[source,shell]
+----
+[nick@host2 ~]$ sudo virsh console guest2
+[sudo] password for nick: 
+Connected to domain 'guest2'
+Escape character is ^] (Ctrl + ])
+
+guest2 login: 
+----
+
+Trying to login over SSH with the password _Password;1_ failed.
+Logging in on the console with the same password succeeds. 
+
+[source,shell]
+----
+guest2 login: root
+Password:  Password;1
+Last failed login: Mon Aug  1 12:38:34 BST 2022 from 192.168.152.1 on ssh:notty
+There was 1 failed login attempt since the last successful login.
+Last login: Sun Jul 31 21:26:19 on ttyS0
+[root@guest2 ~]# 
+----
+
+That's enough to prove the virtual machine is working OK. 
+
+Disconnect from the console. 
+The disconnection command is 
+kbd:[Ctrl + ++]++ ] 
+
+
+[source,shell]
+----
+^]
+[root@host1 ~]# 
+----
+
+
+== connect using SSH
+
+We could use an IP address to connect to the new machine, if we knew it. 
+How do you find the IP address of the new guest?
+
+The arp command shows entries like this, which contain MAC address but no IP address.  
+
+[source,shell]
+....
+[nick@host2 ~]$ arp
+Address                  HWtype  HWaddress           Flags Mask            Iface
+guest1                   ether   52:54:00:00:00:02   C                     pubbr0
+...
+host1                    ether   24:4b:fe:c8:40:a9   C                     pubbr0
+...
+[nick@host2 ~]$ 
+....
+
+
+.guest1 network interfaces
+----
+            + pubbr0                                + privbr0      + privbr1
+            |                                       |              |
+            |     +--------------------------+      |              |
+            |     |  guest1.lab.example.com  |      |              |
+  Internet  |     |                          |      |              |
+  <---------+-----+ enp1s0            enp2s0 +------+              |
+            |     |                          |      |              |
+            |     +--------------------------+      |              |
+----
+
+
+
+== find the IP address of enp2s0 from host1
+
+We know the new VM is connected to two bridges, pubbr0 and privbr0. 
+Libvirt manages these bridges using its two networks, public0 and private0.
+
+The home network router assigned an address for guest1 to use on the home network.
+The OS has probably already associated this with enp1s0. 
+There's no easy way of seeing what this is. 
+
+The DHCP server hands out IP addresses from its pool for privbr0. 
+Libvirt can tell us which addresses are in use. 
+
+Use SSH to connect from the workstation to _host1_. 
+
+View DHCP leases in libvirt's private0 network.
+
+[source,shell]
+....
+[nick@host2 ~]$ sudo virsh net-dhcp-leases private0 
+ Expiry Time           MAC address         Protocol   IP address           Hostname   Client ID or DUID
+------------------------------------------------------------------------------------------------------------
+ 2022-08-01 14:08:06   52:54:00:01:00:02   ipv4       192.168.152.71/24    -          01:52:54:00:01:00:02
+[nick@host2 ~]$ 
+....
+
+
+== find the IP address of enp1s0 from host1
+
+The first network interface on _guest1_ is connected to the home network. 
+It has probably been given an IP address by the DHCP server built into the ISP router. 
+
+Virsh can't tell you because it isn't managing DHCP for this interface. The _virsh net-dhcp-leases pubbr0_ won't work. 
+
+A few ways to find the address: 
+
+* Find out what IP address the home DHCP server allocated.  
+This depends on what your home network equipment is. 
+* Watch network traffic. Run _sudo tcpdump -nn ether host 52:54:00:00:00:02_ on _host1_ and wait for something to happen. 
+
+This is proper network admin. 
+
+
+== find the IP address of enp1s0 using the console
+
+* Connect to the console, 
+* log into the machine, 
+* run _ip addr_ and 
+* copy the IP address.
+
+
+
+== connect using SSH 
+
+[source,shell]
+....
+ssh nick@192.168.152.71
+....
+
+
+== connect using SSH and key-based login  
+
+Copy your public key for easier and safer login. 
+
+[source,shell]
+....
+ssh-copy-id nick@192.168.152.71
+....
+
+SSH from your workstation to the machine. 

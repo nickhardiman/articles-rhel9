@@ -151,39 +151,6 @@ Now there is a VM.
 
 
 
-== login with the console 
-
-Connect to the console with the ``virsh console`` command.
-Hit the Enter key kbd:[⏎]  to get the _guest2 login_ prompt to appear. 
-
-[source,shell]
-----
-[root@host1 ~]# virsh console guest2
-Connected to domain guest2
-Escape character is ^]
-
-Red Hat Enterprise Linux 8.3 (Ootpa)
-Kernel 4.18.0-240.1.1.el8_3.x86_64 on an x86_64
-
-Activate the web console with: systemctl enable --now cockpit.socket
-
-guest2 login: 
-----
-
-That's enough to prove the virtual machine runs. 
-
-Disconnect from the console. 
-The disconnection command is 
-kbd:[Ctrl + ++]++ ] 
-
-
-[source,shell]
-----
-^]
-[root@host1 ~]# 
-----
-
-
 
 == delete the VM
 

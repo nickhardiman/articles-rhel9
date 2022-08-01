@@ -74,7 +74,7 @@ https://libvirt.org/formatnetwork.html#examplesPrivate[libvirt example].
 <network>
   <name>private1</name>
   <bridge name="privbr1"/>
-  <mac address='52:54:00:00:02:01'/>
+  <mac address='52:54:00:02:00:01'/>
   <domain name='private1.example.com' localOnly='yes'/>
   <ip address="192.168.162.1" netmask="255.255.255.0">
     <dhcp>

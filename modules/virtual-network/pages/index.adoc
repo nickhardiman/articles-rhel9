@@ -62,8 +62,8 @@ For instance, if guest1 has a MAC address and an IP address that both end in 1, 
 * hosts attached to pubbr0 get their names and addresses from the home network router. 
 * host1 is a physical PC with a real-world MAC address. 
 * The guest MAC addresses are created by our virt-install commands. 
-* guest1 has two interfaces and a modern interface naming convention. 
-* guest2 also has two interfaces but ???
+* guest1 has two interfaces and a modern interface naming convention (enp1s0). 
+* guest2 also has two interfaces using the old naming convention (eth0).
 
 
 .bridges
@@ -83,9 +83,9 @@ host1,        enp1s0,    12:34:56:12:34:56, 192.168.1.35,   home.network
 guest1,       enp1s0,    52:54:00:00:00:02, 192.168.1.217,  lab.example.com
 *private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
 guest1,       enp2s0,    52:54:00:01:00:02, 192.168.152.2,  private.example.com
-guest2,       eth1,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
+guest2,       eth0,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
 *private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
-guest2,       eth2,      52:54:00:02:00:02, 192.168.152.3,  private.example.com
+guest2,       eth1,      52:54:00:02:00:02, 192.168.152.3,  private.example.com
 guest3,       eth1,      52:54:00:02:00:03, 192.168.162.2,  private.example.com
 
 
