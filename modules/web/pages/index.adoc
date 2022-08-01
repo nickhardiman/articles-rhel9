@@ -1,0 +1,25 @@
+= web
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+Install a few web-related applications.
+
+== apache 
+
+Install and run.
+Reconfigure it to use port 8080.
+Add some modules. 
+Set up TLS using a certificate signed by our CA.
+
+== squid
+
+Use squid on guest1 to proxy guest2's HTTP and HTTPS requests to the Internet.
+
+== nginx 
+
+todo
+
+== haproxy
+
+Install the HAProxy proxy server on guest1. HAProxy is an intermediary between a web client on  the workstation and  web servers on guest2 and guest4.

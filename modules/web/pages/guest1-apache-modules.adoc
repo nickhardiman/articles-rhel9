@@ -1,0 +1,134 @@
+= configure Apache modules
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2020
+
+Many modules are loaded by configuration files in /etc/httpd/conf.modules.d/.
+Some of these modules, like MPM (Multi-Processing Module), don't need any more configuration. 
+Others, like mod-info, must be configured before they can be used. 
+
+
+This provides tuning 
+https://httpd.apache.org/docs/2.4/mod/mpm_common.html[directives] 
+like StartServers, MaxClients and ThreadsPerChild. 
+
+Add more config to the drop-in directory /etc/httpd/conf.d/ for some modules. 
+This already has a few extra pieces of config. 
+
+[source,shell]
+----
+[root@guest1 ~]# ls /etc/httpd/conf.d
+autoindex.conf  README  userdir.conf  welcome.conf
+[root@guest1 ~]# 
+----
+
+
+== check MPM (Multi-Processing Module) is loaded 
+
+This provides tuning 
+https://httpd.apache.org/docs/2.4/mod/mpm_common.html[directives] 
+like StartServers, MaxClients and ThreadsPerChild. 
+
+
+[source,shell]
+----
+[root@guest1 conf.d]# httpd -M | grep mpm
+ mpm_event_module (shared)
+[root@guest1 conf.d]# 
+----
+
+
+
+== configure the mod-info module
+
+The https://httpd.apache.org/docs/2.4/mod/mod_info.html[mod-info module] allows users to view Apache's configuration with the server-info page. 
+
+This is a huge page, best viewed in a web browser. 
+
+See setup in 
+https://httpd.apache.org/docs/2.4/mod/mod_info.html[server-info] page. 
+This must be enabled with extra config. 
+
+It's a bad idea to leak configuration details to the general public, so this module is not configured by default.
+
+[source,shell]
+----
+[root@guest1 ~]# curl --silent http://localhost:8080/server-info
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>404 Not Found</title>
+</head><body>
+<h1>Not Found</h1>
+<p>The requested URL was not found on this server.</p>
+</body></html>
+[root@guest1 ~]# 
+----
+
+Create a new file, server-info.conf. 
+
+./etc/httpd/conf.d/server-info.conf
+[source,shell]
+----
+<Location "/server-info">
+    SetHandler server-info
+</Location>
+----
+
+Reload the configuration. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl reload httpd 
+[root@guest1 ~]# 
+----
+
+View the first five lines. 
+
+[source,shell]
+----
+[root@guest1 ~]# curl --silent http://localhost:8080/server-info | head -n5
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Server Information</title>
+[root@guest1 ~]# 
+----
+
+On your workstation, open the web page http://guest1.lab.example.com:8080/server-info
+
+
+== configure the server-status module 
+
+View Apache's status.
+
+
+The https://httpd.apache.org/docs/2.4/mod/mod_status.html[status page] 
+must be enabled with extra config. 
+
+Create a new file, server-status.conf.
+
+./etc/httpd/conf.d/server-status.conf
+[source,shell]
+----
+<Location "/server-status">
+    SetHandler server-status
+</Location>
+----
+
+Reload the apache config. 
+
+View the page. 
+
+
+[source,shell]
+----
+[root@guest1 conf.modules.d]# curl --silent http://localhost:8080/server-status | grep Status
+<title>Apache Status</title>
+<h1>Apache Server Status for localhost (via ::1)</h1>
+[root@guest1 conf.modules.d]# 
+----
+
+This is another huge page that is best viewed with a web browser. 
+On your workstation, open the web page http://guest1.lab.example.com:8080/server-status
+

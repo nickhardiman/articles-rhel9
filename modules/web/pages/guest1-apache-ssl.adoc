@@ -1,0 +1,135 @@
+= add TLS to Apache 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-02-2021
+
+
+The https://en.wikipedia.org/wiki/Transport_Layer_Security[TLS (Transport Layer Security)] protocol protects communication between the client and server, mainly by encrypting it. 
+
+The https://en.wikipedia.org/wiki/Transport_Layer_Security[SSL (Secure Sockets Layer)] protocol is long gone, replaced by TLS (Transport Layer Security). 
+But the name remains in Apache's mod_ssl module. 
+And in the configuration file name. 
+And in the engine, directives, and log files. 
+All over Apache, basically. 
+
+The server usually listens to port 443 for encrypted TLS traffic. 
+We're going to run a load balancer on that port, so this web server will have to use a different port.
+Change the port to 8443. 
+
+
+== no change for SELinux
+
+Changing the port can cause SELinux problems.
+The security system assumes there's something funny going on.
+But SELinux already has port 8443 in its list.
+The entry is named _http_port_t_.
+
+[source,shell]
+----
+[root@control1 ~]# semanage port -l | grep 8443
+http_port_t                    tcp      80, 81, 443, 488, 8008, 8009, 8443, 9000
+[root@control1 ~]# 
+----
+
+
+
+== install 
+
+[source,shell]
+----
+[root@guest1 ~]# dnf install mod_ssl
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:44:11 ago on Mon 01 Feb 2021 19:17:55 GMT.
+Dependencies resolved.
+================================================================================
+ Package Arch   Version                  Repository                        Size
+================================================================================
+Installing:
+ mod_ssl x86_64 1:2.4.37-30.module+el8.3.0+7001+0766b9e7
+                                         rhel-8-for-x86_64-appstream-rpms 133 k
+Installing dependencies:
+ sscg    x86_64 2.3.3-14.el8             rhel-8-for-x86_64-appstream-rpms  49 k
+
+Transaction Summary
+================================================================================
+Install  2 Packages
+
+Total download size: 182 k
+Installed size: 360 k
+Is this ok [y/N]: 
+----
+
+== configure 
+
+The package adds a new configuration file, /etc/httpd/conf.d/ssl.conf
+But it does not load this new configuration.
+
+Change the port to 8443.
+
+
+Edit the config file. 
+
+[source,shell]
+----
+[root@guest1 ~]# vi /etc/httpd/conf.d/ssl.conf 
+----
+
+There are two lines that need to be changed. 
+
+[source,shell]
+----
+Listen 443 https
+...
+<VirtualHost _default_:443>
+----
+
+Change 443 to 8443. 
+
+[source,shell]
+----
+Listen 8443 https
+...
+<VirtualHost _default_:8443>
+----
+
+
+
+
+Restart apache. 
+
+Don't reload. 
+A reload fails because there is no certificate file. 
+/etc/pki/tls/certs/localhost.crt does not exist. 
+Here's what happens with a restart. 
+Systemd runs the unit file httpd-init.service, which runs /usr/libexec/httpd-ssl-gencerts, which runs Simple Signed Certificate Generator[sscg (Simple Signed Certificate Generator)], which generates this missing certificate. 
+
+Check. 
+
+[source,shell]
+----
+[root@guest1 conf.d]# systemctl status httpd | grep Status
+   Status: "Running, listening on: port 8443, port 8080"
+[root@guest1 conf.d]# 
+----
+
+Get the HTTP headers for the home page. 
+
+The new certificate isn't trusted, so use the --insecure option. 
+
+There is no home page in /var/www/html/ and producing an index is not configured, so we get a 403 denied error. 
+
+
+[source,shell]
+----
+[root@guest1 ~]# curl --insecure --head https://localhost:8443/
+HTTP/1.1 403 Forbidden
+Date: Mon, 01 Feb 2021 22:36:15 GMT
+Server: Apache/2.4.37 (Red Hat Enterprise Linux) OpenSSL/1.1.1g
+Last-Modified: Mon, 15 Jun 2020 11:49:07 GMT
+ETag: "f91-5a81e03a232c0"
+Accept-Ranges: bytes
+Content-Length: 3985
+Content-Type: text/html; charset=UTF-8
+
+[root@guest1 ~]# 
+----

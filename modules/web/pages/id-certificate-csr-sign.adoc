@@ -1,0 +1,175 @@
+= sign a CSR (Certificate Signing Request)
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+
+Sign the new certificate in the CSR file.
+This part is done by the CA.
+Swap hats and change directories. 
+
+
+
+== sign the CSR 
+
+Use the _openssl ca_ command. 
+
+[source,shell]
+....
+cd ~/certauth/
+SERVER=www.lab.example.com
+openssl ca \
+  -config openssl.cnf \
+  -passin file:cakey.pass \
+  -infiles certreqs/$SERVER.csr
+....
+
+This command is interactive. 
+The CA utility prompts before completing the job. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ openssl ca \
+>   -config openssl.cnf \
+>   -passin file:cakey.pass \
+>   -infiles certreqs/$SERVER.csr
+Using configuration from openssl.cnf
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 2 (0x2)
+        Validity
+            Not Before: Feb  1 23:01:23 2021 GMT
+            Not After : Feb  1 23:01:23 2022 GMT
+        Subject:
+            countryName               = UK
+            stateOrProvinceName       = mystate
+            organizationName          = myorg
+            organizationalUnitName    = myou
+            commonName                = www.lab.example.com
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier: 
+                AB:96:1A:06:43:19:49:76:C4:B2:26:6B:90:5A:1B:96:C3:C9:39:37
+            X509v3 Authority Key Identifier: 
+                keyid:92:75:37:21:03:E0:A5:D3:4D:B6:01:53:8F:A8:81:90:43:20:63:78
+
+Certificate is to be certified until Feb  1 23:01:23 2022 GMT (365 days)
+Sign the certificate? [y/n]:
+....
+
+Sign and save. 
+
+[source,shell]
+....
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 2 (0x2)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=UK, ST=mystate, O=myorg, OU=myou, CN=ca.lab.example.com
+        Validity
+            Not Before: Feb  1 23:01:23 2021 GMT
+            Not After : Feb  1 23:01:23 2022 GMT
+        Subject: C=UK, ST=mystate, O=myorg, OU=myou, CN=www.lab.example.com
+...
+4Y+Z7TRVxJOGMiX/XmC/+TpAFroJJ7J1L7rSl6Yo8Kb3
+-----END CERTIFICATE-----
+Data Base Updated
+[nick@guest1 certauth]$ 
+....
+
+
+== check the signed certificate 
+
+The signed certificate is displayed on the terminal and also written to the newcerts directory. 
+The file name is a serial number. 
+
+
+The _index.txt_ file is a simple text database.
+This holds the serial number of the new signed certificate.
+
+
+[source,shell]
+....
+[nick@guest1 certauth]$ cat index.txt
+V	220201174555Z		01	unknown	/C=UK/ST=mystate/O=myorg/OU=myou/CN=ca.lab.example.com
+V	220201230123Z		02	unknown	/C=UK/ST=mystate/O=myorg/OU=myou/CN=www.lab.example.com
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ SERIAL=02
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ ls newcerts/
+01.pem  02.pem
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ head newcerts/$SERIAL.pem 
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 2 (0x2)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=UK, ST=mystate, O=myorg, OU=myou, CN=ca.lab.example.com
+        Validity
+            Not Before: Feb  1 23:01:23 2021 GMT
+            Not After : Feb  1 23:01:23 2022 GMT
+        Subject: C=UK, ST=mystate, O=myorg, OU=myou, CN=www.lab.example.com
+[nick@guest1 certauth]$ 
+....
+
+
+== copy the file from the CA to the user
+
+Store the signed certificate file with the CSR and key files. 
+
+[source,shell]
+....
+[nick@guest1 certauth]$ cp newcerts/$SERIAL.pem ~/cert/$SERVER.cer
+[nick@guest1 certauth]$ 
+[nick@guest1 certauth]$ ls -1 ~/cert/$SERVER*
+/home/nick/cert/www.lab.example.com.cer
+/home/nick/cert/www.lab.example.com.csr
+/home/nick/cert/www.lab.example.com.key
+[nick@guest1 certauth]$ 
+....
+
+The _.cer_ file contains the encoded certificate, along with all the decoded information. 
+It's the same information shown by the command `openssl x509 -in www.lab.example.com.cer -text`.
+
+
+== check files match 
+
+One way of checking these three files all match is to check the https://en.wikipedia.org/wiki/RSA_(cryptosystem)[modulus]. 
+The modulus is a huge prime number and is used in both the private key and public key. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ openssl rsa -noout -modulus -in $SERVER.key 
+Modulus=B76B5740422C4CBD7A8AB4A99D35CB4F800E89F8E2E35001E50230D066766A48E6A433F2C3AC49A63E392BFE70D8F50CA32FB89029B23230D188E6C974B5CFD58C0F0A017803F05E75ABE00707513CC5199CDB60B573EE4097F636DD6BA1AC2B39C4CF86B270C9A05338B60BAF840E3B28D7AB2B3B49E02A801DE37CDDB23A1150F04C7938B09AC147AD64C295D38134B93B6D1C88AE51480D1245DE4DCC5BA00CA6AB656F7D03D7BE3D8171D20DCF05607553DA68D41E41F1729B5A913D5C8F838257673D21FA21C5ADF7DB2F920D34283929B9891120C6823B7F401F4862AB3B1E522F270263085EC5E589B957A6EBB0038BF14C3BA26080267B6BC1EB85F3
+[nick@guest1 cert]$ 
+....
+
+This huge number can be reduced to something more readable using a message digest. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ openssl rsa -noout -modulus -in $SERVER.key  | openssl md5
+(stdin)= d0aa19f47c78e9596b5f3fb707d36c21
+[nick@guest1 cert]$ 
+....
+
+The numbers from all three of these commands should be the same. 
+
+[source,shell]
+....
+openssl x509 -noout -modulus -in $SERVER.cer | openssl md5
+openssl rsa  -noout -modulus -in $SERVER.key | openssl md5
+openssl req  -noout -modulus -in $SERVER.csr | openssl md5
+....
+

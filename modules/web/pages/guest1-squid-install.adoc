@@ -1,0 +1,265 @@
+= use the Squid proxy caching server  
+Nick Hardiman
+:source-highlighter: highlight.js
+:toc: 
+:revdate: 25-02-2021
+
+VMs _guest2_ and _guest3_ can't send requests to the Internet. 
+The _privbr0_ network doesn't use NAT.
+Packets can be sent out via _guest1_, but they won't find their way back. 
+The _default_ network would work, but that isn't being used. 
+Why? It's a security feature, to monitor traffic and stop anything undesirable. 
+Sending everything out via a proxy allows control of what requests are sent. 
+It's annoying for the user, but a common setup. 
+
+Use squid to proxy HTTP and HTTPS requests to the Internet. 
+
+== a forward proxy 
+
+Squid is a forward proxy - it sends requests from a few clients to the vast number of servers on the Internet. 
+----
++------------------------------------------+
+|  home network                            |
+| +--------------+       +---------------+ |              +--------------+
+| |              |       | forward proxy | |              |              |
+| | client       +-------+ front    back +---(Internet)---+ server       |
+| |              |       |               | |              |              |
+| +--------------+       +---------------+ |              +--------------+
+|                                          |
++------------------------------------------+
+----
+
+== install 
+
+[source,shell]
+....
+[root@guest1 ~]# dnf install squid
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:37:55 ago on Thu 25 Feb 2021 10:53:10 GMT.
+Dependencies resolved.
+======================================================================================================================
+ Package                Arch     Version                                     Repository                          Size
+======================================================================================================================
+Installing:
+ squid                  x86_64   7:4.11-3.module+el8.3.0+7851+7808b5f9       rhel-8-for-x86_64-appstream-rpms   3.6 M
+Installing dependencies:
+ libecap                x86_64   1.0.1-2.module+el8.1.0+4044+36416a77        rhel-8-for-x86_64-appstream-rpms    29 k
+ libtool-ltdl           x86_64   2.4.6-25.el8                                rhel-8-for-x86_64-baseos-rpms       58 k
+ perl-DBI               x86_64   1.641-3.module+el8.3.0+6481+fbe55708        rhel-8-for-x86_64-appstream-rpms   740 k
+ perl-Data-Dumper       x86_64   2.167-399.el8                               rhel-8-for-x86_64-baseos-rpms       58 k
+ perl-Digest            noarch   1.17-395.el8                                rhel-8-for-x86_64-appstream-rpms    27 k
+ perl-Digest-MD5        x86_64   2.55-396.el8                                rhel-8-for-x86_64-appstream-rpms    37 k
+ perl-Digest-SHA        x86_64   1:6.02-1.el8                                rhel-8-for-x86_64-appstream-rpms    66 k
+ perl-Encode            x86_64   4:2.97-3.el8                                rhel-8-for-x86_64-baseos-rpms      1.5 M
+ perl-Getopt-Long       noarch   1:2.50-4.el8                                rhel-8-for-x86_64-baseos-rpms       63 k
+ perl-HTTP-Tiny         noarch   0.074-1.el8                                 rhel-8-for-x86_64-baseos-rpms       58 k
+ perl-IO-Socket-IP      noarch   0.39-5.el8                                  rhel-8-for-x86_64-appstream-rpms    47 k
+ perl-MIME-Base64       x86_64   3.15-396.el8                                rhel-8-for-x86_64-baseos-rpms       31 k
+ perl-Math-BigInt       noarch   1:1.9998.11-7.el8                           rhel-8-for-x86_64-baseos-rpms      196 k
+ perl-Math-Complex      noarch   1.59-417.el8_3                              rhel-8-for-x86_64-baseos-rpms      108 k
+ perl-Net-SSLeay        x86_64   1.88-1.module+el8.3.0+6446+594cad75         rhel-8-for-x86_64-appstream-rpms   379 k
+ perl-Pod-Escapes       noarch   1:1.07-395.el8                              rhel-8-for-x86_64-baseos-rpms       20 k
+ perl-Pod-Perldoc       noarch   3.28-396.el8                                rhel-8-for-x86_64-baseos-rpms       88 k
+ perl-Pod-Simple        noarch   1:3.35-395.el8                              rhel-8-for-x86_64-baseos-rpms      213 k
+ perl-Pod-Usage         noarch   4:1.69-395.el8                              rhel-8-for-x86_64-baseos-rpms       34 k
+ perl-Storable          x86_64   1:3.11-3.el8                                rhel-8-for-x86_64-baseos-rpms       98 k
+ perl-Term-ANSIColor    noarch   4.06-396.el8                                rhel-8-for-x86_64-baseos-rpms       46 k
+ perl-Term-Cap          noarch   1.17-395.el8                                rhel-8-for-x86_64-baseos-rpms       23 k
+ perl-Text-ParseWords   noarch   3.30-395.el8                                rhel-8-for-x86_64-baseos-rpms       18 k
+ perl-URI               noarch   1.73-3.el8                                  rhel-8-for-x86_64-appstream-rpms   116 k
+ perl-libnet            noarch   3.11-3.el8                                  rhel-8-for-x86_64-appstream-rpms   121 k
+ perl-podlators         noarch   4.11-1.el8                                  rhel-8-for-x86_64-baseos-rpms      118 k
+Installing weak dependencies:
+ perl-IO-Socket-SSL     noarch   2.066-4.module+el8.3.0+6446+594cad75        rhel-8-for-x86_64-appstream-rpms   298 k
+ perl-Mozilla-CA        noarch   20160104-7.module+el8.3.0+6498+9eecfe51     rhel-8-for-x86_64-appstream-rpms    15 k
+Enabling module streams:
+ perl                            5.26                                                                                
+ perl-DBI                        1.641                                                                               
+ perl-IO-Socket-SSL              2.066                                                                               
+ perl-libwww-perl                6.34                                                                                
+ squid                           4                                                                                   
+
+Transaction Summary
+======================================================================================================================
+Install  29 Packages
+
+Total download size: 8.1 M
+Installed size: 28 M
+Is this ok [y/N]: 
+....
+
+== ports and processes 
+
+[source,shell]
+....
+[root@guest1 ~]# ss -tlnp
+State     Recv-Q    Send-Q       Local Address:Port       Peer Address:Port                                           
+LISTEN    0         128                0.0.0.0:22              0.0.0.0:*        users:(("sshd",pid=927,fd=5))         
+LISTEN    0         100                0.0.0.0:25              0.0.0.0:*        users:(("master",pid=14408,fd=16))    
+LISTEN    0         128                   [::]:22                 [::]:*        users:(("sshd",pid=927,fd=7))         
+LISTEN    0         128                      *:3128                  *:*        users:(("squid",pid=16551,fd=13))     
+LISTEN    0         100                   [::]:25                 [::]:*        users:(("master",pid=14408,fd=17))    
+[root@guest1 ~]# 
+....
+
+[source,shell]
+....
+[root@guest1 ~]# ps faxu 
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+...
+root       16549  0.0  0.4 127788 18432 ?        Ss   12:45   0:00 /usr/sbin/squid --foreground -f /etc/squid/squid.co
+squid      16551  0.0  0.6 141636 24972 ?        S    12:45   0:00  \_ (squid-1) --kid squid-1 --foreground -f /etc/sq
+squid      16552  0.0  0.0  49072  3000 ?        S    12:45   0:00      \_ (logfile-daemon) /var/log/squid/access.log
+[root@guest1 ~]# 
+....
+
+
+
+== systemd 
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl status squid
+● squid.service - Squid caching proxy
+   Loaded: loaded (/usr/lib/systemd/system/squid.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+     Docs: man:squid(8)
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl start squid
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl enable  squid
+Created symlink /etc/systemd/system/multi-user.target.wants/squid.service → /usr/lib/systemd/system/squid.service.
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl status squid
+● squid.service - Squid caching proxy
+   Loaded: loaded (/usr/lib/systemd/system/squid.service; enabled; vendor preset: disabled)
+   Active: active (running) since Thu 2021-02-25 12:45:15 GMT; 10s ago
+     Docs: man:squid(8)
+ Main PID: 16549 (squid)
+    Tasks: 3 (limit: 23294)
+   Memory: 14.6M
+   CGroup: /system.slice/squid.service
+           ├─16549 /usr/sbin/squid --foreground -f /etc/squid/squid.conf
+           ├─16551 (squid-1) --kid squid-1 --foreground -f /etc/squid/squid.conf
+           └─16552 (logfile-daemon) /var/log/squid/access.log
+
+Feb 25 12:45:15 guest1.lab.example.com systemd[1]: Starting Squid caching proxy...
+Feb 25 12:45:15 guest1.lab.example.com squid[16549]: Squid Parent: will start 1 kids
+Feb 25 12:45:15 guest1.lab.example.com squid[16549]: Squid Parent: (squid-1) process 16551 started
+Feb 25 12:45:15 guest1.lab.example.com systemd[1]: Started Squid caching proxy.
+[root@guest1 ~]# 
+....
+
+== configure
+
+[source,shell]
+....
+[root@guest1 ~]# cat /etc/squid/squid.conf
+#
+# Recommended minimum configuration:
+#
+...
+refresh_pattern ^gopher:	1440	0%	1440
+refresh_pattern -i (/cgi-bin/|\?) 0	0%	0
+refresh_pattern .		0	20%	4320
+[root@guest1 ~]# 
+....
+
+
+== firewall 
+
+/usr/lib/firewalld/services/squid.xml
+
+[source,shell]
+....
+[root@guest1 ~]# firewall-cmd --add-service squid
+success
+[root@guest1 ~]# firewall-cmd --add-service squid --permanent
+success
+[root@guest1 ~]# 
+[root@guest1 ~]# firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp1s0 enp2s0
+  sources: 
+  services: cockpit dhcpv6-client smtp squid ssh
+  ports: 
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+[root@guest1 ~]# 
+....
+
+== check 
+
+send an HTTP request to Google. 
+Show the headers of the home page.
+
+[source,shell]
+....
+[root@guest1 ~]# curl --headers http://www.google.com
+curl: option --headers: is unknown
+curl: try 'curl --help' or 'curl --manual' for more information
+[root@guest1 ~]# curl --head http://www.google.com
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=ISO-8859-1
+P3P: CP="This is not a P3P policy! See g.co/p3phelp for more info."
+Date: Thu, 25 Feb 2021 12:55:56 GMT
+Server: gws
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Transfer-Encoding: chunked
+Expires: Thu, 25 Feb 2021 12:55:56 GMT
+Cache-Control: private
+Set-Cookie: NID=210=SkmCH4QyOwzLKE5CZ9n3_xK7y3dv7pWI-cygl8mbU0ArQ-tF8hpqS8YFN7nH64bROzewmmu_CKCDyYxGe7fl6AHn6yeTjBumRor7YLPRG6hMMBsq3395kKhQvz7lA9npdBEsU6HrCaHxwd43z9hPsGfxc70uH9xdG7QdJoW7vgQ; expires=Fri, 27-Aug-2021 12:55:56 GMT; path=/; domain=.google.com; HttpOnly
+
+[root@guest1 ~]# 
+....
+
+Send the same request via the proxy. 
+
+Missing headers 
+
+* Transfer-Encoding
+
+Extra headers 
+
+* X-Cache: MISS from guest1.lab.example.com
+* X-Cache-Lookup: MISS from guest1.lab.example.com:3128
+* Via: 1.1 guest1.lab.example.com (squid/4.11)
+* Connection: keep-alive
+
+[source,shell]
+....
+[root@guest1 ~]# curl --proxy localhost:3128 --head http://www.google.com
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=ISO-8859-1
+P3P: CP="This is not a P3P policy! See g.co/p3phelp for more info."
+Date: Thu, 25 Feb 2021 12:56:17 GMT
+Server: gws
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Expires: Thu, 25 Feb 2021 12:56:17 GMT
+Cache-Control: private
+Set-Cookie: NID=210=qy-WuprvNCLeKpaM-1GPLpKZHSY-slgfGuZ9MABLzauej4fh9F73mv8qqb7rbd6371Dpa_JoajE6hmQTjYzDjWS_tpKV7Ury1FCLDdrGQM53LfdysW55zpgKo3hNbZH9ly9dVieieAVHdUqg0YremsTPP7PHgjlTO2NmcfJal6k; expires=Fri, 27-Aug-2021 12:56:17 GMT; path=/; domain=.google.com; HttpOnly
+X-Cache: MISS from guest1.lab.example.com
+X-Cache-Lookup: MISS from guest1.lab.example.com:3128
+Via: 1.1 guest1.lab.example.com (squid/4.11)
+Connection: keep-alive
+
+[root@guest1 ~]# 
+....
+
+log 
+
+[source,shell]
+....
+[root@guest1 ~]# tail -f /var/log/squid/access.log 
+1614257777.751     33 ::1 TCP_MISS/200 735 HEAD http://www.google.com/ - HIER_DIRECT/2a00:1450:4009:817::2004 text/html
+....
+
+

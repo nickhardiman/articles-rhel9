@@ -1,0 +1,142 @@
+= create a CSR (Certificate Signing Request)
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+Generate a private key and CSR (Certificate Signing Request). 
+The CSR is a file containing the new certificate.
+The certificate contains many fields, like name, expiry date and the public key. 
+
+This example creates a replacement for the web server's self-signed certificate, named _www.lab.example.com_.
+
+Alternative approaches include using https://github.com/sgallagher/sscg[sscg] or https://letsencrypt.org/[Let's Encrypt].
+
+
+
+== pick a name 
+
+[source,shell]
+....
+[nick@guest1 ~]$ mkdir cert
+[nick@guest1 ~]$ cd cert
+[nick@guest1 cert]$ SERVER=www.lab.example.com
+[nick@guest1 cert]$ 
+....
+
+== create a private key
+
+Each server has its own key pair. 
+
+Create the private key first. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ openssl genrsa -out $SERVER.key 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+................................................+++++
+...+++++
+e is 65537 (0x010001)
+[nick@guest1 cert]$ 
+....
+
+View the new private key file. 
+
+This file is plaintext, unlike the myca.key file.  
+It is base64 encoded and has lines that are less than 72 characters long, so it can be sent in a mail message without being corrupted by old mail servers.
+This practice was started because line wrap and binary characters used to cause a lot of trouble, and remains today because plain text is easy to copy and paste. 
+
+
+[source,shell]
+....
+[nick@guest1 cert]$ ls
+www.lab.example.com.key
+[nick@guest1 cert]$ 
+[nick@guest1 cert]$ cat www.lab.example.com.key 
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAvJ/8MbRtlwwhw0hnYAfdApT1H/ZSbfWWjrwmLvKJzxR2E7HH
+NyOsc/PnGxy7Flub+rfWXKnM7nBOt40vXWXetKDX8/lVCE2E3nq6tpK4s6EG+Gc7
+t3V0KChvpU5Ar4sJ4EwZ5zqo4W38BbsSlDn2h7lVrw+DlnDp8iSKx0cN3VR+5bQi
+...
+9nTKgBSMolEAngGPBL1tfIGlak9aBkVy5ABp2rLBHmoAnNWExYjibG2noIZE13bZ
+IViohwKBgCc+4d9AaYN5cwwiIzxHKl4EYigACh+PXjhmtwSMxISIzFOCy5hbgmmM
+RS81/ON3Gns1SF/UDZgvKHC80T46nPOET+8pIhpIzGKkmaGJYje2Cv0RuUkiqv/L
+gA+T7Vv27V0cK06En1TAljEr3g1U/0zBDEV4urTmSI2aVmWRf6Xp
+-----END RSA PRIVATE KEY-----
+[nick@guest1 cert]$ 
+....
+
+
+
+
+== create a CSR 
+
+The command has plenty of options. 
+This _-subj_ option is a close match to the -subj used to create the CA certificate. 
+
+[source,shell]
+....
+openssl req -new   \
+  -config ../CA/openssl.cnf     \
+  -out $SERVER.csr   \
+  -nodes  \
+  -key $SERVER.key \
+  -subj "/C=UK/ST=mystate/O=myorg/OU=myou/CN=$SERVER"
+....
+
+Run the command. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ openssl req -new   \
+>   -config ../CA/openssl.cnf     \
+>   -out $SERVER.csr   \
+>   -nodes  \
+>   -key $SERVER.key \
+>   -subj "/C=UK/ST=mystate/O=myorg/OU=myou/CN=$SERVER"
+[nick@guest1 cert]$ 
+....
+
+View the new CSR file.  
+
+[source,shell]
+....
+[nick@guest1 server]$ cat $SERVER.csr 
+-----BEGIN CERTIFICATE REQUEST-----
+MIICpjCCAY4CAQAwYTELMAkGA1UEBhMCVUsxEDAOBgNVBAgMB215c3RhdGUxDjAM
+BgNVBAoMBW15b3JnMQ0wCwYDVQQLDARteW91MSEwHwYDVQQDDBhteXNlcnZlci5s
+YWIuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDL
+...
+LgQsU3oKXI5dKx1AbR6OU6YiPq5fYMxm1+XxRXSmvEyvWOn01GL7KTKeX9B+nB9A
+0vq9qcAaxc2mf5cXZEDkJ98SLxEx+IHT9nhXfz2e1eryfrL80NooTKoYK4wPo7sW
+oRtOowJ/z7gPxA==
+-----END CERTIFICATE REQUEST-----
+[nick@guest1 server]$ 
+....
+
+Decode the CSR. 
+
+[source,shell]
+....
+[nick@guest1 server]$ openssl req -in $SERVER.csr -text -noout
+Certificate Request:
+    Data:
+        Version: 1 (0x0)
+        Subject: C = UK, ST = mystate, O = myorg, OU = myou, CN = myserver.lab.example.com
+...
+....
+
+
+
+== send the CSR to the CA 
+
+With a public CA, this step requires some effort to get the CSR to an external organizatin. 
+It may require mailing the CSR, or pasting into a web form.
+
+For us, it's an easy file copy. 
+
+[source,shell]
+....
+[nick@guest1 cert]$ cp $SERVER.csr ~/certauth/certreqs/
+[nick@guest1 cert]$ 
+....
+

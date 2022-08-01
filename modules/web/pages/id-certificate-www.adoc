@@ -1,0 +1,126 @@
+= replace apache's certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 30-01-2021
+
+Make changes to Apache and Bind so the web site uses the name _www.lab.example.com_ and our matching server certificate.
+Then open the firewall to make the site available to the home network. 
+
+Apache is already running a secure server. 
+This web site is available at _https://localhost:8443/_.
+The server uses a self-signed certificate. 
+
+== add a DNS entry 
+
+Use the root account. Bind files are protected. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo -i
+[root@guest1 ~]# echo 'www IN CNAME guest1' >> /var/named/lab.example.com-records
+[root@guest1 ~]# 
+[root@guest1 ~]# exit
+logout
+[nick@guest1 ~]$ 
+....
+
+Check. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ host www.lab.example.com
+www.lab.example.com is an alias for guest1.lab.example.com.
+guest1.lab.example.com has address 192.168.1.217
+[nick@guest1 ~]$ 
+....
+
+
+== use the new certificate and key
+
+The web server is configured with two certificate files, localhost.crt and localhost.key. 
+Despite the name, these are nothing to do with the localhost. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ cd /etc/httpd/conf.d
+[nick@guest1 conf.d]$ 
+[nick@guest1 conf.d]$ grep localhost ssl.conf 
+SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+[nick@guest1 conf.d]$ 
+....
+
+The quickest way to use our new certificates is to overwrite these two files. 
+
+[source,shell]
+....
+[nick@guest1 conf.d]$ cd ~/cert/
+[nick@guest1 cert]$ 
+[nick@guest1 cert]$ sudo cp ./www.lab.example.com.cer /etc/pki/tls/certs/localhost.crt
+[sudo] password for nick: 
+[nick@guest1 cert]$ 
+[nick@guest1 cert]$ sudo cp ./www.lab.example.com.key /etc/pki/tls/private/localhost.key 
+[nick@guest1 cert]$ 
+....
+
+The final change required is to get apache to use these new files. 
+Before poking Apache, set up a failing test. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ curl https://www.lab.example.com:8443/
+curl: (60) SSL certificate problem: self signed certificate in certificate chain
+More details here: https://curl.haxx.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+[nick@guest1 ~]$ 
+....
+
+Tell apache to re-read its configuration.  
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo systemctl reload httpd
+[nick@guest1 ~]$ 
+....
+
+Repeat the test. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ curl https://www.lab.example.com:8443/
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+	<head>
+		<title>Test Page for the Apache HTTP Server on Red Hat Enterprise Linux</title>
+...
+....
+
+== open the firewall 
+
+Use the command `sudo firewall-cmd --list-all` to check open ports. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo firewall-cmd --add-port 8443/tcp
+success
+[nick@guest1 ~]$ sudo firewall-cmd --add-port 8443/tcp --permanent
+success
+[nick@guest1 ~]$ 
+....
+
+== check from the workstation
+
+Open a web browser on the workstation and confirm network access. 
+
+If the workstation is successfully using guest1 DNS, visit the page https://www.lab.example.com:8443/. 
+If not, find guest1's IP address and view the page with a URL along the lines of https://192.168.1.217:8443/.
+
+If using Google Chrome, it won't let you view the page because it does not know about the CA certificate _ca.lab.example.com_.
+But you can view the certificate and confirm the details are correct. 
+
+If using Mozilla Firefox, it will give you an _Accept the risk and continue_ option. 
+

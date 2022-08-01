@@ -1,0 +1,237 @@
+= install the HAProxy load balancer
+Nick Hardiman
+:source-highlighter: highlight.js
+:toc: 
+:revdate: 25-02-2021
+
+Install the HAProxy https://en.wikipedia.org/wiki/Proxy_server[proxy server] on _guest1_. 
+HAProxy is an intermediary between a web client and the web servers on _guest2_ and _guest4_.  
+HAProxy is also a https://en.wikipedia.org/wiki/Load_balancing_(computing)[load balancer], distributing requests evenly between _guest2_ and _guest4_. 
+
+== a transparent reverse proxy 
+
+HAProxy is a reverse proxy. 
+----
++------------------------------------------+
+|  home network                            |
+| +--------------+       +---------------+ |              +--------------+
+| |              |       | reverse proxy | |              |              |
+| | server       +-------+ back    front +---(Internet)---+ client       |
+| |              |       |               | |              |              |
+| +--------------+       +---------------+ |              +--------------+
+|                                          |
++------------------------------------------+
+----
+
+HAProxy is a reverse proxy - it sends requests from many clients to a few servers.
+The forward and reverse names come from an old networking idea that a device has a front and a back. 
+Network kit, like an office, has a front end used by customers and a back end used by administrators. 
+If the customers are in the office, the network kit is oriented so the front end faces them.
+If customers are in the Internet, the network kit is reversed so the front faces them.
+It's a https://www.txstate.edu/philosophy/resources/fallacy-definitions/Faulty-Analogy.html[faulty analogy] that has confused many people over many years. 
+
+A proxy may talk a special proxy protocol, which requires clients are able to talk the same language. 
+Or it may be transparent, where no client change is required. 
+HAProxy is configured here to be transparent - it appears to be a regular web site.
+
+
+
+== a load balancer 
+
+The web servers on _guest2_ and _guest4_ are identical. 
+It doesn't matter which one answers an HTTP request. 
+
+HAProxy has a list of web servers and sends each new request to the next server on the list. 
+This is a simple load-balancing algorithm called https://en.wikipedia.org/wiki/Load_balancing_(computing)#Round-Robin[round-robin].
+
+Other load balancing algorithms are _leastconn_, _source_ and _hdr_.
+These are described in the file _/usr/share/doc/haproxy/intro.txt_.
+
+In this example, curl is the web client and makes four requests. 
+HAProxy even distributes these requests between the two nginx web servers.
+
+
+----
+                                                    +-----------------+
+                          +-----------------+       | nginx           |
+                          | haproxy         |       |                 |
++-----------------+       |   first request +------>|                 |
+| curl            |       |   third request +------>|                 |
+|                 |       |                 |       +-----------------+
+| client requests |======>|                 |       
+|                 |       |                 |       +-----------------+
++-----------------+       |  second request +------>| nginx           |
+                          |  fourth request +------>|                 |
+                          +-----------------+       |                 |
+                                                    |                 |
+                                                    |                 |
+                                                    +-----------------+
+----
+
+== install 
+
+[source,shell]
+....
+yum install -y haproxy
+....
+
+
+
+== systemd 
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl status haproxy
+● haproxy.service - HAProxy Load Balancer
+   Loaded: loaded (/usr/lib/systemd/system/haproxy.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+[root@guest1 ~]# 
+....
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl enable haproxy
+Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service → /usr/lib/systemd/system/haproxy.service.
+[root@guest1 ~]# 
+....
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl start haproxy
+[root@guest1 ~]# 
+....
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl status haproxy
+● haproxy.service - HAProxy Load Balancer
+   Loaded: loaded (/usr/lib/systemd/system/haproxy.service; enabled; vendor preset: disabled)
+   Active: active (running) since Wed 2021-01-13 16:39:02 GMT; 3s ago
+  Process: 1911 ExecStartPre=/usr/sbin/haproxy -f $CONFIG -c -q $OPTIONS (code=exited, status=0/SUCCESS)
+ Main PID: 1912 (haproxy)
+    Tasks: 2 (limit: 23295)
+   Memory: 2.8M
+   CGroup: /system.slice/haproxy.service
+           ├─1912 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
+           └─1914 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
+
+Jan 13 16:39:02 guest1.lab.example.com systemd[1]: Starting HAProxy Load Balancer...
+Jan 13 16:39:02 guest1.lab.example.com systemd[1]: Started HAProxy Load Balancer.
+[root@guest1 ~]# 
+....
+
+
+
+== open the firewall
+
+Tell firewalld to allow web server traffic.
+
+
+[source,shell]
+....
+firewall-cmd --add-service http 
+firewall-cmd --add-service http --permanent
+firewall-cmd --add-service https 
+firewall-cmd --add-service https --permanent
+....
+
+Let the network view the new stats page on port 9000.
+The stats page is created next. 
+
+[source,shell]
+....
+firewall-cmd --add-service https --permanent
+firewall-cmd --add-port 9000/tcp
+....
+
+
+== add a stats page 
+
+image::haproxy-stats.png[stats,width=587,height=900,title="HAProxy stats"]
+
+The config file /etc/haproxy/haproxy.cfg is about 90 lines and load balances a cluster of applications running on the local machine _guest1_. 
+There are no matching applications on the local machine, so haproxy isn't really doing anything useful.
+
+[source,shell]
+....
+[root@guest1 ~]# cat  /etc/haproxy/haproxy.cfg 
+#---------------------------------------------------------------------
+# Example configuration for a possible web application.  See the
+# full configuration options online.
+#
+#   https://www.haproxy.org/download/1.8/doc/configuration.txt
+...
+    server  app2 127.0.0.1:5002 check
+    server  app3 127.0.0.1:5003 check
+    server  app4 127.0.0.1:5004 check
+[root@guest1 ~]# 
+....
+
+
+=== configure 
+
+Create a stats web page. 
+Edit the config file. 
+
+[source,shell]
+....
+[root@guest1 ~]# vi /etc/haproxy/haproxy.cfg 
+....
+
+Add these lines to the bottom of the config file.  
+
+[source,shell]
+....
+listen stats
+    bind :9000
+    stats enable
+    stats uri /
+....
+
+Restart HAProxy.
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl restart haproxy
+[root@guest1 ~]# 
+....
+
+=== view the stats page  
+
+Find the home network address of _guest1_.
+In this example it's _192.168.1.217_. 
+
+[source,shell]
+....
+ip addr show dev enp1s0
+....
+
+Open a web browser on the workstation.
+
+Enter a URL in the form of http://192.168.1.217:9000/.
+
+View the dashboard. 
+The default app does not exist, so checks are failing.
+Many lines are colored red. 
+
+
+
+== load balance guest2 and guest4 
+
+Allow HTTP traffic. 
+Add these lines to the bottom of the config file. 
+
+[source,shell]
+....
+frontend http-requests
+    bind *:80
+    default_backend http-requests
+    option http
+
+backend http-requests
+    balance round-robin
+    server guest2 192.168.152.100:80 check
+    server guest4 192.168.152.101:80 check
+....
+
+

@@ -1,0 +1,113 @@
+= make Apache listen to port 8080
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2021
+
+
+The server listens to port 80 by default. 
+That port is for plain text traffic.
+We're going to run a load balancer on port 80, so this web server will have to use a different port.
+Change the port from 80 to 8080.
+
+
+== no change for SELinux 
+
+Changing the port can cause SELinux problems. 
+The security system assumes there's something funny going on. 
+But SELinux already has port 8080 in its list. 
+The type is named _http_cache_port_t_ and is for a caching web service rather than an ordinary web service, but it still works. 
+
+[source,shell]
+----
+[root@control1 ~]# semanage port -l | grep 8080
+http_cache_port_t              tcp      8080, 8118, 8123, 10001-10010
+[root@control1 ~]# 
+----
+
+
+== configure apache
+
+Tell systemd to run apache. 
+
+Customize the config. 
+
+Change the port in the main config file. 
+This file is /etc/httpd/conf/httpd.conf.
+
+
+=== use port 8080 
+
+By default, apache listens to port 80. 
+This port will be listened to by haproxy later. 
+
+Change the port to 8080. 
+
+[source,shell]
+----
+[root@guest1 ~]# vi /etc/httpd/conf/httpd.conf 
+----
+
+Find the Listen line. 
+
+[source,shell]
+----
+Listen 80
+----
+
+Change it. 
+
+[source,shell]
+----
+Listen 8080
+----
+
+
+
+== Get the home page
+
+It's a big page, so display the HTTP headers and the top of the page only. 
+
+[source,shell]
+----
+[root@guest1 ~]# curl --head localhost:8080 
+HTTP/1.1 403 Forbidden
+Date: Mon, 01 Feb 2021 21:20:14 GMT
+Server: Apache/2.4.37 (Red Hat Enterprise Linux)
+Last-Modified: Mon, 15 Jun 2020 11:49:07 GMT
+ETag: "f91-5a81e03a232c0"
+Accept-Ranges: bytes
+Content-Length: 3985
+Content-Type: text/html; charset=UTF-8
+
+[root@guest1 ~]# 
+[root@guest1 ~]# curl --silent localhost:8080 | head -n 5
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+	<head>
+		<title>Test Page for the Apache HTTP Server on Red Hat Enterprise Linux</title>
+[root@guest1 ~]# 
+----
+
+The code is 403, forbidden. 
+There is no content to display, so we're getting an error page instead. 
+
+[source,shell]
+----
+[root@guest1 ~]# ls /var/www/html/
+[root@guest1 ~]# 
+----
+
+
+== open the firewall 
+
+Clients on the network can't see this web server. 
+Open the firewall. 
+
+[source,shell]
+----
+firewall-cmd --add-port 8080/tcp
+firewall-cmd --add-port 8080/tcp --permanent
+----
+
+

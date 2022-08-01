@@ -1,0 +1,162 @@
+= install Apache
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2021
+
+Install Apache.
+Set up modules to provide information. 
+
+
+== install 
+
+[source,shell]
+----
+[root@guest1 ~]# dnf install httpd 
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:26:45 ago on Mon 01 Feb 2021 19:17:55 GMT.
+Dependencies resolved.
+================================================================================
+ Package            Arch   Version       Repository                        Size
+================================================================================
+Installing:
+ httpd              x86_64 2.4.37-30.module+el8.3.0+7001+0766b9e7
+                                         rhel-8-for-x86_64-appstream-rpms 1.4 M
+Installing dependencies:
+ httpd-filesystem   noarch 2.4.37-30.module+el8.3.0+7001+0766b9e7
+                                         rhel-8-for-x86_64-appstream-rpms  37 k
+ mailcap            noarch 2.1.48-3.el8  rhel-8-for-x86_64-baseos-rpms     39 k
+ mod_http2          x86_64 1.15.7-2.module+el8.3.0+7670+8bf57d29
+                                         rhel-8-for-x86_64-appstream-rpms 154 k
+ redhat-logos-httpd noarch 81.1-1.el8    rhel-8-for-x86_64-baseos-rpms     26 k
+
+Transaction Summary
+================================================================================
+Install  5 Packages
+
+Total download size: 1.6 M
+Installed size: 4.7 M
+Is this ok [y/N]: 
+----
+
+Copies executables, logs, content and config. 
+Config includes many systemd files.
+
+
+== systemd units
+
+The unit file httpd.service starts and stops apache.
+
+There is also a socket unit file and drop-in directories. 
+The httpd@.service file is an "instantiated template service".
+For more information, run  `man httpd.service`.
+
+
+[source,shell]
+----
+[root@guest1 ~]# ls -1dF /usr/lib/systemd/system/httpd*
+/usr/lib/systemd/system/httpd.service
+'/usr/lib/systemd/system/httpd@.service'
+/usr/lib/systemd/system/httpd.service.d/
+/usr/lib/systemd/system/httpd.socket
+/usr/lib/systemd/system/httpd.socket.d/
+[root@guest1 ~]# 
+----
+
+View the unit configuration. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl cat httpd.service
+# /usr/lib/systemd/system/httpd.service
+# See httpd.service(8) for more information on using the httpd service.
+
+# Modifying this file in-place is not recommended, because changes
+# will be overwritten during package upgrades.  To customize the
+# behaviour, run "systemctl edit httpd" to create an override unit.
+
+# For example, to pass additional options (such as -D definitions) to
+# the httpd binary at startup, create an override unit (as is done by
+# systemctl edit) and enter the following:
+
+#       [Service]
+#       Environment=OPTIONS=-DMY_DEFINE
+
+[Unit]
+Description=The Apache HTTP Server
+Wants=httpd-init.service
+After=network.target remote-fs.target nss-lookup.target httpd-init.service
+Documentation=man:httpd.service(8)
+
+[Service]
+Type=notify
+Environment=LANG=C
+
+ExecStart=/usr/sbin/httpd $OPTIONS -DFOREGROUND
+ExecReload=/usr/sbin/httpd $OPTIONS -k graceful
+# Send SIGWINCH for graceful stop
+KillSignal=SIGWINCH
+KillMode=mixed
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+[root@guest1 ~]# 
+----
+
+=== systemd 
+
+Start the service.  
+
+[source,shell]
+----
+systemctl start httpd.service 
+systemctl enable httpd.service 
+/etc/systemd/system/multi-user.target.wants/httpd.service → /usr/lib/systemd/system/httpd.service
+----
+
+=== check apache 
+
+Apache manages its own logging. 
+When Apache starts, it creates two log files. 
+
+[source,shell]
+----
+[root@guest1 ~]# ls /var/log/httpd/
+access_log  error_log
+[root@guest1 ~]# 
+----
+
+Apache runs half a dozen processes. 
+One parent, four children. 
+Each child has many threads. 
+
+[source,shell]
+----
+[root@guest1 ~]# ps -fC httpd
+UID          PID    PPID  C STIME TTY          TIME CMD
+root      256917       1  0 21:04 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    256918  256917  0 21:04 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    256919  256917  0 21:04 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    256920  256917  0 21:04 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    256921  256917  0 21:04 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+[root@guest1 ~]# 
+----
+
+The pstree utility can display a simple tree of processes. 
+Install pstree with `dnf install psmisc`.
+
+List the children of httpd parent process. 
+The parent is the one owned by root. 
+
+[source,shell]
+----
+[root@guest1 ~]# pstree -cT 256917
+httpd─┬─httpd
+      ├─httpd
+      ├─httpd
+      └─httpd
+[root@guest1 ~]# 
+----
+
+
