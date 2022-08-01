@@ -19,4 +19,6 @@
 ** xref:libvirt-network-private0-domain[]
 ** xref:guest2-network.adoc[]
 ** xref:guest2-dnsmasq-dhcp.adoc[]
-** xref:guest3-clone.adoc[]
+** xref:guest3-install.adoc[]
+** xref:guest3-connect.adoc[]
+** xref:guest4-clone.adoc[]

@@ -1,4 +1,4 @@
-= clone guest2's image to create guest3 
+= clone guest2's image to create guest4 
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 07-03-2021
@@ -8,32 +8,43 @@ Nick Hardiman
 ----
             + pubbr0                                + privbr0                              + privbr1
             |                                       |                                      |
-            |     +--------------------------+      |     +--------------------------+     |     +--------------------------+ 
-            |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |     |  guest3.lab.example.com  | 
-  Internet  |     |                          |      |     |                          |     |     |                          | 
-  <---------+-----+ enp1s0            enp2s0 +------+-----+ enp1s0            enp2s0 +-----+-----+ enp1s0                   |
-            |     |                          |      |     |                          |     |     |                          |
-            |     +--------------------------+      |     +--------------------------+     |     +--------------------------+ 
+            |     +--------------------------+      |     +--------------------------+     | 
+   Internet |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |
+  <---------+     |                          |      +-----+ enp1s0            enp2s0 +-----+ 
+            +-----+ enp1s0            enp2s0 +------+     |                          |     |
+            |     |                          |      |     |                          |     |
+            |     +--------------------------+      |     +--------------------------+     |
+                                                    |     +--------------------------+     |
+                                                    |     |  guest4.lab.example.com  |     |
+                                                    +-----+ enp1s0            enp2s0 +-----+ 
+                                                    |     |                          |     |
+                                                    |     |                          |     |
+                                                          +--------------------------+ 
+
 ----
 
 
-Create another VM like guest2. 
-Instead of installing from scratch, the way _guest1_ and _guest2_ were created, base it on guest2.
-Start by creating a new image file that holds the storage volume.
+Create another VM like guest2 using virt-clone, virt-sysprep and virt-customize. 
+This is almost an exact copy of machine layout and storage volume. 
 
+Instead of installing from scratch, the way _guest1_ was created, base it on guest2.
+
+Start by creating a new image file that holds the storage volume.
 Feel free to say _disk_, _storage volume_ or _image file_. 
 
-* _guest3_ thinks it is a disk. 
+* _guest4_ thinks it is a disk. 
 * _host1_ thinks it is an image file. 
 * _Libvirt_ thinks it is a file containing a storage volume. 
 
-The _guest2.qcow2_ storage volume has all the files guest3 needs.
+The _guest2.qcow2_ storage volume has all the files guest4 needs.
 Make a copy of guest2's storage and customize it a little.
 This takes less time and effort than installing the OS from scratch.
 
-Shutdown guest2. 
-
 If guest2 is still running, virt-clone refuses to work, saying _Domain with devices to clone must be paused or shutoff_.
+
+Use the root account. 
+
+Shutdown guest2. 
 
 [source,shell]
 ----
@@ -55,37 +66,29 @@ Copy the guest2 VM.
 
 [source,shell]
 ----
-[root@host1 ~]# virt-clone --original guest2 --name guest3 --file /var/lib/libvirt/images/guest3.qcow2
-Allocating 'guest3.qcow2'                                          |  30 GB  00:00:03     
-Allocating 'guest3_VARS.fd'                                        | 528 kB  00:00:00     
+[root@host1 ~]# virt-clone --original rhel-baseos-9.0-x86_64-kvm.qcow2 --name guest4 --file /var/lib/libvirt/images/guest4.qcow2
+Allocating 'guest4.qcow2'                                          |  30 GB  00:00:03     
+Allocating 'guest4_VARS.fd'                                        | 528 kB  00:00:00     
 
-Clone 'guest3' created successfully.
+Clone 'guest4' created successfully.
 [root@host1 ~]# 
 ----
 
-The new _guest3.qcow2_ file does need to be changed. 
-It has the wrong hostname. 
+The new _guest4.qcow2_ file needs work. 
+For instance, it contains the wrong hostname. 
 
 == view the hostname with virt-inspector
 
 The _virt-inspector_ utility can display the hostname. 
 In fact, it produces a vast amount of data about all kinds of operating system things. 
 The output is an XML document - it's thousands of lines long, and mostly describes installed packages. 
-
-The _virt-customize_ utility is included in the _libguestfs-tools_ package.
-
-Install the _libguestfs-tools_ package. 
-
-[source,shell]
-----
-sudo dnf install libguestfs-tools
-----
+The _virt-customize_ utility is included in the _guestfs-tools_ package.
 
 Use XPATH to display the hostname part of the XML document. 
 
 [source,shell]
 ----
-[root@host1 ~]# virt-inspector -a /var/lib/libvirt/images/guest3.qcow2 | virt-inspector --xpath '//hostname'
+[root@host1 ~]# virt-inspector -a /var/lib/libvirt/images/guest4.qcow2 | virt-inspector --xpath '//hostname'
 <hostname>guest2.private.example.com</hostname>
 [root@host1 ~]# 
 ----
@@ -100,7 +103,7 @@ The virt-sysprep command can clean up the new machine by removing these.
 
 [source,shell]
 ----
-[root@host1 ~]# virt-sysprep --domain guest3
+[root@host1 ~]# virt-sysprep --domain guest4
 [   0.0] Examining the guest ...
 [   2.0] Performing "abrt-data" ...
 [   2.0] Performing "backup-files" ...
@@ -121,8 +124,8 @@ Change the hostname.
 [source,shell]
 ----
 virt-customize \
-  --add       /var/lib/libvirt/images/guest3.qcow2  \
-  --hostname  guest3.private.example.com \
+  --add       /var/lib/libvirt/images/guest4.qcow2  \
+  --hostname  guest4.private.example.com \
   --selinux-relabel
 ----
 
@@ -131,12 +134,12 @@ Run the command.
 [source,shell]
 ----
 [root@host1 ~]# virt-customize \
->   --add       /var/lib/libvirt/images/guest3.qcow2  \
->   --hostname  guest3.private.example.com \
+>   --add       /var/lib/libvirt/images/guest4.qcow2  \
+>   --hostname  guest4.private.example.com \
 >   --selinux-relabel
 [   0.0] Examining the guest ...
 [   4.2] Setting a random seed
-[   4.2] Setting the hostname: guest3.private.example.com
+[   4.2] Setting the hostname: guest4.private.example.com
 [   4.2] SELinux relabelling
 [  11.9] Finishing off
 [root@host1 ~]# 
@@ -147,9 +150,12 @@ Run the command.
 == view libvirt's list of volumes 
 
 Libvirt keeps a list of volumes in its storage pools. 
-It should already know about the new file guest3.qcow2. 
+It should already know about the new file guest4.qcow2. 
 
 List all the volumes in the _images_ storage pool with the `virsh vol-list images` command.
+
+If the new file is not there, tell libvirt to update its list with `virsh pool-refresh images`. 
+For instance, guest4.qcow2 is missing from this list. 
 
 [source,shell]
 ----
@@ -159,14 +165,11 @@ List all the volumes in the _images_ storage pool with the `virsh vol-list image
  guest1.qcow2                       /var/lib/libvirt/images/guest1.qcow2
  guest2.qcow2                       /var/lib/libvirt/images/guest2.qcow2
  rhel-8.3-x86_64-dvd.iso            /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
- rhel-8.3-x86_64-kvm.qcow2          /var/lib/libvirt/images/rhel-8.3-x86_64-kvm.qcow2
-
+...
 [root@host1 ~]# 
 ----
 
-The new file isn't there.
-
-Tell libvirt to update its list with `virsh pool-refresh images`.
+Refresh.
 
 [source,shell]
 ----
@@ -178,9 +181,9 @@ Pool images refreshed
 ----------------------------------------------------------------------------------------------
  guest1.qcow2                       /var/lib/libvirt/images/guest1.qcow2
  guest2.qcow2                       /var/lib/libvirt/images/guest2.qcow2
- guest3.qcow2                       /var/lib/libvirt/images/guest3.qcow2
+ guest4.qcow2                       /var/lib/libvirt/images/guest4.qcow2
  rhel-8.3-x86_64-dvd.iso            /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
- rhel-8.3-x86_64-kvm.qcow2          /var/lib/libvirt/images/rhel-8.3-x86_64-kvm.qcow2
+...
 ----
 
 
@@ -188,8 +191,8 @@ Get more details with the _virsh vol-info_ command.
 
 [source,shell]
 ----
-[root@host1 libvirt]# virsh vol-info guest3.qcow2 images
-Name:           guest3.qcow2
+[root@host1 libvirt]# virsh vol-info guest4.qcow2 images
+Name:           guest4.qcow2
 Type:           file
 Capacity:       30.00 GiB
 Allocation:     2.53 GiB
@@ -204,7 +207,7 @@ If something goes wrong, remove the new machine and image file with this command
 
 [source,shell]
 ----
-virsh undefine --nvram --remove-all-storage guest3
+virsh undefine --nvram --remove-all-storage guest4
 ----
 
 
@@ -213,5 +216,5 @@ virsh undefine --nvram --remove-all-storage guest3
 [source,shell]
 ----
 virsh start guest2
-virsh start guest3
+virsh start guest4
 ----

@@ -70,7 +70,7 @@ Create the kickstart file for guest1.
 
 [source,shell]
 ....
-[root@host1 libvirt]# vi vm-guest1-rhel8.ks 
+[root@host1 libvirt]# vi vm-guest1-rhel9.ks 
 ....
 
 The kickstart content is about 50 lines of text containing dozens of commands. 

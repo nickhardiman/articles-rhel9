@@ -1,0 +1,122 @@
+= connect to guest3
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+There is no way of connecting  from the home network. 
+You can SSH from host1, or use the console. 
+
+
+.guest1 and guest2 network interfaces
+----
+            + pubbr0                                + privbr0                              + privbr1
+            |                                       |                                      |
+            |     +--------------------------+      |     +--------------------------+     |
+            |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |
+  Internet  |     |                          |      |     |                          |     |
+  <---------+-----+ enp1s0            enp2s0 +------+-----+ eth0                eth1 +-----+
+            |     |                          |      |     |                          |     |
+            |     +--------------------------+      |     +--------------------------+     |
+----
+
+
+
+== check the DHCP leases
+
+
+We know the new VM is connected to two bridges, privbr0 and privbr1. Libvirt manages these bridges using  its two networks, private0 and private1.
+
+The DHCP server hands out IP addresses from its pool. Libvirt can tell us which addresses are in use. 
+
+Use SSH to connect from the workstation to _host1_. 
+
+View DHCP leases in libvirt's private1 network.
+
+[source,shell]
+....
+[nick@host2 ~]$ sudo virsh net-dhcp-leases private0 
+ Expiry Time           MAC address         Protocol   IP address           Hostname   Client ID or DUID
+------------------------------------------------------------------------------------------------------------
+ 2022-08-01 10:08:25   52:54:00:00:00:02   ipv4       192.168.152.28/24    guest1     01:52:54:00:00:00:02
+ 2022-08-01 09:51:14   52:54:00:02:00:02   ipv4       192.168.152.114/24   guest2     01:52:54:00:02:00:02
+
+[nick@host2 ~]$ 
+....
+
+
+View  leases in  private1.
+
+[source,shell]
+....
+[nick@host2 ~]$ sudo virsh net-dhcp-leases private1
+ Expiry Time   MAC address   Protocol   IP address   Hostname   Client ID or DUID
+-----------------------------------------------------------------------------------
+
+[nick@host2 ~]$ 
+....
+
+Nothing!
+
+
+=== try to connect using SSH
+
+You can't use SSH (Secure SHell) to connect from _host1_ to your new RHEL machine.
+The only account on this machine is root, but trying to connect with the password _Password;1_ does not work.
+This is because of SSH daemon config. 
+The root user is not allowed to connect remotely like this. 
+
+
+[source,shell]
+----
+[nick@host2 ~]$ ssh root@192.168.152.114
+root@192.168.152.114's password:   Password;1
+Permission denied, please try again.
+root@192.168.152.114's password: 
+----
+
+
+=== connect using the console
+
+Connect to the console with the ``virsh console`` command.
+Hit the Enter key kbd:[⏎]  to get the _guest2 login_ prompt to appear. 
+
+[source,shell]
+----
+[nick@host2 ~]$ sudo virsh console guest2
+[sudo] password for nick: 
+Connected to domain 'guest2'
+Escape character is ^] (Ctrl + ])
+
+guest2 login: 
+----
+
+Trying to login over SSH with the password _Password;1_ failed.
+Logging in on the console with the same password succeeds. 
+
+[source,shell]
+----
+guest2 login: root
+Password:  Password;1
+Last failed login: Mon Aug  1 12:38:34 BST 2022 from 192.168.152.1 on ssh:notty
+There was 1 failed login attempt since the last successful login.
+Last login: Sun Jul 31 21:26:19 on ttyS0
+[root@guest2 ~]# 
+----
+
+That's enough to prove the virtual machine is working OK. 
+
+Disconnect from the console. 
+The disconnection command is 
+kbd:[Ctrl + ++]++ ] 
+
+
+[source,shell]
+----
+^]
+[root@host1 ~]# 
+----
+
+
+
+
+
