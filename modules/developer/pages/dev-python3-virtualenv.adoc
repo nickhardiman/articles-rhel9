@@ -1,0 +1,91 @@
+= python3 and virtualenv 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 29-05-2020
+
+
+How Python developers can go from nothing to virtualenv on RHEL8. 
+
+
+You can create a virtual environment using the platform copy of Python, with the command ``/usr/libexec/platform-python3.6 -m venv my-project``. 
+But this is really meant for system use. 
+
+
+== Python and the developer subscription 
+
+. sign up for a developer account.
+. prepare your workstation
+. install RHEL 8
+. complete system registration and subscription 
+. install python 
+
+
+
+
+== create a python virtual environment 
+
+???
+--system-site-packages
+https://liquidat.wordpress.com/2019/08/30/howto-get-a-python-virtual-environment-running-on-rhel-8/
+python3.6 -m venv --system-site-packages myvirtual_venv
+
+selinux 
+???
+
+Python developers 
+https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments[create virtual environments] to keep their workspaces seperate. 
+
+There is a virtualenv command supplied by the RPM package ``python3-virtualenv``, but this package has some version baggage. Installing _python3-virtualenv_ enables the module _python36_, and this article doesn't use that. 
+
+Create a virtual environment using Python 3.8 and the venv module. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ python3 -m venv new/virtual/environment
+[nick@guest1 ~]$
+----
+
+This creates a new path with hundreds of files in it, including pip. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ new/virtual/environment/bin/pip --version
+pip 19.2.3 from /home/nick/new/virtual/environment/lib64/python3.8/site-packages/pip (python 3.8)
+[nick@guest1 ~]$ 
+----
+
+== use the python virtual environment 
+
+Using a python virtual environment changes your working environment. 
+Try running ``env`` and looking at the variables PATH, PS1 and  VIRTUAL_ENV.
+
+[source,shell]
+----
+[nick@guest1 ~]$ source new/virtual/environment/bin/activate 
+(environment) [nick@guest1 ~]$ 
+----
+
+This developer environment is now in use. 
+
+* Upgrade packages. ``pip install --upgrade pip setuptools``
+* Install packages. ``pip install yamllint``
+* Run a command. ``python -c 'print("Hello, World!")'``
+
+
+
+== clean up 
+
+Remove the virtual environment. 
+
+[source,shell]
+----
+(environment) [nick@guest1 ~]$ deactivate
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ rm -r new
+[nick@guest1 ~]$ 
+----
+
+
+
+
+

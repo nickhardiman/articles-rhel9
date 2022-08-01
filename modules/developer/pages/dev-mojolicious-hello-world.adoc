@@ -1,0 +1,55 @@
+= serve "hello world" with mojolicious
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 22-02-2021
+
+
+Instead of writing "hello, world" to STDOUT, reply with "hello, world" to client requests.
+The client is an HTTP client, like curl, a web browser, or telnet with manual typing. 
+
+Install mojolicious. 
+
+[source,shell]
+----
+bash-4.4# curl -L https://cpanmin.us | perl - -M https://cpan.metacpan.org -n Mojolicious
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  295k  100  295k    0     0  2067k      0 --:--:-- --:--:-- --:--:-- 2067k
+--> Working on Mojolicious
+Fetching https://cpan.metacpan.org/authors/id/S/SR/SRI/Mojolicious-8.57.tar.gz ... OK
+Configuring Mojolicious-8.57 ... OK
+Building Mojolicious-8.57 ... OK
+Successfully installed Mojolicious-8.57
+1 distribution installed
+bash-4.4# 
+[root@guest1 ~]# du -sh /var/lib/containers/storage/
+1.1G	/var/lib/containers/storage/
+[root@guest1 ~]# 
+----
+
+Configure a web service. 
+
+The command to start this new web service is `/usr/local/bin/morbo /hello.pl`. 
+The _morbo_ command starts a web server - this file was installed along with mojolicious. 
+This command makes the _hello.pl_ perl script. 
+
+[source,shell]
+----
+echo "use Mojolicious::Lite;
+get '/' => {text => 'I ♥ Mojolicious!'};
+app->start;" > hello.pl
+----
+
+Create the perl script.
+
+[source,shell]
+----
+bash-4.4# pwd
+/
+bash-4.4# 
+bash-4.4# echo "use Mojolicious::Lite;
+> get '/' => {text => 'I ♥ Mojolicious!'};
+> app->start;" > hello.pl
+bash-4.4# 
+----
+

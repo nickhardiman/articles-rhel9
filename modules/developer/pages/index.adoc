@@ -1,0 +1,7 @@
+= developer
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+Program "hello world"  with assembly language, python3 and the perl framework mojolicious. 
+
