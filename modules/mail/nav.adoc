@@ -1,0 +1,6 @@
+* xref:index.adoc[]
+** xref:guest1-postfix-install.adoc[]
+** xref:guest1-mailx-install.adoc[]
+** xref:guest1-postfix-configure.adoc[]
+** xref:guest2-mailx.adoc[]
+** xref:guest2-postfix-null-client.adoc[]

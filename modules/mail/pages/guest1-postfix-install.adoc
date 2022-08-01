@@ -1,0 +1,195 @@
+= install the postfix mail service 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 20-02-2021
+
+
+Use postfix to send and receive e-mail. 
+Postfix on guest1 will receive mail from all the VMs. 
+This postfix service won't communicate with the outside world. 
+
+== install postfix
+
+A minimal install of RHEL 8 includes about 400 packages, and postfix is not one of them. 
+
+The libicu package contains Unicode libraries (ICU stands for International Components for Unicode).
+
+[source,shell]
+....
+[root@guest1 ~]# dnf install postfix
+Updating Subscription Management repositories.
+Last metadata expiration check: 0:32:03 ago on Wed 24 Feb 2021 10:29:10 GMT.
+Dependencies resolved.
+=================================================================================
+ Package   Arch     Version                Repository                       Size
+=================================================================================
+Installing:
+ postfix   x86_64   2:3.3.1-12.el8_3.1     rhel-8-for-x86_64-baseos-rpms   1.5 M
+Installing dependencies:
+ libicu    x86_64   60.3-2.el8_1           rhel-8-for-x86_64-baseos-rpms   8.8 M
+
+Transaction Summary
+=================================================================================
+Install  2 Packages
+
+Total download size: 10 M
+Installed size: 36 M
+Is this ok [y/N]: 
+....
+
+
+== systemd 
+
+The postfix package includes one systemd unit file, _/usr/lib/systemd/system/postfix.service_.
+
+It isn't enabled and the application isn't running. 
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl status postfix
+● postfix.service - Postfix Mail Transport Agent
+   Loaded: loaded (/usr/lib/systemd/system/postfix.service; disabled; vendor pre>
+   Active: inactive (dead)
+[root@guest1 ~]# 
+....
+
+Enable, start and check it's running. 
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl start postfix
+[root@guest1 ~]# systemctl enable postfix
+Created symlink /etc/systemd/system/multi-user.target.wants/postfix.service → /usr/lib/systemd/system/postfix.service.
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl status postfix
+● postfix.service - Postfix Mail Transport Agent
+   Loaded: loaded (/usr/lib/systemd/system/postfix.service; enabled; vendor pres>
+   Active: active (running) since Wed 2021-02-24 11:06:13 GMT; 9s ago
+ Main PID: 10916 (master)
+    Tasks: 3 (limit: 23294)
+   Memory: 6.0M
+   CGroup: /system.slice/postfix.service
+           ├─10916 /usr/libexec/postfix/master -w
+           ├─10917 pickup -l -t unix -u
+           └─10918 qmgr -l -t unix -u
+
+Feb 24 11:06:12 guest1.lab.example.com systemd[1]: Starting Postfix Mail Transpo>
+Feb 24 11:06:13 guest1.lab.example.com postfix/master[10916]: daemon started -- >
+Feb 24 11:06:13 guest1.lab.example.com systemd[1]: Started Postfix Mail Transpor>
+[root@guest1 ~]# 
+....
+
+
+=== postfix processes 
+
+The SMTP service waits for mails to arrive by listening to port 25. 
+The `ss` command shows the process listening to port 25 - it's not _postfix_, it's _master_. 
+
+
+[source,shell]
+....
+[root@guest1 ~]# ss -tlnp | grep :25
+LISTEN    0         100              127.0.0.1:25               0.0.0.0:*        users:(("master",pid=10916,fd=16))                                             
+LISTEN    0         100                  [::1]:25                  [::]:*        users:(("master",pid=10916,fd=17))                                             
+[root@guest1 ~]# 
+....
+
+
+Postfix starts a few processes. 
+Use `ps fax` to list all processes and group them together. 
+There are a few postfix processes, like this.
+
+[source,shell]
+....
+[root@guest1 ~]# ps fax
+    PID TTY      STAT   TIME COMMAND
+...
+  10916 ?        Ss     0:00 /usr/libexec/postfix/master -w
+  10917 ?        S      0:00  \_ pickup -l -t unix -u
+  10918 ?        S      0:00  \_ qmgr -l -t unix -u
+[root@guest1 ~]# 
+....
+
+The _master_, _pickup_ and _qmgr_ processes are all described in the system manager's manual. Try running `man master`.
+
+
+== configure 
+
+The default configuration of postfix is to work on mails from this host only. 
+It's secure, and it's pretty limited. 
+
+* Postfix only listens to the local interface, so it can't be contacted across the network. 
+* Postfix only accepts mail sent to addresses in the form _user@host_. 
+The address _nick@guest1.lab.example.com_ is good, and so is _nick@localhost_. 
+But the address _nick@example.com_ is bad. 
+
+== send a mail 
+
+Send a mail.
+Using only the user name is OK - postfix adds the hostname automatically, to change _nick_ to _nick@guest1.lab.example.com_.
+
+Use the sendmail utility. 
+Sendmail waits for you to type your message. 
+
+[source,shell]
+....
+[root@guest1 ~]# sendmail nick
+....
+
+Type a message. 
+finish with a line that only contains the https://en.wikipedia.org/wiki/Full_stop[full stop punctuation mark] (also known as a period).
+
+[source,shell]
+....
+[root@guest1 ~]# sendmail nick
+subject: a mail test
+Did this arrive? 
+.
+[root@guest1 ~]# 
+....
+
+
+=== where did it go? 
+
+Postfix stores the mail in _/var/spool/mail/nick_.
+
+An e-mail has two parts - the envelope and the body, separated by an empty line. 
+The envelope is the details about how to send a mail, and what happened along the way. 
+The body is the message for the recipient to read. 
+
+Postfix adds some headers to the envelope part, including _Return-Path_, _Received_ and _Date_.
+
+[source,shell]
+....
+[root@guest1 ~]# ls -l /var/spool/mail/nick 
+-rw-rw----. 1 nick mail 472 Feb 24 11:49 /var/spool/mail/nick
+[root@guest1 ~]# 
+[root@guest1 ~]# cat /var/spool/mail/nick 
+From root@guest1.lab.example.com  Wed Feb 24 11:49:04 2021
+Return-Path: <root@guest1.lab.example.com>
+X-Original-To: nick
+Delivered-To: nick@guest1.lab.example.com
+Received: by guest1.lab.example.com (Postfix, from userid 0)
+	id 8F8C22045AB9; Wed, 24 Feb 2021 11:49:04 +0000 (GMT)
+subject: a mail test
+Message-Id: <20210224114904.8F8C22045AB9@guest1.lab.example.com>
+Date: Wed, 24 Feb 2021 11:48:48 +0000 (GMT)
+From: root <root@guest1.lab.example.com>
+
+Did this arrive? 
+
+[root@guest1 ~]# 
+....
+
+== mail notifications 
+
+Open another terminal and log in as the user. 
+A message appears about mail. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ 
+You have mail in /var/spool/mail/nick
+[nick@guest1 ~]$ 
+....
+

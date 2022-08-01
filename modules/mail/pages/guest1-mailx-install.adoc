@@ -1,0 +1,137 @@
+= use mailx to read mail 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 20-02-2021
+
+The minimal install does not include an e-mail reader.
+The only way to read mail is by vewing the file /var/spool/mail/nick.
+It's an OK solution, but not a great one. 
+The more mails there are, the trickier it is to manage.  
+
+The proper name for an e-mail reader in SMTP land is MUA (Mail User Agent).
+Two MUAs that work on the command line are mailx and mutt. 
+
+The mailx utility is pretty basic, but it's better than working directly with user files in /var/spool/mail.
+Mutt is a complicated curses-based utility, with colors and status bars.
+It's a little like using the vim editor. 
+
+This example keeps things simple with mailx.
+
+
+== install mailx
+
+[source,shell]
+....
+[root@guest1 ~]# dnf install mailx
+Updating Subscription Management repositories.
+Last metadata expiration check: 2:20:17 ago on Wed 24 Feb 2021 10:29:10 GMT.
+Dependencies resolved.
+=================================================================================
+ Package   Arch       Version            Repository                         Size
+=================================================================================
+Installing:
+ mailx     x86_64     12.5-29.el8        rhel-8-for-x86_64-baseos-rpms     257 k
+
+Transaction Summary
+=================================================================================
+Install  1 Package
+
+Total download size: 257 k
+Installed size: 491 k
+Is this ok [y/N]: 
+....
+
+
+
+== read mail
+
+Open another terminal and log in as the user. 
+A message appears about mail. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ 
+You have mail in /var/spool/mail/nick
+[nick@guest1 ~]$ 
+....
+
+The minimal install does not include an e-mail reader.
+The only way to read mail is by vewing the file /var/spool/mail/nick.
+It's an OK solution, but not a great one. 
+The more mails there are, the trickier it is to manage.  
+
+The proper name for an e-mail reader in SMTP land is MUA (Mail User Agent).
+Two MUAs that work on the command line are mailx and mutt. 
+
+== install mailx
+
+[source,shell]
+....
+....
+
+== read mail 
+
+The mailx utility also uses a slightly similar name, `mail`. 
+It comes with lots of commands. 
+Type `help` to see the main commands, and `list` to see all commands. 
+For the lazy typer, entering the first letter of a command works just as well as typing the whole thing - `quit` and `q` do the same thing. 
+
+Open mail. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ ls -l /usr/bin/mail
+lrwxrwxrwx. 1 root root 5 Nov  2  2018 /usr/bin/mail -> mailx
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ mail
+Heirloom Mail version 12.5 7/5/10.  Type ? for help.
+"/var/spool/mail/nick": 1 message 1 new
+>N  1 root                  Wed Feb 24 11:49  13/472   "a mail test"
+& 
+....
+
+Close mail. 
+Quit the program by entering the q command. 
+
+[source,shell]
+....
+& q
+Held 1 message in /var/spool/mail/nick
+You have mail in /var/spool/mail/nick
+[nick@guest1 ~]$ 
+....
+
+
+Open mail again and read the message. 
+Enter the number of the message to display it.
+
+[source,shell]
+....
+[nick@guest1 ~]$ mail
+Heirloom Mail version 12.5 7/5/10.  Type ? for help.
+"/var/spool/mail/nick": 1 message 1 unread
+>U  1 root                  Wed Feb 24 11:49  14/482   "a mail test"
+& 1
+Message  1:
+From root@guest1.lab.example.com  Wed Feb 24 11:49:04 2021
+Return-Path: <root@guest1.lab.example.com>
+X-Original-To: nick
+Delivered-To: nick@guest1.lab.example.com
+subject: a mail test
+Date: Wed, 24 Feb 2021 11:48:48 +0000 (GMT)
+From: root <root@guest1.lab.example.com>
+Status: RO
+
+Did this arrive? 
+
+& 
+....
+
+Delete the message. 
+
+[source,shell]
+....
+& d 1
+& 
+....
+

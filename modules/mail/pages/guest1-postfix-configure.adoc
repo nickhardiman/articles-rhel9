@@ -1,0 +1,96 @@
+= configure postfix to receive example.com mails 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 20-02-2021
+
+https://www.redhat.com/sysadmin/install-configure-postfix
+
+http://www.postfix.org/STANDARD_CONFIGURATION_README.html
+
+
+== the default configuration 
+
+The postfix configuration has a mind-boggling number of settings - most of a thousand. 
+
+[source,shell]
+....
+[root@guest1 ~]# postconf | head
+2bounce_notice_recipient = postmaster
+access_map_defer_code = 450
+access_map_reject_code = 554
+address_verify_cache_cleanup_interval = 12h
+address_verify_default_transport = $default_transport
+address_verify_local_transport = $local_transport
+address_verify_map = btree:$data_directory/verify_cache
+address_verify_negative_cache = yes
+address_verify_negative_expire_time = 3d
+address_verify_negative_refresh_time = 3h
+[root@guest1 ~]# 
+[root@guest1 ~]# 
+[root@guest1 ~]# postconf | wc -l
+885
+[root@guest1 ~]# 
+....
+
+The config file contains a subset of these - about thirty. 
+It also contains hundreds of lines of comments. 
+
+[source,shell]
+....
+[root@guest1 ~]# grep -v -E '^#|^\s*$' /etc/postfix/main.cf
+compatibility_level = 2
+queue_directory = /var/spool/postfix
+command_directory = /usr/sbin
+...
+smtp_tls_security_level = may
+meta_directory = /etc/postfix
+shlib_directory = /usr/lib64/postfix
+[root@guest1 ~]# 
+....
+
+
+== change 
+
+[source,shell]
+....
+mydomain = example.com
+....
+
+[source,shell]
+....
+#inet_interfaces = localhost
+inet_interfaces = all
+....
+
+[source,shell]
+....
+#mydestination = $myhostname, localhost.$mydomain, localhost
+184a187
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+....
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl restart postfix
+[root@guest1 ~]# 
+....
+
+
+== open the firewall 
+
+Firewalld comes with three SMTP service files.
+
+[source,shell]
+....
+[root@guest1 ~]# ls /usr/lib/firewalld/services/smtp*
+/usr/lib/firewalld/services/smtp-submission.xml
+/usr/lib/firewalld/services/smtps.xml
+/usr/lib/firewalld/services/smtp.xml
+[root@guest1 ~]# 
+[root@guest1 ~]# firewall-cmd --add-service smtp 
+success
+[root@guest1 ~]# firewall-cmd --add-service smtp --permanent
+success
+[root@guest1 ~]# 
+....
+

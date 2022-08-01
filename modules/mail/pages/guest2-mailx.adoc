@@ -1,0 +1,60 @@
+= view mail with mailx  
+Nick Hardiman
+:source-highlighter: highlight.js
+:toc: 
+:revdate: 25-02-2021
+
+== install 
+
+[source,shell]
+....
+dnf install mailx
+....
+
+
+== send test mails 
+
+The mailx command to send a message from guest2 to guest1. 
+
+[source,shell]
+....
+echo "my message body" \
+  | mailx \
+  -r "root@guest2.private.example.com" \
+  -s "my subject" \
+  -S smtp="guest1.private.example.com:25" \
+  nick@guest1.lab.example.com
+....
+
+Open a terminal on guest1. 
+
+Watch 
+
+[source,shell]
+....
+[nick@guest1 ~]# tail -f /var/spool/mail/nick 
+....
+
+Check. 
+Send a mail to these addresses.
+
+* nick@guest1.lab.example.com
+* nick@lab.example.com
+* nick@example.com
+
+[source,shell]
+....
+[root@guest2 ~]# echo "my message body 1"   | mailx   -r "root@guest2.private.example.com"   -s "my subject 1"   -S smtp="guest1.private.example.com:25"   nick@guest1.lab.example.com
+[root@guest2 ~]# 
+[root@guest2 ~]# echo "my message body 2"   | mailx   -r "root@lab.example.com"   -s "my subject 2"   -S smtp="guest1.private.example.com:25"   nick@lab.example.com
+[root@guest2 ~]# smtp-server: 454 4.7.1 <nick@lab.example.com>: Relay access denied
+"/root/dead.letter" 11/324
+. . . message not sent.
+
+[root@guest2 ~]# echo "my message body 3"   | mailx   -r "root@example.com"   -s "my subject 3"   -S smtp="guest1.private.example.com:25"   nick@example.com
+[root@guest2 ~]# 
+....
+
+The address _nick@lab.example.com_ is not recognized by guest1. 
+It refuses to accept the mail. 
+

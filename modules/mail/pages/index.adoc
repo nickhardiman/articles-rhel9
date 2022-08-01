@@ -1,0 +1,16 @@
+= mail
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+Use postfix to send and receive e-mail. 
+The proper name for an e-mail sending and receiving system in SMTP land is MTA (Mail Transport Agent).
+E-mail, along with logs and metrics, is a way for the system to communicate with the sysadmin and automate tasks. 
+For instance, git can send code patches by e-mail.
+
+Postfix on guest1 will receive mail from all the VMs. 
+
+This postfix service won't communicate with the outside world. 
+Setting up a public e-mail service is risky and complicated. 
+Automated programs search the Internet for badly configured mail servers, so spammers can send a ton of junk to innocent in-boxes.
+
