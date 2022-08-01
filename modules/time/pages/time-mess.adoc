@@ -1,0 +1,92 @@
+= mess with time
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 27-07-2020
+
+
+== yesterday 
+
+Turn off chronyd.
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo systemctl stop chronyd
+[nick@guest1 ~]$ 
+....
+
+Roll the clock back. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo timedatectl set-time yesterday
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ timedatectl
+               Local time: Tue 2020-07-28 00:00:03 BST
+           Universal time: Mon 2020-07-27 23:00:03 UTC
+                 RTC time: Mon 2020-07-27 23:00:03
+                Time zone: Europe/London (BST, +0100)
+System clock synchronized: no
+              NTP service: inactive
+          RTC in local TZ: no
+[nick@guest1 ~]$ 
+....
+
+Reboot. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo systemctl reboot 
+Connection to g1 closed by remote host.
+Connection to g1 closed.
+[nick@host1 ~]$ 
+....
+
+Log in and check. 
+System time is fixed, but the RTC is not. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ timedatectl
+               Local time: Wed 2020-07-29 11:38:39 BST
+           Universal time: Wed 2020-07-29 10:38:39 UTC
+                 RTC time: Mon 2020-07-27 23:04:07
+                Time zone: Europe/London (BST, +0100)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ journalctl -u chronyd
+...
+Jul 28 00:02:56 guest1.lab.example.com chronyd[775]: System clock wrong by 128071.726672 seconds, adjustment started
+Jul 29 11:37:28 guest1.lab.example.com chronyd[775]: System clock was stepped by 128071.726672 seconds
+[nick@guest1 ~]$ 
+....
+
+
+== RTC (Real Time Clock)
+
+Overwrite RTC time. 
+
+Changing a time setting triggers an RTC update. 
+Change the `RTC in local TZ` setting from `no` to `yes`. 
+We don't really want an RTC telling local time - that causes extra work dealing with Summer clock changes.
+Change this setting back to `no`.
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo timedatectl set-local-rtc yes
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ sudo timedatectl set-local-rtc no
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ timedatectl 
+               Local time: Wed 2020-07-29 11:50:35 BST
+           Universal time: Wed 2020-07-29 10:50:35 UTC
+                 RTC time: Wed 2020-07-29 10:50:35
+                Time zone: Europe/London (BST, +0100)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+[nick@guest1 ~]$ 
+....
+
+

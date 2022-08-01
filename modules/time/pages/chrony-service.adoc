@@ -1,0 +1,197 @@
+= configure the chrony service
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 27-07-2020
+
+
+Get time from the LAN, not the Internet. 
+
+Chronyd can act as both client and server, but out of the box only the client works. The server won't talk to anyone without a little configuration. 
+Set up guest1 as a server and guest2 as a client. 
+Guest1 gets its time from the Internet and guest2 gets its time from guest1. 
+
+Since we have access to both client and server, we can tighten security by adding key-based authentication.
+
+
+== configure the server
+
+Use guest1 as the NTP server.  
+This isn't much good in a production network, because there is only one machine supplying time. 
+If guest1 is shut down, clients can't synchronize their watches. 
+
+The default config file contains half a dozen directives. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ grep -Ev '^#|^$' /etc/chrony.conf 
+pool 2.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+keyfile /etc/chrony.keys
+leapsectz right/UTC
+logdir /var/log/chrony
+[nick@guest1 ~]$ 
+....
+
+Add another directive to allow requests from the network. 
+
+Edit the config file with `sudo vi /etc/chrony.conf`.
+
+Uncomment the line `#allow 192.168.0.0/16`.
+
+Chronyd reads its config file when it starts. 
+Restart the server's time daemon with `sudo systemctl restart chronyd`.
+
+Check access. With the default configuration, we would get the reply `209 Access denied`.
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo chronyc accheck guest2.lab.example.com
+208 Access allowed
+[nick@guest1 ~]$ 
+....
+
+
+== configure a client
+
+Use guest2 as the first NTP client. 
+
+Edit the config file with `sudo vi /etc/chrony.conf`.
+
+Replace the pool directive.
+Comment out the pool line.
+Add a server line. 
+
+[source,shell]
+....
+#pool 2.rhel.pool.ntp.org iburst
+server guest1.lab.example.com iburst
+....
+
+Restart the client's time daemon with `sudo systemctl restart chronyd`.
+
+Check source status. 
+
+At first, the State column shows '?', which might mean the chrony client has just started, or the client can't contact the server. 
+
+
+[source,shell]
+....
+[nick@guest2 ~]$ chronyc sources
+210 Number of sources = 1
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^? guest1.lab.example.com        0   6     0     -     +0ns[   +0ns] +/-    0ns
+[nick@guest2 ~]$
+....
+
+After a few seconds, more fields show data. 
+
+[source,shell]
+....
+[nick@guest2 ~]$ chronyc sources
+210 Number of sources = 1
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^? guest1.lab.example.com        4   6     3     0  +1812us[+1812us] +/-  113ms
+[nick@guest2 ~]$ 
+....
+
+After a few more seconds, Status changes to '*' (synchronized).
+
+[source,shell]
+....
+[nick@guest2 ~]$ chronyc sources
+210 Number of sources = 1
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* guest1.lab.example.com        4   6    17    27   -141ns[-1172ns] +/-  113ms
+[nick@guest2 ~]$ 
+....
+
+
+== authenticate with a key
+
+Adding a key protects the client from bad servers. 
+It proves the time update comes from a trusted source. 
+The key doesn't protect the server - it happily carries on serving time to clients that have no key. 
+
+Chrony can control access using keys. 
+Keys are stored in the config file /etc/chrony.keys, and a key option is added to /etc/chrony.conf. 
+
+Create a key on the server, guest1.
+Use the https://chrony.tuxfamily.org/manual.html#keygen-command[keygen command].
+
+[source,shell]
+....
+[nick@guest1 ~]$ chronyc keygen
+1 SHA1 HEX:F37158CC01ECFB8FEAE8CC24649C1058E965A218
+[nick@guest1 ~]$ 
+....
+
+Add this key to the server (guest1). 
+
+[source,shell]
+....
+[nick@guest1 ~]$ sudo bash -c "echo '1 SHA1 HEX:F37158CC01ECFB8FEAE8CC24649C1058E965A218' >> /etc/chrony.keys"
+[nick@guest1 ~]$ 
+....
+
+Repeat on the client (guest2).
+
+Edit /etc/chrony.conf on the client. 
+Add `key 1` to the server line. 
+
+[source,shell]
+....
+server guest1.lab.example.com iburst key 1 
+....
+
+Restart the client's time daemon with `sudo systemctl restart chronyd`.
+
+Check with `chronyc sources` and `journalctl -u chronyd`. 
+
+[source,shell]
+....
+[nick@guest2 ~]$ chronyc sources
+210 Number of sources = 1
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* guest1.lab.example.com        2   6    17    56    +11us[  +25us] +/-   11ms
+[nick@guest2 ~]$ 
+[nick@guest2 ~]$ journalctl --unit=chronyd --lines=3
+Hint: You are currently not seeing messages from other users and the system.
+      Users in the 'systemd-journal' group can see all messages. Pass -q to
+      turn off this notice.
+-- Logs begin at Wed 2020-07-29 10:32:01 EDT, end at Wed 2020-07-29 11:51:50 EDT. --
+Jul 29 11:51:46 guest2.lab.example.com systemd[1]: Started NTP client/server.
+Jul 29 11:51:50 guest2.lab.example.com chronyd[1660]: Selected source 192.168.122.4
+Jul 29 11:51:50 guest2.lab.example.com chronyd[1660]: System clock TAI offset set to 37 seconds
+[nick@guest2 ~]$ 
+....
+
+If something's gone wrong, the sources table shows plenty of zeroes. 
+The journal does not show any `Selected source` and `System clock` messages after the `Start` message. 
+
+[source,shell]
+....
+[nick@guest2 ~]$ chronyc sources
+210 Number of sources = 1
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^? guest1.lab.example.com        0   8     0     -     +0ns[   +0ns] +/-    0ns
+[nick@guest2 ~]$ 
+....
+
+
+== other tweaks 
+
+Many networks have limited or no access to the Internet. 
+Like many infrastructure applications, chrony can be tuned to make an isolated network's time better. 
+
+* Add more sources, for resilience.
+* Set the stratum using `local stratum 5`.
+* Add hardware clocks, for better time keeping. 
+
+To figure out what's possible, check out the manual (`man 1 chronyc`, `man 5 chrony.conf` and `man 8 chronyd`).

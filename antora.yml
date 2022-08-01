@@ -36,4 +36,6 @@ nav:
 - modules/security/nav.adoc 
 - modules/dns/nav.adoc 
 - modules/mail/nav.adoc 
+- modules/web/nav.adoc 
+- modules/time/nav.adoc 
 

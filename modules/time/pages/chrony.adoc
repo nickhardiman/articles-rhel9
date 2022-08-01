@@ -1,0 +1,134 @@
+= examine chrony 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 27-07-2020
+
+Make sure the clock is ticking.
+
+Chronyd manages system time. It regularly asks NTP servers what the time is and sets the time for the OS to use. 
+
+Chronyd sets system time using network servers, not the RTC (Real Time Clock). 
+Many computers have a built-in quartz clock that permanently tracks time. PCs have one, Arduinos and Raspberry Pis don't, and VMs have an emulated RTC (check out /dev/rtc). The command `timedatectl` shows both system time and RTC time. 
+
+
+
+== chronyd 
+
+The chronyd daemon does the synchronization work, constantly checking network time and updating system time. 
+Systemd unit chronyd.service manages the daemon. 
+
+To see chronyd's log messages, run `journalctl -u chronyd`. 
+It's pretty quiet. 
+Chronyd can be configured to write all kinds of data to files in /var/log/chrony/, 
+but by default this directory is empty. 
+The Logging section in `man 5 chrony.conf` describes the options. 
+
+
+
+== the NTP pool 
+
+Chrony collects time from a few servers. 
+The configuration file /etc/chrony.conf names one pool of servers to collect time from. 
+The NTP servers are hidden behind this pool's DNS name - nne name points to many IP addresses.
+
+[source,shell]
+....
+[nick@guest1 ~]$ grep pool  /etc/chrony.conf
+# Use public servers from the pool.ntp.org project.
+# Please consider joining the pool (http://www.pool.ntp.org/join.html).
+pool 2.rhel.pool.ntp.org iburst
+[nick@guest1 ~]$ 
+....
+
+The config line `pool 2.rhel.pool.ntp.org iburst` has three fields. 
+
+* *pool* directive. Use one DNS name and check its IP addresses. For more information, run `man 5 chrony.conf`.
+* *2.rhel.pool.ntp.org* DNS name. 
+* *iburst* server option. When the sytem boots and chrony starts, get a good clock time by making many requests quickly (that's an initial burst of requests). 
+
+This config is set up to use servers from the 
+https://www.pool.ntp.org/en/use.html[pool.ntp.org] project.
+There are 
+https://en.wikipedia.org/wiki/NTP_pool[thousands of servers] in this NTP pool, from all over the world. 
+When a client resolves the name, their DNS checks what part of the world the client is in, picks four random servers, and replies with their addresses. 
+
+To see how that DNS name resolves to IP addresses, use the _host_ command. 
+This command isn't included with a minimal system, so install the _bind-utils_ package first. 
+
+[source,shell]
+....
+[root@guest1 ~]# dnf install bind-utils
+...
+Complete!
+[root@guest1 ~]# host 2.rhel.pool.ntp.org
+2.rhel.pool.ntp.org has address 162.159.200.123
+2.rhel.pool.ntp.org has address 82.219.4.30
+2.rhel.pool.ntp.org has address 178.62.16.103
+2.rhel.pool.ntp.org has address 185.53.93.157
+2.rhel.pool.ntp.org has IPv6 address 2a01:7e00::f03c:91ff:fe96:f129
+2.rhel.pool.ntp.org has IPv6 address 2a01:7e00::f03c:91ff:fe93:e774
+2.rhel.pool.ntp.org has IPv6 address 2a03:b980:123:3::a
+2.rhel.pool.ntp.org has IPv6 address 2a01:3e0:701:0:195:219:205:9
+[root@guest1 ~]# 
+....
+
+To see which random IP addresses were picked for chronyd, use the _chronyc_ utility.
+
+[source,shell]
+....
+[root@guest1 ~]# chronyc -n sources
+210 Number of sources = 4
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^+ 185.83.169.27                 1   8   377   117   -182us[ -182us] +/-   11ms
+^* 85.199.214.98                 1   8   377   180  -1641ns[  -58us] +/- 7050us
+^- 81.21.65.169                  2   8   371   308   -238us[ -290us] +/-   22ms
+^+ 109.74.192.97                 3   8   165   176   +177us[ +177us] +/-   11ms
+[root@guest1 ~]# 
+....
+
+
+== make chronyd step time 
+
+Normally, chronyd fixes any time drift by changing system time in baby steps. 
+When a computer boots up, chronyd takes one big step to fix system time - it finds out time from the network then overwrites the system time.  
+This is important for VMs, with their shaky grasp of time. 
+
+Test this by setting the time to yesterday, then rebooting. 
+The time is reset. 
+
+Check the config and current time. 
+
+[source,shell]
+....
+[nick@guest1 ~]$ grep step /etc/chrony.conf 
+# Allow the system clock to be stepped in the first three updates
+makestep 1.0 3
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ timedatectl 
+               Local time: Wed 2020-07-29 11:32:58 BST
+           Universal time: Wed 2020-07-29 10:32:58 UTC
+                 RTC time: Wed 2020-07-29 10:32:58
+                Time zone: Europe/London (BST, +0100)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+[nick@guest1 ~]$ 
+....
+
+
+
+
+== there's plenty more 
+
+To find out more, check out the Red Hat customer portal. 
+There's a whole chapter on 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_basic_system_settings/using-chrony-to-configure-ntp[using the Chrony suite to configure NTP].
+
+To master chrony, read the man pages and experiment. 
+There are many directives and options for the chrony.conf file, 
+and many commands for the chronyc utility.
+
+For Ansible automation, there is a 
+https://access.redhat.com/articles/3050101[RHEL system role] named 
+https://github.com/linux-system-roles/timesync[rhel-system-roles.timesync].

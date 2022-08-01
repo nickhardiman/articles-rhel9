@@ -1,0 +1,28 @@
+= time 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+== time protocols 
+
+Red Hat provides software for two time protocols, https://www.redhat.com/en/blog/combining-ptp-ntp-get-best-both-worlds[NTP and PTP].
+
+
+== NTP
+
+Get time from the LAN, not the Internet. 
+https://en.wikipedia.org/wiki/Network_Time_Protocol[NTP (Network Time Protocol)]  
+can gives millisecond accuracy (a millisecond is one thousandth of a second).  
+The chrony package is installed by default, and talks the NTP protocol. 
+
+Chronyd can act as both client and server, but out of the box only the client works. The server won't talk to anyone without a little configuration. 
+Set up guest1 as a server and guest2 as a client. 
+Guest1 gets its time from the Internet and guest2 gets its time from guest1. 
+
+== PTP
+
+https://en.wikipedia.org/wiki/Precision_Time_Protocol[PTP (Precision Time Protocol)] 
+is used for applications that are super-sensitive to timing. 
+This protocol gives micro-second accuracy (a micro-second is one millionth of a second) and works best with special hardware. 
+Install the linuxptp package for PTP. 
+
