@@ -133,16 +133,18 @@ HOST=guest1
 NEW_DISK=/var/lib/libvirt/images/$HOST.qcow2
 INSTALL_ISO=/var/lib/libvirt/images/rhel-baseos-9.0-x86_64-dvd.iso
 KICKSTART_CONFIG=vm-$HOST-rhel9.ks
-IF1_MAC=52:54:00:00:00:01
-IF2_MAC=52:54:00:00:00:02
+IF1_MAC=52:54:00:00:00:02
+IF1_NET=public0
+IF2_MAC=52:54:00:01:00:02
+IF2_NET=private0
 virt-install \
   --name="$HOST" \
   --vcpus=2 \
   --ram=4096 \
   --disk path=$NEW_DISK,size=30 \
   --os-variant rhel9.0 \
-  --network network=public0,mac=$IF1_MAC   \
-  --network network=private0,mac=$IF2_MAC   \
+  --network network=$IF1_NET,mac=$IF1_MAC   \
+  --network network=$IF2_NET,mac=$IF2_MAC   \
   --boot uefi,hd,menu=on \
   --location $INSTALL_ISO \
   --initrd-inject /root/libvirt/$KICKSTART_CONFIG \

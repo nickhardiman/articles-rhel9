@@ -20,4 +20,5 @@
 ** xref:storage-examine.adoc[] 
 ** xref:network-examine.adoc[] 
 ** xref:terminal-examine.adoc[] 
+** xref:ssh-keypair.adoc[] 
 ** xref:ssh-use.adoc[] 
