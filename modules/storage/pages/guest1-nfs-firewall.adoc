@@ -1,0 +1,111 @@
+= change the firewall for NFS
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 04-01-2021
+
+NFS exports aren't available over the network until the firewall is opened. 
+
+
+== open the firewall 
+
+The file 
+/usr/lib/firewalld/services/nfs.xml
+contains the port needed for NFSv4, 2049/tcp.
+
+Open the port. 
+
+[source,shell]
+----
+[root@guest1 ~]# firewall-cmd --add-service=nfs 
+success
+[root@guest1 ~]# firewall-cmd --add-service=nfs --permanent
+success
+[root@guest1 ~]# 
+----
+
+Check. 
+
+[source,shell]
+----
+[root@guest1 ~]# firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp1s0 enp2s0
+  sources: 
+  services: cockpit dhcpv6-client dns http https nfs ssh
+  ports: 
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+[root@guest1 ~]# 
+----
+
+
+
+== view available shares over the network 
+
+This is done with the slightly odd method of mounting everything from the NFS server and seeing what turns up. 
+
+[source,shell]
+----
+[root@host1 ~]# mount guest1.lab.example.com:/ /mnt/
+[root@host1 ~]# find /mnt
+/mnt
+/mnt/var
+...
+/mnt/var/nfs/pv2
+/mnt/var/nfs/pv3
+[root@host1 ~]# 
+[root@host1 ~]# umount /mnt
+[root@host1 ~]# find /mnt
+/mnt
+[root@host1 ~]# 
+----
+
+
+== mount and unmount over the network 
+
+Mount a share from host1.  
+
+[source,shell]
+----
+[root@host1 ~]# mount -t nfs guest1.lab.example.com:/var/nfs/pv1 /mnt
+[root@host1 ~]# 
+[root@host1 ~]# df -h /mnt
+Filesystem                           Size  Used Avail Use% Mounted on
+guest1.lab.example.com:/var/nfs/pv1   39G  3.2G   36G   9% /mnt
+[root@host1 ~]# 
+[root@host1 ~]# umount /mnt
+[root@host1 ~]# 
+----
+
+== showmount and rpcinfo 
+
+These old utilities won't work from host1. 
+They aren't required for mounting NFS shares. 
+
+[source,shell]
+----
+[root@host1 ~]# showmount -e guest1.lab.example.com
+rpc mount dump: RPC: Unable to receive; errno = No route to host
+[root@host1 ~]# 
+[root@host1 ~]# rpcinfo -p guest1.lab.example.com
+guest1.lab.example.com: RPC: Remote system error - No route to host
+[root@host1 ~]# 
+----
+
+If you need showmount and rpcinfo to work over the network, these can be fixed with more firewall work on guest1. 
+
+[source,shell]
+----
+[root@guest1 ~]# firewall-cmd  --permanent --add-service rpc-bind
+success
+[root@guest1 ~]# firewall-cmd  --permanent --add-service mountd
+success
+[root@guest1 ~]# 
+----
+

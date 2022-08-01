@@ -1,0 +1,84 @@
+= use an NFS share
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 18-01-2021
+
+Use guest2 to mount one of guest1's NFS exports.
+
+== install the NFS helper 
+
+Mount a directory from guest1 to guest2.
+
+[source,shell]
+----
+[root@guest2 ~]# mount -t nfs4 guest1:/var/nfs/pv1  /mnt
+mount: /mnt: bad option; for several filesystems (e.g. nfs, cifs) you might need a /sbin/mount.<type> helper program.
+[root@guest2 ~]#
+
+ls /usr/sbin/mount*
+----
+
+[source,shell]
+----
+dnf install nfs-utils
+----
+
+
+== create a file 
+
+Mount the NFS share.
+The description of /mnt changes from LVM to NFS export. 
+
+[source,shell]
+----
+[root@guest2 ~]# df /mnt
+Filesystem            1K-blocks    Used Available Use% Mounted on
+/dev/mapper/rhel-root  40854028 8865592  31988436  22% /
+[root@guest2 ~]# 
+[root@guest2 ~]# mount guest1:/var/nfs/pv1 /mnt
+[root@guest2 ~]#  
+[root@guest2 ~]# df /mnt
+Filesystem          1K-blocks    Used Available Use% Mounted on
+guest1:/var/nfs/pv1  40854528 3260416  37594112   8% /mnt
+[root@guest2 ~]# 
+----
+
+
+Try creating a deleting files. 
+
+[source,shell]
+----
+[root@guest2 ~]# touch /mnt/hi
+[root@guest2 ~]# touch /mnt/delete-me
+[root@guest2 ~]# ls -l /mnt/delete-me
+-rw-r--r--. 1 nobody nobody 0 Feb 14 13:50 /mnt/delete-me
+[root@guest2 ~]# rm /mnt/delete-me
+rm: remove regular empty file ‘/mnt/delete-me’? y
+[root@guest2 ~]# 
+[root@guest2 ~]#  
+----
+
+Unmount. 
+
+[source,shell]
+---- 
+[root@guest2 ~]# umount /mnt
+[root@guest2 ~]# 
+----
+
+
+== check on guest1 
+
+Check the file. 
+It's owned by nobody. 
+
+[source,shell]
+----
+[root@guest1 ~]# ls -la /var/nfs/pv1
+total 0
+drwxrwxrwx. 2 root   root   19 Jan 18 15:38 .
+drwxr-xr-x. 5 root   root   39 Jan 18 15:34 ..
+-rw-r--r--. 1 nobody nobody  0 Jan 18 15:38 hi
+[root@guest1 ~]# 
+----
+

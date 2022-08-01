@@ -1,0 +1,563 @@
+= VDO (Virtual Data Optimizer)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 29-05-2020
+
+!!! rhel 9?
+
+Play with VDO using a USB drive. 
+
+This article describes an easy way to get hands-on with https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/deduplicating_and_compressing_storage/index[VDO (Virtual Data Optimizer)], which deduplicates and compresses storage. It's a low-level trip through the land of Linux block storage (no object stores here).
+There are plenty of commands to run along the way. 
+
+Set up and run a simple test that stores a VM (Virtual Machine) image file on a USB3 drive. The file is a 20GB QEMU disk that's mostly empty space, so it should compress well. For a final test, use libvirt to start a VM using this image file. Does it boot?
+
+It's not a real-world test - no storage acronyms like iSCSI, NAS, NFS or SAN here. For a more real-world description, check out Christian Horn's article, https://www.redhat.com/en/blog/look-vdo-new-linux-compression-layer[A look at VDO, the new Linux compression layer]. 
+
+
+
+
+== what you need  
+
+* a USB3 drive. Back up your files! VDO will wipe the content.
+* a workstation. An old laptop is fine. 
+** 32GB memory. The VM and VDO number crunching need space. 
+** USB3 port. USB2 copy speeds are depressing. 
+* RHEL 8  
+* developer subscription 
+* VM image file. This test uses a 20GB QEMU file that's mostly empty space.
+
+There's no software to install. 
+https://fedoraproject.org/wiki/DNF[DNF] packages _kmod-vdo_  and _vdo_ are already present. These supply kernel modules (kvdo and uds), and the ``vdo`` command.
+
+
+=== the USB drive 
+
+Everything on the USB drive will be deleted, so don't use a drive that's important. 
+
+VDO requires a block device. 
+Adding another block device to your workstation is easier than you might think. 
+An ordinary USB drive is a block device.
+
+You can try this out with an old USB drive that's been gathering dust for years, or a shiny new drive that's ten times faster. These tests were carried out with a 64GB USB3 Sandisk Extreme bought in 2016.
+
+An old USB2 drive will work, and will prove you can https://en.wiktionary.org/wiki/you_can%27t_get_a_quart_into_a_pint_pot[put a quart into a pint pot].
+You can copy your 20GB disk image onto a 16GB USB drive with no problems. 
+The bad news is the data transfer speeds on old drives are abysmal. 
+Waiting for a file copy to finish is like watching a Galapagos tortoise having a stroll. 
+
+
+
+== before plugging in the USB drive 
+
+Have a look at the current state of the system, so you can see what changes are made when a USB drive is plugged in. 
+
+
+=== view block devices 
+
+The ``lsblk`` command shows a good summary. 
+
+[source,shell]
+----
+[nick@host ~]$ lsblk
+NAME                                          MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+sda                                             8:0    0 465.8G  0 disk  
+├─sda1                                          8:1    0     1G  0 part  /boot
+└─sda2                                          8:2    0 464.8G  0 part  
+  └─luks-06674073-845d-4a8a-836d-35b90a61beae 253:0    0 464.8G  0 crypt 
+    ├─rhel-root                               253:1    0    50G  0 lvm   /
+    ├─rhel-swap                               253:2    0  15.7G  0 lvm   [SWAP]
+    └─rhel-home                               253:3    0   399G  0 lvm   /home
+sr0                                            11:0    1  1024M  0 rom   
+[nick@host ~]$ 
+----
+
+After staring at this table for a little while, some details start to emerge.  
+
+* /dev/sda is the only disk in the workstation.
+* The partition /dev/sda1 is showing up as /boot. 
+* Partition /dev/sda2 is used by LUKS and LVM (encryption and volume systems).
+* The three LVM partitions are the default layout for a RHEL 8 install.
+* Since the first block device is showing up as ``sda``, it's a good bet the new USB drive will show up as ``sdb``.
+
+
+=== view USB devices 
+
+You can have a look at the list of USB devices already in use with the command ``lsusb``. 
+There will be many, from hub to mouse.
+
+Everything in Linux is represented as a file. 
+These files are the disk and its partitions.
+
+[source,shell]
+----
+[nick@host ~]$ ls /dev/sd*
+/dev/sda  /dev/sda1  /dev/sda2
+[nick@host ~]$ 
+----
+
+
+=== view the journal 
+
+Open a terminal and watch activity log messages. 
+When you plug in the USB drive, dozens of messages will be displayed here. 
+
+[source,shell]
+----
+[nick@host ~]$ journalctl -f
+-- Logs begin at Wed 2020-05-20 07:50:29 BST. --
+...
+May 20 08:58:00 host.example.com sshd[4586]: pam_unix(sshd:session): session opened for user nick by (uid=0)
+----
+
+You can stop following the log by aborting journalctl with https://en.wikipedia.org/wiki/Control-C[Control+C].
+
+
+== add a VDO volume 
+
+Set up the USB drive as a VDO device, add a file system, and mount it.
+
+=== plug in the USB drive 
+
+When you insert a USB drive, Linux makes new block device files. 
+Journalctl messages describe what happens.  
+
+[source]
+----
+May 20 08:59:22 host.example.com kernel: usb 3-2: new high-speed USB device number 3 using xhci_hcd
+May 20 08:59:22 host.example.com kernel: usb 3-2: New USB device found, idVendor=0930, idProduct=6545, bcdDevice= 1.10
+May 20 08:59:22 host.example.com kernel: usb 3-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+...
+May 20 08:59:24 host.example.com kernel: sd 6:0:0:0: [sdb] Assuming drive cache: write through
+May 20 08:59:24 host.example.com kernel:  sdb: sdb1 sdb2
+May 20 08:59:24 host.example.com kernel: sd 6:0:0:0: [sdb] Attached SCSI removable disk
+----
+
+Stop watching the log. 
+Abort journalctl with https://en.wikipedia.org/wiki/Control-C[Control+C].
+
+The messages suggest this USB drive has been used before - there are two partitions named ``sdb1`` and  ``sdb2``, and it's a good bet these hold data.
+In this case, the drive happens to hold an install ISO which is no longer required. 
+
+No clean-up is required. There's no need to delete partitions or clear the content of this USB drive. 
+We're going to force VDO to overwrite the USB content.
+
+There are now more device node files in /dev/. 
+
+[source,shell]
+----
+[nick@host ~]$ ls /dev/sd*
+/dev/sda  /dev/sda1  /dev/sda2  /dev/sdb  /dev/sdb1  /dev/sdb2
+[nick@host ~]$ 
+----
+
+
+
+=== create a VDO device
+
+You're about to lose all the files on your USB drive. 
+
+VDO presents a logical size that is bigger than the actual size. 
+How much bigger depends on what the drive is to be used for. 
+The VDO device we make will hold a VM image. The 
+Red Hat recommends https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/system_design_guide/deploying-vdo_system-design-guide[provisioning storage at a 10:1 logical to physical ratio].
+The command option  ``--vdoLogicalSize=640G`` is about right for a 64GB USB drive.
+
+VDO plays it safe by refusing to overwrite an existing VDO volume or file system.
+Since this USB drive holds data, ``vdo create`` fails. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo create --name=my_vdo --device=/dev/sdb --vdoLogicalSize=160G
+Creating VDO my_vdo
+vdo: ERROR - Device /dev/sdb excluded by a filter.
+[nick@host ~]$ 
+----
+
+The ``--force`` option causes VDO to overwrite everything. Are you ready to lose your data? 
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo create --name=my_vdo --device=/dev/sdb --vdoLogicalSize=640G --force
+Creating VDO my_vdo
+      The VDO volume can address 54 GB in 27 data slabs, each 2 GB.
+      It can grow to address at most 16 TB of physical storage in 8192 slabs.
+      If a larger maximum size might be needed, use bigger slabs.
+Starting VDO my_vdo
+Starting compression on VDO my_vdo
+VDO instance 0 volume is ready at /dev/mapper/my_vdo
+[nick@host ~]$
+----
+
+
+Now there's a new https://en.wikipedia.org/wiki/Device_mapper[device mapper] file.
+
+[source,shell]
+----
+[nick@host ~]$ ls -l /dev/mapper/my_vdo 
+lrwxrwxrwx. 1 root root 7 May 20 11:11 /dev/mapper/my_vdo -> ../dm-4
+[nick@host ~]$ 
+----
+
+That's the end of the VDO setup work. The new VDO device is now defined. If you remove the USB drive and reboot the workstation, this definition will still exist.
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo list --all
+my_vdo
+[nick@host ~]$ 
+----
+
+
+
+=== create the XFS file system
+
+Add RHEL 8's https://access.redhat.com/articles/3129891[default file system] to the new block device. 
+
+The ``-K`` option tells ``mkfs`` to not discard blocks - it's an option related to SSD maintenance. If you want to find out more about discarding blocks, have a look at Alan Formy-Duval's article https://opensource.com/article/20/2/trim-solid-state-storage-linux[Extend the life of your SSD drive with fstrim].
+
+
+[source,shell]
+----
+[nick@host ~]$ sudo mkfs.xfs -K /dev/mapper/my_vdo 
+meta-data=/dev/mapper/my_vdo     isize=512    agcount=4, agsize=41943040 blks
+         =                       sectsz=4096  attr=2, projid32bit=1
+         =                       crc=1        finobt=1, sparse=1, rmapbt=0
+         =                       reflink=1
+data     =                       bsize=4096   blocks=167772160, imaxpct=25
+         =                       sunit=0      swidth=0 blks
+naming   =version 2              bsize=4096   ascii-ci=0, ftype=1
+log      =internal log           bsize=4096   blocks=81920, version=2
+         =                       sectsz=4096  sunit=1 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+[nick@host ~]$  
+----
+
+Wait for the udev event queue to clear.
+If https://en.wikipedia.org/wiki/Udev[udev] means nothing to you, don't worry - that's perfectly normal. Read https://opensource.com/article/20/2/linux-systemd-udevd[Managing your attached hardware on Linux with systemd-udevd] to find out what it means. 
+
+[source,shell]
+----
+[nick@host ~]$ udevadm settle
+[nick@host ~]$ 
+----
+
+
+
+=== mount the new device
+
+Create a new mount point and mount your new VDO device. Use the device mapper node, not the block device (/dev/mapper/my_vdo, not /dev/sdb).
+These changes are all temporary, and disappear when the system is powered off. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo mount /dev/mapper/my_vdo /mnt/my_mount/
+[nick@host ~]$ 
+----
+
+Allow all the https://en.wikipedia.org/wiki/Wheel_(computing)[big wheels] to use the new VDO device. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo chown .wheel /mnt/my_mount/
+[nick@host ~]$ sudo chmod 775 /mnt/my_mount/
+[nick@host ~]$ 
+----
+
+
+=== inspect VDO 
+
+Have a look around the system, now VDO is operational. 
+
+Kernel modules are loaded. 
+
+[source,shell]
+----
+[nick@host ~]$ lsmod | grep -E 'vdo|uds'
+kvdo                  581632  1
+uds                   253952  1 kvdo
+dm_bufio               32768  1 uds
+dm_mod                151552  20 kvdo,dm_crypt,dm_log,dm_mirror,dm_bufio
+[nick@host ~]$ 
+----
+
+Journalctl says the VDO service is working.
+
+[source,shell]
+----
+[nick@host ~]$ journalctl _SYSTEMD_UNIT=vdo.service
+-- Logs begin at Thu 2020-05-28 13:34:36 BST, end at Thu 2020-05-28 14:14:22 BST. --
+May 28 13:35:11 host.example.com vdo[1564]: Starting VDO my_vdo
+May 28 13:35:11 host.example.com vdo[1564]: Starting compression on VDO my_vdo
+May 28 13:35:11 host.example.com vdo[1564]: VDO instance 0 volume is ready at /dev/mapper/my_vdo
+[nick@host ~]$ 
+----
+
+Journalctl also says the uds kernel module is tainted. 
+Don't worry, nothing is broken. 
+VDO code is not included in the upstream kernel - these modules are built seperately.
+For more information, see https://access.redhat.com/solutions/3320911[Why is UDS and/or KVDO tainting the kernel?].
+
+[source,shell]
+----
+[nick@host ~]$ journalctl | grep taints
+May 28 13:35:10 host.example.com kernel: uds: loading out-of-tree module taints kernel.
+[nick@host ~]$ 
+[nick@host ~]$ 
+[nick@host ~]$ cat /proc/sys/kernel/tainted
+4096
+[nick@host ~]$ 
+----
+
+The ``lsblk`` command output has a couple more lines. 
+
+[source,shell]
+----
+[nick@host ~]$ lsblk
+NAME                                          MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+sda                                             8:0    0 465.8G  0 disk  
+├─sda1                                          8:1    0     1G  0 part  /boot
+└─sda2                                          8:2    0 464.8G  0 part  
+  └─luks-06674073-845d-4a8a-836d-35b90a61beae 253:0    0 464.8G  0 crypt 
+    ├─rhel-root                               253:1    0    50G  0 lvm   /
+    ├─rhel-swap                               253:2    0  15.7G  0 lvm   [SWAP]
+    └─rhel-home                               253:3    0   399G  0 lvm   /home
+sdb                                             8:16   1  58.4G  0 disk  
+└─my_vdo                                      253:4    0   640G  0 vdo   /mnt/my_mount
+sr0                                            11:0    1  1024M  0 rom   
+[nick@host ~]$ 
+----
+
+No files have been copied to this device yet, but some space is used - it's reserved by VDO. 
+The ``df`` and ``vdostats`` command have different views on how the space is being used.  
+
+[source,shell]
+----
+[nick@host ~]$ df -h /mnt/my_mount/
+Filesystem          Size  Used Avail Use% Mounted on
+/dev/mapper/my_vdo  640G  4.5G  636G   1% /mnt/my_mount
+[nick@host ~]$ 
+[nick@host ~]$ sudo vdostats --human-readable
+Device                    Size      Used Available Use% Space saving%
+/dev/mapper/my_vdo       58.4G      4.5G     54.0G   7%           99%
+[nick@host ~]$ 
+----
+
+
+
+== copy a VM image file
+
+Copy a file from the workstation's store to the new VDO store. This 20GB file is a QEMU disk image. The image holds 12 GB of OS files, and has not been shrunk in any way (it's not compressed or sparse) so it's mostly unused space. 
+VDO will use https://github.com/lz4/lz4[LZ4] to compress the copy. 
+
+[source,shell]
+----
+[nick@host ~]$ ls -lh guest-images/guest1.qcow2 
+-rw-------. 1 nick nick 20G May 15 18:28 guest-images/guest1.qcow2
+[nick@host ~]$ 
+----
+
+Copy to the USB drive. This is the first real work VDO has to do.
+If you want to see resources being consumed while the file is copied, run ``top`` in a second terminal. You will see many VDO processes with names like _kvdo0:bioQ1_, _kvdo0:indexW_ and _kvdo0:dedupeQ_.
+
+If you're using an old USB2 drive, this copy can take over an hour.  
+The drag is mostly caused by the appalling write speed of old USB devices, and partly because of VDO's block compression and deduplication work.
+
+Use the ``rsync`` command to copy the file, not the old classic ``cp``,  
+because the ``-P`` option shows progress.
+
+[source,shell]
+----
+[nick@host ~]$ rsync -P guest-images/guest1.qcow2 /mnt/my_mount/
+guest1.qcow2
+ 21,474,836,480 100%   35.96MB/s    0:09:29 (xfr#1, to-chk=0/1)
+[nick@host ~]$ 
+----
+
+Check the storage space used. VDO says the amount of space used has gone up from 4.5G to 5.8G.
+
+[source,shell]
+----
+[nick@host ~]$ df -h /mnt/my_mount/
+Filesystem          Size  Used Avail Use% Mounted on
+/dev/mapper/my_vdo  640G   25G  616G   4% /mnt/my_mount
+[nick@host ~]$ 
+[nick@host ~]$ sudo vdostats --human-readable
+Device                    Size      Used Available Use% Space saving%
+/dev/mapper/my_vdo       58.4G      5.8G     52.6G   9%           93%
+[nick@host ~]$ 
+----
+
+
+== start a VM using the image file
+
+Does the new VDO device work? 
+
+To check VDO, fire up a VM using the image file you copied.
+
+If you are using an old USB2 drive, this boot test may fail. The read speed may be so slow some booting processes time out. 
+
+Create a new VM using the image.
+The command has no less than 7 options.
+
+[source,shell]
+----
+virt-install \
+    --network bridge:virbr0 \
+    --name vm_vdo \
+    --disk /mnt/my_mount/guest1.qcow2 \
+    --os-variant rhel8.0 \
+    --import \
+    --graphics none \
+    --noautoconsole
+----
+
+Check the VM's state. 
+
+[source,shell]
+----
+[nick@host ~]$ virsh list
+ Id    Name                           State
+----------------------------------------------------
+ 1     vm_vdo                         running
+
+[nick@host ~]$ 
+----
+
+== clean up 
+
+Return your workstation to its previous state with some housekeeping. There are a few things to clean up - a VM is running, VDO has persistent configuration, and the USB drive is plugged in and mounted on the file system.
+A workstation reboot won't do the trick. A reboot will remove the VM and mount, but it won't remove the definitions of the VM and VDO device. 
+
+
+
+=== delete the VM 
+
+Stop the VM and delete the configuration with these commands. 
+
+[source,shell]
+----
+virsh destroy vm_vdo
+virsh undefine vm_vdo
+----
+
+=== delete the VDO device definition
+
+This command makes VDO forget about the new device. 
+Don't expect this USB stick to work with your Windows PC or Mac. 
+If you want to turn the USB drive back into regular storage, reformat it.
+
+Systemd starts a VDO service when the workstation boots. 
+If the definition exists but the USB drive is not inserted, this service fails to start. 
+Command ``sudo systemctl status vdo`` shows the error messages. 
+
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo remove -n my_vdo --force
+Removing VDO my_vdo
+Stopping VDO my_vdo
+vdo: WARNING - VDO service my_vdo already stopped
+[nick@host ~]$ 
+----
+
+=== unplug the USB drive  
+
+If you want to remove the USB device, run these commands first. 
+``vdo stop`` does some clean-up work, including removing the device mapper node.
+``udisksctl power-off`` checks no process is using the drive, clears caches and disables the USB port. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo stop -n my_vdo
+Stopping VDO my_vdo
+[nick@host ~]$ 
+[nick@host ~]$ sudo udisksctl power-off -b /dev/sdb
+[nick@host ~]$ 
+----
+
+if you did not remove the VDO config _my_vdo_, VDO is now a little upset. 
+It will recover when the USB drive is plugged in again. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo status
+[sudo] password for nick: 
+vdo: ERROR - vdodumpconfig: Failed to make FileLayer from '/dev/disk/by-id/usb-SanDisk_Extreme_AA011020150130231287-0:0' with No such file or directory
+[nick@host ~]$ 
+----
+
+=== plug the USB drive in again
+
+If you want to re-insert the USB drive, carry out these quick steps. 
+
+. Plug in the USB drive.
+. Restart the volume.
+. Remount it. 
+
+When you insert the USB drive, the kernel handles the USB work automatically and creates /dev/sdb.
+VDO can then see this volume. 
+But the device mapper node is gone and the volume isn't mounted.
+
+[source,shell]
+----
+[nick@host ~]$ sudo vdo status
+VDO status:
+  Date: '2020-05-29 10:00:30+01:00'
+  Node: host.example.com
+...
+    Device mapper status: not available
+...
+    VDO statistics: not available
+[nick@host ~]$ 
+[nick@host ~]$ sudo vdo start -n my_vdo
+Starting VDO my_vdo
+Starting compression on VDO my_vdo
+VDO instance 0 volume is ready at /dev/mapper/my_vdo
+[nick@host ~]$ 
+[nick@host ~]$ sudo vdo status
+...
+    Device mapper status: 0 1342177280 vdo /dev/sdb normal - online online 1530781 
+...
+    VDO statistics:
+      /dev/mapper/my_vdo:
+        1K-blocks: 61272256
+...
+[nick@host ~]$ 
+----
+
+Run these commands to remount the volume. 
+This article doesn't cover any mounting configuration, like adding an entry in /etc/fstab or setting up USB auto-mount.
+
+[source,shell]
+----
+sudo mount /dev/mapper/my_vdo /mnt/my_mount/
+sudo chown .wheel /mnt/my_mount/
+sudo chmod 775 /mnt/my_mount/
+----
+
+All OK? Is the file still available? 
+
+[source,shell]
+----
+[nick@host ~]$ ls -lah /mnt/my_mount/
+total 20G
+drwxrwxr-x. 2 root wheel  26 May 20 16:25 .
+drwxr-xr-x. 3 root root   22 May 20 13:09 ..
+-rw-------. 1 nick nick  20G May 20 19:29 guest1.qcow2
+[nick@host ~]$ 
+----
+
+== more things to try 
+
+This is not a setup that you would use at work, but it does touch on several storage administration topics. 
+You mounted an XFS file system, ran a KVM virtual machine, and ran a bunch of tools.
+You configured VDO, and saw VDO compress a VM image by 90%. 
+
+For more VDO experiments ideas, try these.
+
+* Add LVM on top of the VDO device. 
+* Scale up with many VMs.
+* Store other kinds of files. 
+* Automate with https://docs.ansible.com/ansible/latest/modules/vdo_module.html[ansible's VDO module].
+

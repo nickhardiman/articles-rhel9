@@ -1,0 +1,381 @@
+= share directories with NFS
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 05-12-2020
+
+
+https://en.wikipedia.org/wiki/Network_File_System[NFS (Network File System)] allows a local directory to be shared by many remote machines. 
+
+Set up an NFS server. 
+Use the latest version 4 - this has been around for many years. 
+
+NFS is file-level storage, not block-level like the disk. 
+
+
+== a share and an export 
+
+When NFS shares a directory with other machines on the network, that directory is called an _export_. 
+It is also called a _share_, partly because that is a name Microsoft admins are used to, and partly because the name fits. 
+
+
+== install 
+
+The core of NFS is built into the kernel. 
+The user-space tools to manage NFS are not included in a minimal installation. 
+
+Use the root account. 
+
+Install the NFS utilities package. 
+
+[source,shell]
+----
+[root@guest1 ~]# dnf install nfs-utils
+Updating Subscription Management repositories.
+Last metadata expiration check: 1:04:57 ago on Mon 18 Jan 2021 09:21:41 GMT.
+Dependencies resolved.
+====================================================================================================================================
+ Package                        Architecture        Version                        Repository                                  Size
+====================================================================================================================================
+Installing:
+ nfs-utils                      x86_64              1:2.3.3-35.el8                 rhel-8-for-x86_64-baseos-rpms              494 k
+Installing dependencies:
+ gssproxy                       x86_64              0.8.0-16.el8                   rhel-8-for-x86_64-baseos-rpms              118 k
+ keyutils                       x86_64              1.5.10-6.el8                   rhel-8-for-x86_64-baseos-rpms               63 k
+ libverto-libevent              x86_64              0.3.0-5.el8                    rhel-8-for-x86_64-baseos-rpms               16 k
+ python3-pyyaml                 x86_64              3.12-12.el8                    rhel-8-for-x86_64-baseos-rpms              193 k
+ quota                          x86_64              1:4.04-10.el8                  rhel-8-for-x86_64-baseos-rpms              214 k
+ quota-nls                      noarch              1:4.04-10.el8                  rhel-8-for-x86_64-baseos-rpms               94 k
+ rpcbind                        x86_64              1.2.5-7.el8                    rhel-8-for-x86_64-baseos-rpms               70 k
+
+Transaction Summary
+====================================================================================================================================
+Install  8 Packages
+
+Total download size: 1.2 M
+Installed size: 3.7 M
+Is this ok [y/N]: 
+----
+
+== configure  
+
+The _/etc/nfs.conf_ file is an https://en.wikipedia.org/wiki/INI_file[INI file]. 
+A fresh install has a lot of headings, but only one value (`use-gss-proxy=1`). 
+Use `man nfs.conf` to find out more about this file. 
+
+[source,shell]
+----
+[root@guest1 ~]$ grep -v -E '^#' /etc/nfs.conf 
+[general]
+[exportfs]
+[gssd]
+use-gss-proxy=1
+[lockd]
+[mountd]
+[nfsdcltrack]
+[nfsd]
+[statd]
+[sm-notify]
+[root@guest1 ~]$ 
+----
+
+
+
+
+=== use version 4 only
+
+Versions 3 and 4 are enabled. 
+Version 4.2 has been around for a few years, so it's safe to keep this one and disable the others. 
+
+[source,shell]
+----
+[root@guest1 ~]# grep vers /etc/nfs.conf 
+# reverse-lookup=n
+# vers2=n
+# vers3=y
+# vers4=y
+# vers4.0=y
+# vers4.1=y
+# vers4.2=y
+[root@guest1 ~]# 
+----
+
+Enable version 4.2.
+This is enabled by default, so this change only makes it more obvious. 
+
+This file can be changed by editing it or by using the nfsconf utility. 
+
+[source,shell]
+----
+[root@guest1 ~]$ nfsconf --set nfsd vers4.2 y
+[root@guest1 ~]$ 
+----
+
+Check.  
+
+[source,shell]
+----
+[root@guest1 ~]$ grep -v -E '^#' /etc/nfs.conf 
+...
+[nfsd]
+vers4.2 = y
+[statd]
+[sm-notify]
+[root@guest1 ~]$ 
+----
+
+Disable the older versions. 
+
+Don't set _vers4_ to _n_.  
+The service will complain "rpc.nfsd: no version specified" and refuse to start. 
+
+[source,shell]
+----
+[root@guest1 ~]# nfsconf --set nfsd vers4.1 n
+[root@guest1 ~]# nfsconf --set nfsd vers4.0 n
+[root@guest1 ~]# nfsconf --set nfsd vers3 n
+[root@guest1 ~]# 
+----
+
+
+=== configure systemd
+
+The NFS service does not run by default.  
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl status nfs-server
+● nfs-server.service - NFS server and services
+   Loaded: loaded (/usr/lib/systemd/system/nfs-server.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl start nfs-server
+[root@guest1 ~]# 
+----
+
+Enable and run. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl enable nfs-server
+Created symlink /etc/systemd/system/multi-user.target.wants/nfs-server.service → /usr/lib/systemd/system/nfs-server.service.
+[root@guest1 ~]# 
+----
+
+Check. 
+
+[source,shell]
+----
+[root@guest1 pv1]# systemctl status nfs-server
+● nfs-server.service - NFS server and services
+   Loaded: loaded (/usr/lib/systemd/system/nfs-server.service; enabled; vendor preset: disabled)
+  Drop-In: /run/systemd/generator/nfs-server.service.d
+           └─order-with-mounts.conf
+   Active: active (exited) since Tue 2020-10-20 02:47:34 PDT; 7h ago
+  Process: 1477 ExecStart=/bin/sh -c if systemctl -q is-active gssproxy; then systemctl reload gssproxy ; fi (code=exited, status=0/SUCCESS)
+  Process: 1420 ExecStart=/usr/sbin/rpc.nfsd (code=exited, status=0/SUCCESS)
+  Process: 1414 ExecStartPre=/usr/sbin/exportfs -r (code=exited, status=0/SUCCESS)
+ Main PID: 1477 (code=exited, status=0/SUCCESS)
+
+Oct 20 02:47:33 helper systemd[1]: Starting NFS server and services...
+Oct 20 02:47:34 helper systemd[1]: Started NFS server and services.
+[root@guest1 pv1]# 
+----
+
+The service exited, but things are working. 
+
+The kernel loads some modules related to nfs. 
+
+[source,shell]
+----
+[root@guest1 ~]# lsmod | grep nfs
+nfsd                  471040  13
+auth_rpcgss           114688  1 nfsd
+nfs_acl                16384  1 nfsd
+lockd                 122880  1 nfsd
+grace                  16384  2 nfsd,lockd
+sunrpc                479232  14 nfsd,auth_rpcgss,lockd,nfs_acl
+[root@guest1 ~]# 
+----
+
+The service is listening to all interfaces on port 2049.
+
+[source,shell]
+----
+[root@guest1 ~]$ ss -tln | grep 2049
+LISTEN   0         64                   0.0.0.0:2049             0.0.0.0:*      
+LISTEN   0         64                      [::]:2049                [::]:*      
+[root@guest1 ~]$ 
+----
+
+New processes are running, including the NFSv4 Client Tracking Daemon _nfsdcld_ and some NFS server processes _nfsd_.
+NFS processes are described in https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_file_systems/mounting-nfs-shares_managing-file-systems[Red Hat's user guide]. 
+
+
+[source,shell]
+----
+[root@guest1 ~]$ ps -ef | grep nfs
+root         869       1  0 19:17 ?        00:00:00 /usr/sbin/nfsdcld
+root        2772       2  0 21:13 ?        00:00:00 [nfsiod]
+root        2945       2  0 21:29 ?        00:00:00 [nfsd]
+root        2946       2  0 21:29 ?        00:00:00 [nfsd]
+root        2947       2  0 21:29 ?        00:00:00 [nfsd]
+root        2948       2  0 21:29 ?        00:00:00 [nfsd]
+root        2949       2  0 21:29 ?        00:00:00 [nfsd]
+root        2950       2  0 21:29 ?        00:00:00 [nfsd]
+root        2951       2  0 21:29 ?        00:00:00 [nfsd]
+root        2952       2  0 21:29 ?        00:00:00 [nfsd]
+root        3247    1955  0 21:48 pts/0    00:00:00 grep --color=auto nfs
+[root@guest1 ~]$ 
+----
+
+
+== create exports  
+
+=== make some directories 
+
+Create three directories. 
+Configure NFS to share these. 
+Check they work. 
+
+
+[source,shell]
+----
+[root@guest1 ~]# mkdir /var/nfs
+[root@guest1 ~]# 
+[root@guest1 ~]# cd /var/nfs
+[root@guest1 nfs]# 
+[root@guest1 nfs]# mkdir pv1 pv2 pv3
+[root@guest1 nfs]# 
+----
+
+[source,shell]
+----
+[root@guest1 nfs]# ls -l
+total 0
+drwxr-xr-x. 2 root root 6 Oct 20 09:15 pv1
+drwxr-xr-x. 2 root root 6 Oct 20 09:15 pv2
+drwxr-xr-x. 2 root root 6 Oct 20 09:15 pv3
+[root@guest1 ~]# 
+[root@guest1 nfs]# chmod 777 *
+[root@guest1 nfs]# 
+----
+
+
+=== tell NFS about these directories 
+
+Add config for the new exports. 
+
+[source,shell]
+----
+[root@guest1 nfs]# vi /etc/exports
+
+/var/nfs/pv1	*(rw,sync,root_squash)
+/var/nfs/pv2	*(rw,sync,root_squash)
+/var/nfs/pv3	*(rw,sync,root_squash)
+[root@guest1 pv1]# 
+----
+
+Tell the NFS service about the new exports.
+
+[source,shell]
+----
+[root@guest1 pv1]# exportfs -ra
+[root@guest1 pv1]# 
+----
+
+Check.
+
+[source,shell]
+----
+[root@guest1 pv1]# exportfs 
+/export       	<world>
+/var/nfs/pv1  	<world>
+/var/nfs/pv2  	<world>
+/var/nfs/pv3  	<world>
+[root@guest1 pv1]#
+----
+
+
+== mount an export 
+
+Mount one of the new exports and create a file. 
+The _/mnt/_ directory is often used as a mount point for NFS. 
+
+
+=== the /mnt/ directory 
+
+
+This check shows there is nothing special going on for the directory /mnt/. 
+It's part of the root directory /.
+The _/dev/mapper/rhel-root_ filesystem name shows root is managed by 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/index[LVM (Linux Volume Manager)]. 
+
+[source,shell]
+----
+[root@guest1 ~]# ls /mnt
+[root@guest1 ~]#
+[root@guest1 nfs]# df /mnt
+Filesystem            1K-blocks    Used Available Use% Mounted on
+/dev/mapper/rhel-root  40854028 2390688  38463340   6% /
+[root@guest1 nfs]# 
+----
+
+
+=== mount a share on /mnt
+
+Mount a share. 
+Do this on the same machine, not across the network. 
+
+[source,shell]
+----
+[root@guest1 nfs]# mount guest1:/var/nfs/pv1 /mnt
+[root@guest1 nfs]# 
+----
+
+Check.
+
+[source,shell]
+----
+[root@guest1 nfs]# df /mnt
+Filesystem          1K-blocks    Used Available Use% Mounted on
+guest1:/var/nfs/pv1  40854528 2391040  38463488   6% /mnt
+[root@guest1 nfs]#  
+----
+
+
+
+=== create a file 
+
+Temporarily mount the NFS share and create a new empty file.
+
+[source,shell]
+----
+[root@guest1 nfs]# mount guest1:/var/nfs/pv1 /mnt
+[root@guest1 nfs]# 
+[root@guest1 nfs]# touch /mnt/hello
+[root@guest1 nfs]# 
+----
+
+Check the file. 
+It's owned by nobody. 
+
+[source,shell]
+----
+[root@guest1 nfs]# ls -la /var/nfs/pv1
+total 0
+drwxrwxrwx. 2 root   root   19 Jan 18 15:38 .
+drwxr-xr-x. 5 root   root   39 Jan 18 15:34 ..
+-rw-r--r--. 1 nobody nobody  0 Jan 18 15:38 hello
+[root@guest1 nfs]# 
+----
+
+
+=== unmount 
+
+Stop using the NFS share. 
+
+[source,shell]
+----
+[root@guest1 nfs]# umount /mnt
+[root@guest1 nfs]# 
+----

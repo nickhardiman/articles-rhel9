@@ -1,0 +1,386 @@
+= LVM (Logical Volume Manager)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-09-2020
+
+
+
+https://redhatsummitlabs.gitlab.io/building-a-rhel-gold-image-for-azure/
+LVM is very common in physical machines and on-premise virtual machines to configure OS and Data disks in software, rather than in hardware.
+
+
+== docs 
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/
+  Storage and Clusters
+    Configuring and managing high availability clusters
+    https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/index
+
+Products & Services > Product Documentation > Red Hat Enterprise Linux > 8
+ > Configuring and managing logical volumes
+  > Chapter 4. Configuring LVM logical volumes
+
+man lvm 
+
+lots of man pages. 
+
+[source,shell]
+----
+SEE ALSO
+       lvm(8) lvm.conf(5) lvmconfig(8)
+
+       pvchange(8)  pvck(8)  pvcreate(8)  pvdisplay(8)  pvmove(8)  pvremove(8)
+       pvresize(8) pvs(8) pvscan(8)
+
+       vgcfgbackup(8)  vgcfgrestore(8)  vgchange(8) vgck(8) vgcreate(8) vgcon‐
+       vert(8)  vgdisplay(8)  vgexport(8)  vgextend(8)  vgimport(8)  vgimport‐
+       clone(8)  vgmerge(8)  vgmknodes(8)  vgreduce(8) vgremove(8) vgrename(8)
+       vgs(8) vgscan(8) vgsplit(8)
+
+       lvcreate(8) lvchange(8)  lvconvert(8)  lvdisplay(8)  lvextend(8)  lvre‐
+       duce(8) lvremove(8) lvrename(8) lvresize(8) lvs(8) lvscan(8)
+
+       lvm-fullreport(8) lvm-lvpoll(8) lvm2-activation-generator(8) blkdeacti‐
+       vate(8) lvmdump(8)
+
+       dmeventd(8) lvmpolld(8)  lvmlockd(8)  lvmlockctl(8)  cmirrord(8)  lvmd‐
+       busd(8)
+
+       lvmsystemid(7) lvmreport(7) lvmraid(7) lvmthin(7) lvmcache(7)
+----
+
+
+== where not to use it 
+
+image builder 
+image builder cannot set up LVM.
+
+azure
+LVM use in Azure is limited
+https://redhatsummitlabs.gitlab.io/building-a-rhel-gold-image-for-azure/
+While LVM is a useful tool still for Data disks in Azure, the Red Hat recommendation is not to use LVM for Operating System disks at this time (mount points like /, /bin, /usr, /var, etc).
+
+Frequently Asked Questions and Recommended Practices for Microsoft Azure
+
+Can Logical Volume Management (LVM) be used for RHEL VM disks in Microsoft Azure?
+https://access.redhat.com/articles/2758981#can-logical-volume-management-lvm-be-used-for-rhel-vm-disks-in-microsoft-azure-19
+
+Everything done as root because ...
+
+[source,shell]
+----
+[nick@host1 libvirt]$ sudo su -
+[sudo] password for nick: 
+[root@host1 ~]# 
+----
+
+== config 
+
+/etc/lvm/lvm.conf
+
+It's huge.
+
+[source,shell]
+----
+[root@host1 ~]# wc -l /etc/lvm/lvm.conf
+2283 /etc/lvm/lvm.conf
+[root@host1 ~]# 
+----
+
+It's one of those fancy config layouts that looks a bit like JSON, similar to named.conf. 
+
+
+[source,shell]
+----
+[root@host1 ~]# grep -v -E '^\s*#|^\s*$' /etc/lvm/lvm.conf 
+config {
+	checks = 1
+	abort_on_errors = 0
+	profile_dir = "/etc/lvm/profile"
+}
+
+...(several more stanzas)...
+
+dmeventd {
+	mirror_library = "libdevmapper-event-lvm2mirror.so"
+	snapshot_library = "libdevmapper-event-lvm2snapshot.so"
+	thin_library = "libdevmapper-event-lvm2thin.so"
+}
+[root@host1 ~]# 
+----
+
+
+
+== USB stick 
+
+insert USB thumb drive 
+
+
+Kernel recognizes the drive. 
+Gnome mounts the drive. 
+
+
+=== identify drive 
+
+check list of USB devices 
+
+[source,shell]
+----
+[root@host1 ~]# lsusb
+Bus 002 Device 003: ID 17ef:1003 Lenovo Integrated Smart Card Reader
+Bus 002 Device 002: ID 8087:0024 Intel Corp. Integrated Rate Matching Hub
+Bus 002 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 003 Device 002: ID 0781:5567 SanDisk Corp. Cruzer Blade    <-- thumb drive 
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 006: ID 04f2:b217 Chicony Electronics Co., Ltd Lenovo Integrated Camera (0.3MP)
+Bus 001 Device 004: ID 147e:2016 Upek Biometric Touchchip/Touchstrip Fingerprint Sensor
+Bus 001 Device 003: ID 047d:1020 Kensington Expert Mouse Trackball
+Bus 001 Device 002: ID 8087:0024 Intel Corp. Integrated Rate Matching Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+[root@host1 ~]# 
+----
+
+check /dev/
+
+[source,shell]
+----
+[root@host1 ~]# ls -l /dev/disk/by-path/*usb*
+lrwxrwxrwx. 1 root root 9 Sep  8 14:08 /dev/disk/by-path/pci-0000:0e:00.0-usb-0:1:1.0-scsi-0:0:0:0 -> ../../sdb
+[root@host1 ~]# 
+----
+
+check logs
+
+[source,shell]
+----
+[root@host1 ~]# tail -30 /var/log/messages
+...
+Sep  8 13:42:13 h1 kernel: usb 3-1: new high-speed USB device number 2 using xhci_hcd
+Sep  8 13:42:14 h1 kernel: usb 3-1: New USB device found, idVendor=0781, idProduct=5567, bcdDevice= 1.26
+Sep  8 13:42:14 h1 kernel: usb 3-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+Sep  8 13:42:14 h1 kernel: usb 3-1: Product: Firebird USB Flash Drive
+Sep  8 13:42:14 h1 kernel: usb 3-1: Manufacturer: SanDisk
+Sep  8 13:42:14 h1 kernel: usb 3-1: SerialNumber: 4C532000061225111040
+Sep  8 13:42:14 h1 mtp-probe[4389]: checking bus 3, device 2: "/sys/devices/pci0000:00/0000:00:1c.6/0000:0e:00.0/usb3/3-1"
+Sep  8 13:42:14 h1 mtp-probe[4389]: bus: 3, device: 2 was not an MTP device
+Sep  8 13:42:14 h1 kernel: usb-storage 3-1:1.0: USB Mass Storage device detected
+Sep  8 13:42:14 h1 kernel: scsi host6: usb-storage 3-1:1.0
+Sep  8 13:42:14 h1 kernel: usbcore: registered new interface driver usb-storage
+Sep  8 13:42:14 h1 kernel: usbcore: registered new interface driver uas
+Sep  8 13:42:14 h1 journal[2567]: unhandled action 'bind' on /sys/devices/pci0000:00/0000:00:1c.6/0000:0e:00.0/usb3/3-1
+Sep  8 13:42:14 h1 journal[2567]: unhandled action 'bind' on /sys/devices/pci0000:00/0000:00:1c.6/0000:0e:00.0/usb3/3-1/3-1:1.0
+Sep  8 13:42:15 h1 kernel: scsi 6:0:0:0: Direct-Access     SanDisk  Cruzer Blade     1.26 PQ: 0 ANSI: 5
+Sep  8 13:42:15 h1 kernel: sd 6:0:0:0: Attached scsi generic sg2 type 0
+Sep  8 13:42:15 h1 kernel: sd 6:0:0:0: [sdb] 62530624 512-byte logical blocks: (32.0 GB/29.8 GiB)
+Sep  8 13:42:15 h1 kernel: sd 6:0:0:0: [sdb] Write Protect is off
+Sep  8 13:42:15 h1 kernel: sd 6:0:0:0: [sdb] Write cache: disabled, read cache: enabled, doesn't support DPO or FUA
+Sep  8 13:42:15 h1 kernel: sdb: sdb1 sdb2 sdb3
+Sep  8 13:42:15 h1 kernel: sd 6:0:0:0: [sdb] Attached SCSI removable disk
+Sep  8 13:42:15 h1 journal[1275]: Mounted /dev/sdb1 at /run/media/nhardima/RHRE-20200630 on behalf of uid 1000
+...
+----
+
+Look at the mount details. 
+
+[source,shell]
+----
+[root@host1 libvirt]$ mount | grep /dev/sd
+/dev/sda1 on /boot type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+/dev/sdb1 on /run/media/nhardima/RHRE-20200630 type iso9660 (ro,nosuid,nodev,relatime,nojoliet,check=s,map=n,blocksize=2048,uid=1000,gid=1000,dmode=500,fmode=400,uhelper=udisks2)
+[root@host1 libvirt]$ 
+----
+
+
+Unmount the drive. 
+
+[source,shell]
+----
+[root@host1 ~]# umount /dev/sdb1
+[root@host1 ~]# 
+----
+
+View what's on the drive. 
+The wipefs tool can remove the table of contents for a file system, so it looks like there's nothing on the disk. 
+It's a quick way of removing an entire file system.  
+
+This `wipefs /dev/sdb` command doesn't wipe anything - it lists a few details about the file systems it finds, like the offset (the address where they are). 
+
+[source,shell]
+----
+[root@host1 ~]# wipefs /dev/sdb
+DEVICE OFFSET TYPE    UUID                   LABEL
+sdb    0x8001 iso9660 2020-06-30-19-18-49-00 RHRE-20200630
+sdb    0x1fe  dos                            
+sdb    0x200  gpt                            
+sdb    0x0    mac                            
+[root@host1 ~]# 
+----
+
+
+=== wipe disk 
+
+Can't create a volume group with a formatted disk.
+
+[source,shell]
+----
+[root@host1 ~]# vgcreate myvg /dev/sdb
+  Device /dev/sdb excluded by a filter.
+[root@host1 ~]# 
+----
+
+check disk signatures. 
+
+[source,shell]
+----
+[root@host1 ~]# wipefs /dev/sdb
+DEVICE OFFSET TYPE    UUID                   LABEL
+sdb    0x8001 iso9660 2020-06-30-19-18-49-00 RHRE-20200630
+sdb    0x1fe  dos                            
+sdb    0x200  gpt                            
+sdb    0x0    mac                            
+[root@host1 ~]# 
+----
+
+Delete everything. 
+Adding the --all option tells wipefs to remove the indexes.  
+
+[source,shell]
+----
+[root@host1 ~]# wipefs --all /dev/sdb
+/dev/sdb: 5 bytes were erased at offset 0x00008001 (iso9660): 43 44 30 30 31
+/dev/sdb: 2 bytes were erased at offset 0x000001fe (dos): 55 aa
+/dev/sdb: 8 bytes were erased at offset 0x00000200 (gpt): 45 46 49 20 50 41 52 54
+/dev/sdb: 2 bytes were erased at offset 0x00000000 (mac): 45 52
+/dev/sdb: calling ioctl to re-read partition table: Success
+[root@host1 ~]# 
+----
+
+Check again.
+
+[source,shell]
+----
+[root@host1 ~]# wipefs /dev/sdb
+[root@host1 ~]# 
+----
+
+
+=== add physical volume, volume group and logical volume 
+
+https://gist.github.com/JakeDEvans/908d9a75aa5fc24c9eee24f4912af9aa
+
+[source,shell]
+----
+pvremove -y -ff /dev/sdb
+pvcreate /dev/sdb
+vgcreate myvg /dev/sdb
+vgscan
+----
+
+[source,shell]
+----
+[root@host1 ~]# pvcreate /dev/sdb
+  Physical volume "/dev/sdb" successfully created.
+[root@host1 ~]# 
+----
+
+[source,shell]
+----
+[root@host1 ~]# vgcreate myvg /dev/sdb
+  Volume group "myvg" successfully created
+[root@host1 ~]# 
+----
+
+one-line alternative
+
+[source,shell]
+----
+[root@host1 ~]# vgcreate myvg /dev/sdb
+  Physical volume "/dev/sdb" successfully created.
+  Volume group "myvg" successfully created
+[root@host1 ~]# 
+----
+
+check 
+
+[source,shell]
+----
+[root@host1 ~]# pvs
+  PV                                                    VG   Fmt  Attr PSize   PFree 
+  /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae rhel lvm2 a--  464.74g     0 
+  /dev/sdb                                              myvg lvm2 a--   29.81g 29.81g
+[root@host1 ~]# 
+----
+
+use all space for one new partition 
+
+[source,shell]
+----
+[root@host1 ~]# lvcreate --name mylv --extents 100%VG myvg
+  Logical volume "mylv" created.
+[root@host1 ~]# 
+----
+
+
+check 
+
+[source,shell]
+----
+[root@host1 ~]# lvs
+  LV   VG   Attr       LSize    Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  mylv myvg -wi-a-----   29.81g                                                    
+  home rhel -wi-ao---- <399.05g                                                    
+  root rhel -wi-ao----   49.98g                                                    
+  swap rhel -wi-ao----   15.71g                                                    
+[root@host1 ~]#
+----
+
+=== remove logical volume, volume group and physical volume 
+
+[source,shell]
+----
+[root@host1 ~]# lvremove myvg/mylv
+Do you really want to remove active logical volume myvg/mylv? [y/n]: y
+  Logical volume "mylv" successfully removed
+[root@host1 ~]# 
+----
+
+[source,shell]
+----
+[root@host1 ~]# vgremove myvg
+  Volume group "myvg" successfully removed
+[root@host1 ~]# 
+----
+
+check 
+
+[source,shell]
+----
+[root@host1 ~]# pvs
+  PV                                                    VG   Fmt  Attr PSize   PFree  
+  /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae rhel lvm2 a--  464.74g      0 
+  /dev/sdb                                                   lvm2 ---  <29.82g <29.82g
+[root@host1 ~]# 
+----
+
+remove physical volume from LVM control 
+
+[source,shell]
+----
+[root@host1 ~]# pvremove /dev/sdb
+  Labels on physical volume "/dev/sdb" successfully wiped.
+[root@host1 ~]# 
+----
+
+check 
+
+[source,shell]
+----
+[root@host1 ~]# pvs
+  PV                                                    VG   Fmt  Attr PSize   PFree
+  /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae rhel lvm2 a--  464.74g    0 
+[root@host1 ~]# 
+----
+
+
+

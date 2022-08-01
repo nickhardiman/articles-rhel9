@@ -1,0 +1,159 @@
+= LUKS (Linux Unified Key Setup)
+Nick Hardiman 
+:source-highlighter: highlight.js
+
+!!! LUKS not applied on a guest
+
+Did you know you can set many passwords for unlocking your RHEL  workstation? 
+
+Any of them will allow access. 
+
+
+Get to know your block devices. 
+Spot your encrypted partition.
+Add another password for unlocking your disk.
+
+explore the current setup. 
+You will see things like this.  
+
+* one block device (your laptop's disk)
+* many mounted devices 
+
+
+== view block devices 
+
+The lsblk command shows a good summary. 
+
+[source,shell]
+----
+[nick@host ~]$ lsblk
+NAME                                          MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+sda                                             8:0    0 465.8G  0 disk  
+├─sda1                                          8:1    0     1G  0 part  /boot
+└─sda2                                          8:2    0 464.8G  0 part  
+  └─luks-06674073-845d-4a8a-836d-35b90a61beae 253:0    0 464.8G  0 crypt 
+    ├─rhel-root                               253:1    0    50G  0 lvm   /
+    ├─rhel-swap                               253:2    0  15.7G  0 lvm   [SWAP]
+    └─rhel-home                               253:3    0   399G  0 lvm   /home
+sr0                                            11:0    1  1024M  0 rom   
+[nick@host ~]$ 
+----
+
+After staring at this table for a little while, some details start to emerge.  
+
+* /dev/sda is the only disk in the laptop.
+* The partition /dev/sda1 is showing up as /boot. 
+* Partition /dev/sda2 isn't mounted - LUKS and LVM are handling that. 
+
+These files in the /dev/ directory are the first block device and its partitions. 
+It's a good bet the new USB drive will show up as /dev/sdb.
+
+[source,shell]
+----
+[nick@host ~]$ ls /dev/sd*
+/dev/sda  /dev/sda1  /dev/sda2
+[nick@host ~]$ 
+----
+
+
+== view mounted devices 
+
+There are quite a few other files in /dev/ mounted, in addition to sda's partitions.
+If you want to see absolutely everything mounted on the file system, try running ``findmnt``.
+
+[source,shell]
+----
+[nick@host ~]$ mount | grep /dev/
+tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev,seclabel)
+devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,seclabel,gid=5,mode=620,ptmxmode=000)
+/dev/mapper/rhel-root on / type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+mqueue on /dev/mqueue type mqueue (rw,relatime,seclabel)
+hugetlbfs on /dev/hugepages type hugetlbfs (rw,relatime,seclabel,pagesize=2M)
+/dev/sda1 on /boot type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+/dev/mapper/rhel-home on /home type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+[nick@host ~]$ 
+----
+
+These other devices help the OS function. 
+These are low-level devices that few users ever look at.
+
+* /dev/mapper/* - storage handled by LVM. 
+* devpts on /dev/pts - pseudo terminals for the CLI.
+* tmpfs on /dev/shm - shared memory for processes to talk to each other.  
+* mqueue on /dev/mqueue - system message queues.
+* hugetlbfs on /dev/hugepages - RAM lookup tables, used to keep track of which process is using which chunk of memory.
+
+
+
+== view LVM volumes
+
+The space you are using is all handled by 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/index[LVM (Logical Volume Manager)]
+
+[source,shell]
+----
+[nick@host ~]$ sudo lvs
+  LV   VG   Attr       LSize    Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  home rhel -wi-ao---- <399.05g                                                    
+  root rhel -wi-ao----   49.98g                                                    
+  swap rhel -wi-ao----   15.71g                                                    
+[nick@host ~]$ 
+----
+
+The lvs command has an option for displaying which columns to show. 
+The default's got a whole load of columns I don't want, and doesn't show devices. 
+A custom view shows the LVM volumes and what device each one uses. 
+But the disk is encrypted, so unfortunately the three device names are confusing LUKS labels. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo lvs -o lv_name,vg_name,size,devices
+  LV   VG   LSize    Devices                                                      
+  home rhel <399.05g /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae(4022)  
+  root rhel   49.98g /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae(106178)
+  swap rhel   15.71g /dev/mapper/luks-06674073-845d-4a8a-836d-35b90a61beae(0)     
+[nick@host ~]$ 
+----
+
+== view LUKS 
+
+Partition /dev/sda2 is a LUKS device. 
+It's encrypted and password-protected. 
+
+This device mapper command shows the name of the LUKS device. 
+Those numbers in the parentheses are the device numbers (major and minor pairs, if that means anything to you).
+
+[source,shell]
+----
+[nick@host ~]$ sudo dmsetup ls
+rhel-home	(253:3)
+luks-06674073-845d-4a8a-836d-35b90a61beae	(253:0)
+rhel-swap	(253:2)
+rhel-root	(253:1)
+[nick@host ~]$ 
+----
+
+You can view a load of obscure low-level information about your encrypted partition. 
+
+[source,shell]
+----
+[nick@host ~]$ sudo cryptsetup luksDump /dev/sda2
+[sudo] password for nick: 
+LUKS header information
+Version:       	2
+Epoch:         	3
+...
+----
+
+== add a second password 
+
+Add a second passphrase using the command ``sudo cryptsetup luksAddKey /dev/sda2``.
+Every extra key will gets its own keyslot section in the ``cryptsetup luksDump`` output. 
+
+== check your work 
+
+Reboot 
+
+Enter the new password
+
+

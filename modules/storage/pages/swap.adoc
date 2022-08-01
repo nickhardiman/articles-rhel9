@@ -1,0 +1,27 @@
+= swap 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-09-2020
+
+
+
+file as swap 
+
+[source,shell]
+----
+# Add 4G swap 
+# 1024 K in M * 1024 M in G * 4 G = 4194304
+SWAPFILE=/var/cache/swap
+dd if=/dev/zero of=/var/cache/swap bs=1024 count=4194304
+chmod 0600 $SWAPFILE
+# Setup the swap file with the command:
+mkswap $SWAPFILE
+# To enable the swap file immediately but not automatically at boot time:
+swapon $SWAPFILE
+# To enable it at boot time, edit /etc/fstab to include the following entry:
+echo "$SWAPFILE swap swap defaults 0 0" >> /etc/fstab
+----
+
+LVM volume as swap 
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_storage_devices/getting-started-with-swap_managing-storage-devices#adding-swap-space_getting-started-with-swap

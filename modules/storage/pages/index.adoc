@@ -1,0 +1,7 @@
+= storage
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+I'm in the process of experimenting with a free developer subscription and RHEL 8 on an Asus PN50  mini-PC in my home lab. 
+I'm writing about my experiments here. 
