@@ -1,0 +1,178 @@
+= cgroups 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2020
+
+https://en.wikipedia.org/wiki/Cgroups[CGroups] are used for:
+
+* *Resource limiting*  groups can be set to not exceed a configured memory limit, which also includes the file system cache[8][9]
+* *Prioritization*     some groups may get a larger share of CPU utilization[10] or disk I/O throughput[11]
+* *Accounting*         measures a group's resource usage, which may be used, for example, for billing purposes[12]
+* *Control*            freezing groups of processes, their checkpointing and restarting[12]
+
+https://www.redhat.com/files/summit/session-assets/2017/S103870-Demystifying-systemd.pdf
+Slices, Scopes, Services
+
+* Slice – Unit type for creating the cgroup hierarchy for resource management.
+* Scope – Organizational unit that groups a daemon’s worker processes.
+* Service – Process or group of processes controlled by systemd
+
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/resource_management_guide/index
+
+
+== documents 
+
+== docs 
+
+cgroups in RHEL7
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/resource_management_guide/index
+There is no RHEL8 version. 
+
+[source,XML]
+----
+sudo dnf install kernel-doc
+----
+
+[source,shell]
+----
+[nick@host1 Documents]$ ls /usr/share/doc/kernel-doc-4.18.0/Documentation/cgroup-v1/
+00-INDEX              cpuacct.txt  freezer-subsystem.txt  memory.txt    pids.txt
+blkio-controller.txt  cpusets.txt  hugetlb.txt            net_cls.txt   rdma.txt
+cgroups.txt           devices.txt  memcg_test.txt         net_prio.txt
+[nick@host1 Documents]$ 
+----
+
+== mounts in rhel 8 
+
+[source,shell]
+----
+[nick@host1 ~]$ mount | grep cgroup
+tmpfs on /sys/fs/cgroup type tmpfs (ro,nosuid,nodev,noexec,seclabel,mode=755)
+cgroup on /sys/fs/cgroup/systemd type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,xattr,release_agent=/usr/lib/systemd/systemdcgroups-agent,name=systemd)
+cgroup on /sys/fs/cgroup/cpuset type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,cpuset)
+cgroup on /sys/fs/cgroup/devices type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,devices)
+cgroup on /sys/fs/cgroup/hugetlb type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,hugetlb)
+cgroup on /sys/fs/cgroup/freezer type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,freezer)
+cgroup on /sys/fs/cgroup/net_cls,net_prio type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,net_cls,net_prio)
+cgroup on /sys/fs/cgroup/rdma type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,rdma)
+cgroup on /sys/fs/cgroup/cpu,cpuacct type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,cpu,cpuacct)
+cgroup on /sys/fs/cgroup/perf_event type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,perf_event)
+cgroup on /sys/fs/cgroup/pids type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,pids)
+cgroup on /sys/fs/cgroup/blkio type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,blkio)
+cgroup on /sys/fs/cgroup/memory type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,memory)
+[nick@host1 ~]$ 
+----
+
+
+== cgconfig 
+
+systemd 
+
+[source,shell]
+----
+[nick@host1 ~]$ systemctl status cgconfig.service 
+● cgconfig.service - Control Group configuration service
+   Loaded: loaded (/usr/lib/systemd/system/cgconfig.service; enabled; vendor preset: disabled)
+   Active: active (exited) since Fri 2020-06-26 15:56:51 BST; 42min ago
+  Process: 2538 ExecStart=/usr/sbin/cgconfigparser -l /etc/cgconfig.conf -s 1664 (code=exited, status=0/SUCCESS)
+ Main PID: 2538 (code=exited, status=0/SUCCESS)
+    Tasks: 0 (limit: 203692)
+   Memory: 0B
+   CGroup: /system.slice/cgconfig.service
+[nick@host1 ~]$ 
+----
+
+
+[source,shell]
+----
+[nick@host1 ~]$ cat  /etc/cgconfig.conf 
+#
+#  Copyright IBM Corporation. 2007
+#
+#  Authors:	Balbir Singh <balbir@linux.vnet.ibm.com>
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of version 2.1 of the GNU Lesser General Public License
+#  as published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it would be useful, but
+#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+#
+# By default, we expect systemd mounts everything on boot,
+# so there is not much to do.
+# See man cgconfig.conf for further details, how to create groups
+# on system boot using this file.
+# <!-- BEGIN ansible-runner cgroup -->
+group ansible-runner {
+  perm {
+    admin {
+      uid = awx;
+      gid = awx;
+    }
+
+    task {
+      uid = awx;
+      gid = awx;
+    }
+  }
+
+  cpuacct { }
+  memory { }
+  pids { }
+}
+# <!-- END ansible-runner cgroup -->
+[nick@host1 ~]$ 
+----
+
+
+== systemd
+
+
+systemd-cgls
+
+[source,shell]
+----
+[root@guest1 ~]# systemd-run --unit=toptest --slice=test top -b
+Running as unit: toptest.service
+[root@guest1 ~]# 
+[root@guest1 ~]# 
+[root@guest1 ~]# systemd-cgls
+Control group /:
+-.slice
+...
+├─test.slice
+│ └─toptest.service
+│   └─3310 /usr/bin/top -b
+...
+└─system.slice
+  ├─rngd.service
+  │ └─684 /sbin/rngd -f --fill-watermark=0
+  ├─systemd-udevd.service
+[root@guest1 ~]# 
+----
+
+
+== many changes
+
+Add config files for CPU, disk and memory. 
+
+See changes with https://www.freedesktop.org/software/systemd/man/systemd-delta.html[systemd-delta].
+
+
+[source,shell]
+----
+[nick@guest1 ~]$ systemd-delta
+[REDIRECTED] /etc/systemd/system/dbus-org.freedesktop.timedate1.service → /usr/lib/systemd/system/dbus-org.freedesktop.timedate1.se>
+[REDIRECTED] /etc/systemd/system/default.target → /usr/lib/systemd/system/default.target
+[MASKED]     /etc/systemd/system/systemd-timedated.service → /usr/lib/systemd/system/systemd-timedated.service
+[EXTENDED]   /usr/lib/systemd/system/httpd.service → /usr/lib/systemd/system/httpd.service.d/cpu.conf
+[EXTENDED]   /usr/lib/systemd/system/httpd.service → /usr/lib/systemd/system/httpd.service.d/disk.conf
+[EXTENDED]   /usr/lib/systemd/system/httpd.service → /usr/lib/systemd/system/httpd.service.d/memory.conf
+[EXTENDED]   /usr/lib/systemd/system/httpd.socket → /usr/lib/systemd/system/httpd.socket.d/10-listen443.conf
+[EXTENDED]   /usr/lib/systemd/system/systemd-udev-trigger.service → /usr/lib/systemd/system/systemd-udev-trigger.service.d/systemd->
+
+8 overridden configuration files found.
+[nick@guest1 ~]$ 
+----

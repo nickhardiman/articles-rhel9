@@ -1,0 +1,222 @@
+= control storage with a cgroup
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2020
+
+
+Slow Apache down by throttling disk read.
+
+Requires a second disk mounted on /var/www/.
+!!! no it doesn't, just havent figured out the right tuning level yet. 100k?
+
+Throttle read speed to 100k per second. 
+A request should take 10 seconds instead of being instant. 
+That's right for a 1000k file read in 100k/sec chunks.
+
+Linux is built to speed up storage requests, which means we can't use _ab_ for testing. 
+When a process requests a file from disk, the kernel tries to help by copying the requested file from slow disk storage to quick memory storage.  
+The first request gets the file from disk, and the disk read throttle works. 
+The next request, and every other subsequent request, gets the file from memory. 
+The disk read throttle works for the first request, then the disk isn't touched again. Since the disk isn't touched, the read throttle doesn't do anything. 
+These tests remove the file from memory using a 
+https://www.kernel.org/doc/Documentation/sysctl/vm.txt[sysctl file] named drop_caches. 
+
+
+
+Doc
+/usr/share/doc/kernel-doc-4.18.0/Documentation/cgroup-v1/blkio-controller.txt 
+
+== second disk 
+
+Two disks, /dev/vda and /dev/vdb. 
+The second disk is mounted on /var/www/.
+
+Don't throttle /dev/vda. 
+Severely throttling Apache's access to the primary disk will break it. 
+Apache won't be able to start.
+
+[root@guest1 ~]# ls -l /dev/vd*
+brw-rw----. 1 root disk 253,  0 Jun 30 10:34 /dev/vda
+brw-rw----. 1 root disk 253,  1 Jun 30 10:34 /dev/vda1
+brw-rw----. 1 root disk 253,  2 Jun 30 10:34 /dev/vda2
+brw-rw----. 1 root disk 253,  3 Jun 30 10:34 /dev/vda3
+brw-rw----. 1 root disk 253, 16 Jun 30 10:34 /dev/vdb
+brw-rw----. 1 root disk 253, 17 Jun 30 10:34 /dev/vdb1
+[root@guest1 ~]# 
+
+
+== The host machine can throttle VM storage 
+
+host has many cgroup settings for each virtual machine. 
+
+Each VM has a scope.
+
+
+[source,shell]
+----
+[nick@host1 machine-qemu\x2d5\x2dguest1.scope]$ cat '/sys/fs/cgroup/blkio/machine.slice/machine-qemu\x2d5\x2dguest1.scope/blkio.throttle.io_service_bytes'
+8:0 Read 13824000
+8:0 Write 0
+8:0 Sync 13824000
+...
+253:3 Discard 0
+253:3 Total 62103552
+Total 138031104
+[nick@host1 machine-qemu\x2d5\x2dguest1.scope]$ 
+----
+
+
+== linux page cache. 
+
+Apache doesn't read random.bin direct from disk. 
+It asks the OS and the OS fetches it from disk. 
+The OS also sticks it in page cache, in memory. 
+That way, next time anything asks for random.bin, no need to access the disk.
+The read is instant. 
+
+This guest machine has nearly 1G of spare memory, so it can fit a lot into its page cache. 
+
+[source,shell]
+----
+free -h        # Look at the buff/cache value. 
+sync           
+echo 1 > /proc/sys/vm/drop_caches    # clear the page cache. 
+free -h        # The buff/cache value has dropped. 
+
+----
+
+
+
+== configure 
+
+set DefaultBlockIOAccounting to yes 
+
+[source,shell]
+----
+set DefaultBlockIOAccounting to yes 
+[root@guest1 ~]# grep Account /etc/systemd/system.conf
+#DefaultCPUAccounting=no
+#DefaultIOAccounting=no
+#DefaultIPAccounting=no
+#DefaultBlockIOAccounting=no
+DefaultBlockIOAccounting=yes
+#DefaultMemoryAccounting=yes
+#DefaultTasksAccounting=yes
+[root@guest1 ~]# 
+----
+
+Turn on accounting for the httpd.service unit. 
+
+[source,shell]
+----
+systemctl set-property httpd.service BlockIOAccounting=true
+----
+
+creates this file.
+
+[source,shell]
+----
+[root@guest1 ~]# cat /etc/systemd/system.control/httpd.service.d/50-BlockIOAccounting.conf
+# This is a drop-in unit file extension, created via "systemctl set-property"
+# or an equivalent operation. Do not edit.
+[Service]
+BlockIOAccounting=yes
+[root@guest1 ~]# 
+----
+
+
+./usr/lib/systemd/system/httpd.service.d/disk.conf
+[source,shell]
+----
+[Service]
+BlockIOReadBandwidth=/var/www 100K
+----
+
+
+
+[source,shell]
+----
+systemctl daemon-reload
+systemctl restart httpd.service
+----
+
+
+== view settings 
+
+New files show in _Drop-In_ section of the the service summary. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl status httpd.service
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+  Drop-In: /etc/systemd/system.control/httpd.service.d
+           └─50-BlockIOAccounting.conf
+           /usr/lib/systemd/system/httpd.service.d
+           └─cpu.conf, disk.conf, memory.conf         
+...
+----
+
+New systemctl settings  
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl show --all httpd.service | grep Block
+BlockIOAccounting=yes
+BlockIOWeight=[not set]
+StartupBlockIOWeight=[not set]
+BlockIOReadBandwidth=/var/www 100000
+NonBlocking=no
+DropInPaths=/etc/systemd/system.control/httpd.service.d/50-BlockIOAccounting.conf /usr/lib/systemd/system/httpd.service.d/cpu.conf /usr/lib/systemd/system/httpd.service.d/disk.conf /usr/lib/systemd/system/httpd.service.d/memory.conf
+[root@guest1 ~]# 
+----
+
+New cgroup settings 
+
+[source,shell]
+----
+with mounted /var/www/
+[root@guest1 ~]# cat /sys/fs/cgroup/blkio/system.slice/httpd.service/blkio.throttle.read_bps_device
+253:16 100000
+[root@guest1 ~]# 
+----
+
+
+== test with curl, not ab 
+
+Only one disk read goes slow. 
+For every subsequent read, the OS only pretends to read the disk. 
+
+Use curl to make one request. 
+
+[source,shell]
+----
+free -h        # Look at the buff/cache value. 
+curl -O -k https://192.168.122.4/random.bin # First request is slow. 
+free -h        # The buff/cache value has increased. 
+curl -O -k https://192.168.122.4/random.bin # Second request is instant.
+----
+
+Clear the page cache. 
+
+[source,shell]
+----
+sync
+echo 1 > /proc/sys/vm/drop_caches       # clear the page cache. 
+free -h        # The buff/cache value has decreased. 
+----
+
+Try again. 
+
+[source,shell]
+----
+curl -O -k https://192.168.122.4/random.bin # This request is slow. 
+----
+
+
+== ermmm
+
+This is about preventing, not encouraging. 
+
+Weights
+

@@ -1,0 +1,85 @@
+= benchmark Apache with the default cgroup 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2020
+
+
+Torture Apache with cgroups. 
+
+
+== cgroup system.slice
+
+The systemd unit httpd.service is in the cgroup system.slice.
+
+[source,shell]
+----
+[nick@guest1 ~]$ systemd-cgls  --unit  httpd.service
+Unit httpd.service (/system.slice/httpd.service):
+├─4596 /usr/sbin/httpd -DFOREGROUND
+├─4597 /usr/sbin/httpd -DFOREGROUND
+├─4598 /usr/sbin/httpd -DFOREGROUND
+├─4599 /usr/sbin/httpd -DFOREGROUND
+├─4600 /usr/sbin/httpd -DFOREGROUND
+└─4815 /usr/sbin/httpd -DFOREGROUND
+[nick@guest1 ~]$ 
+----
+
+Process numbers are stored. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ ls /sys/fs/cgroup/systemd/system.slice/httpd.service/
+cgroup.clone_children  cgroup.procs  notify_on_release  tasks
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ cat /sys/fs/cgroup/memory/system.slice/httpd.service/cgroup.procs
+4596
+4597
+4598
+4599
+4600
+4815
+[nick@guest1 ~]$ 
+----
+
+
+== benchmark Apache 
+
+Create a 1MB file. 
+
+[source,shell]
+----
+head -c 1000000 /dev/urandom > /var/www/html/random.bin
+----
+Start top in a different terminal.
+
+Use 
+https://httpd.apache.org/docs/2.4/programs/ab.html[ab (apache benchmark)].
+
+[source,shell]
+----
+ab -c5  -n 10000 https://192.168.122.4/random.bin
+----
+
+Run top. 
+
+top says the CPU is working flat out. 
+ab is using the most CPU, and apache is using what's left.
+ 
+[source,shell]
+----
+top - 14:06:31 up 11:26,  2 users,  load average: 1.65, 1.08, 0.48
+Tasks: 124 total,   3 running, 121 sleeping,   0 stopped,   0 zombie
+%Cpu0  : 77.7 us, 19.3 sy,  0.0 ni,  0.0 id,  0.0 wa,  0.7 hi,  2.3 si,  0.0 st
+MiB Mem :   1323.0 total,    560.0 free,    219.3 used,    543.7 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.    891.1 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4546 root      20   0   36216   6444   5368 R  35.5   0.5   0:03.41 ab
+   4265 apache    20   0 1486416  21308   9832 S  16.6   1.6   0:11.59 httpd
+   4264 apache    20   0 1355232  19684   9896 S  16.3   1.5   0:09.69 httpd
+   4263 apache    20   0 1355244  19544   9892 S  14.6   1.4   0:08.84 httpd
+   4479 apache    20   0 1355196  19728   9896 S  13.0   1.5   0:09.48 httpd
+...
+----
+
+

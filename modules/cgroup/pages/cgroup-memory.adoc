@@ -1,0 +1,194 @@
+= control memory with a cgroup
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-07-2020
+
+
+Kill Apache's children by limiting memory.
+
+The apache web server is one parent process and many children. 
+The parent spawns children, and the children do all the serving.
+Since process children can be throttled, hanged and killed, it's worth not taking the family analogy too seriously.
+
+== memory management 
+
+Memory management in Linux is complicated. 
+Some machine resources, like CPU and disk space, are either used or unused. 
+Machine memory might be used, swapped, reserved, overcommitted like aircraft seats, or even https://access.redhat.com/articles/45002[dirty].
+The RSS (Resident Set Size) column in this process list shows RAM usage. 
+It's process memory that is actually in the machine's memory.
+
+[source,shell]
+----
+[root@guest1 ~]# ps  -ylC httpd
+S   UID     PID    PPID  C PRI  NI   RSS    SZ WCHAN  TTY          TIME CMD
+S     0    3337       1  0  80   0 13916 71110 core_s ?        00:00:00 httpd
+S    48    3338    3337  0  80   0  8904 74294 -      ?        00:00:00 httpd
+S    48    3339    3337  0  80   0 14840 371535 -     ?        00:00:00 httpd
+S    48    3340    3337  0  80   0 12792 338770 -     ?        00:00:00 httpd
+S    48    3341    3337  0  80   0 12792 338770 -     ?        00:00:00 httpd
+[root@guest1 ~]# 
+----
+
+== memory limit
+
+Set a memory limit a little bigger than a child process needs.
+When the child process gets busy, it needs more memory than this limit. 
+The OS then kills the process. 
+
+Hitting a memory limit is more brutal than hitting a CPU limit. 
+The process is killed. 
+
+== configure 
+
+Add file. 
+
+./usr/lib/systemd/system/httpd.service.d/memory.conf
+[source,ini]
+----
+[Service]
+MemoryLimit=40M
+----
+
+Stop Apache. 
+
+[source,shell]
+----
+[root@guest1 log]# systemctl stop httpd.service
+[root@guest1 log]#
+----
+
+Tell systemd about the new configuration.
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl daemon-reload
+[root@guest1 ~]# 
+----
+
+The MemoryLimit value is copied to a cgroup configuration file.
+40 mebibytes is 41943040 bytes (1024 * 1024 * 40).
+
+[source,shell]
+----
+[root@guest1 ~]# cat /sys/fs/cgroup/memory/system.slice/httpd.service/memory.limit_in_bytes 
+41943040
+[root@guest1 ~]# 
+----
+
+
+== view activity
+
+View the apache processes. 
+Open a second window. 
+Watch the activity log. 
+
+
+[source,shell]
+----
+[nick@guest1 ~]$ journalctl -f
+Hint: You are currently not seeing messages from other users and the system.
+      Users in the 'systemd-journal' group can see all messages. Pass -q to
+      turn off this notice.
+-- Logs begin at Tue 2020-06-30 02:58:34 EDT. --
+...
+----
+
+Back to the first window. 
+Start Apache. 
+
+[source,shell]
+----
+[root@guest1 ~]# systemctl start httpd.service
+[root@guest1 ~]# 
+----
+
+Activity log in second window shows success. 
+
+[source,shell]
+----
+Jun 30 04:27:39 guest1.lab.example.com systemd[1]: Starting The Apache HTTP Server...
+Jun 30 04:27:39 guest1.lab.example.com systemd[1]: Started The Apache HTTP Server.
+Jun 30 04:27:39 guest1.lab.example.com httpd[3337]: Server configured, listening on: port 443, port 80
+----
+
+
+== stress apache 
+
+Start stressing Apache. 
+
+[source,shell]
+----
+[root@guest1 ~]# ab -c5  -n 10000 https://192.168.122.4/random.bin
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.122.4 (be patient)
+...
+----
+
+The children doing the work ask for more memory. 
+Within seconds, the child doing the most work asks for too much memory, past the allowed limit.
+It is killed by the OS https://linux-mm.org/OOM_Killer[OOM_Killer]. 
+
+The log shows many system diagnostic messages. 
+
+[source,shell]
+----
+Jun 30 04:34:33 guest1.lab.example.com kernel: httpd invoked oom-killer: gfp_mask=0x600040(GFP_NOFS), nodemask=(null), order=0, oom_score_adj=0
+...
+Jun 30 04:34:33 guest1.lab.example.com kernel: Task in /system.slice/httpd.service killed as a result of limit of /system.slice/httpd.service
+Jun 30 04:34:33 guest1.lab.example.com kernel: memory: usage 40960kB, limit 40960kB, failcnt 7734
+...
+Jun 30 04:34:33 guest1.lab.example.com kernel: Memory cgroup out of memory: Killed process 3339 (httpd) total-vm:1489212kB, anon-rss:10124kB, file-rss:9012kB, shmem-rss:68kB, UID:48
+----
+
+Stop stressing apache. 
+
+[source,shell]
+----
+^C
+
+Server Software:        Apache/2.4.37
+Server Hostname:        192.168.122.4
+Server Port:            443
+...
+  98%    194
+  99%    594
+ 100%    684 (longest request)
+[root@guest1 ~]# 
+----
+
+The old process 3339 is gone. 
+The parent spawned a new one to take its place.  
+
+[source,shell]
+----
+[root@guest1 ~]# ps  -ylC httpd
+S   UID     PID    PPID  C PRI  NI   RSS    SZ WCHAN  TTY          TIME CMD
+S     0    3337       1  0  80   0 13916 71110 core_s ?        00:00:00 httpd
+S    48    3338    3337  0  80   0  8904 74294 -      ?        00:00:00 httpd
+S    48    3340    3337  0  80   0 18312 338802 -     ?        00:00:00 httpd
+S    48    3341    3337  0  80   0 18260 371586 -     ?        00:00:00 httpd
+S    48    3563    3337  1  80   0 18400 338802 -     ?        00:00:00 httpd
+S    48    3629    3337  0  80   0 15936 338770 -     ?        00:00:00 httpd
+[root@guest1 ~]# 
+----
+
+If you want to find out how to stop OOM_Killer picking on your favorite processes, 
+check out https://access.redhat.com/solutions/20985[/proc/$pid/oom_adj and OOM_DISABLE].
+
+
+== be reasonable 
+
+End Apache's suffering by raising the memory limit. 
+Use these commands. 
+
+[source,shell]
+----
+echo -e "[Service]\nMemoryLimit=400M\n" > /usr/lib/systemd/system/httpd.service.d/memory.conf
+systemctl daemon-reload
+systemctl restart httpd.service
+----
+
