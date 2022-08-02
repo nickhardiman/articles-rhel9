@@ -165,7 +165,7 @@ HOST=guest3
 NEW_DISK=/var/lib/libvirt/images/$HOST.qcow2
 INSTALL_ISO=/var/lib/libvirt/images/rhel-8.6-x86_64-dvd.iso
 KICKSTART_CONFIG=vm-$HOST-rhel8.ks
-IF1_MAC=52:54:00:03:00:03
+IF1_MAC=52:54:00:02:00:03
 IF1_NET=private1
 virt-install \
   --name="$HOST" \

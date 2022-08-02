@@ -30,6 +30,8 @@ The DHCP server hands out IP addresses from its pool. Libvirt can tell us which 
 
 Use SSH to connect from the workstation to _host1_. 
 
+
+
 View DHCP leases in libvirt's private0 network.
 
 [source,shell]
@@ -37,8 +39,8 @@ View DHCP leases in libvirt's private0 network.
 [nick@host2 ~]$ sudo virsh net-dhcp-leases private0 
  Expiry Time           MAC address         Protocol   IP address           Hostname   Client ID or DUID
 ------------------------------------------------------------------------------------------------------------
- 2022-08-01 10:08:25   52:54:00:00:00:02   ipv4       192.168.152.28/24    guest1     01:52:54:00:00:00:02
- 2022-08-01 09:51:14   52:54:00:02:00:02   ipv4       192.168.152.114/24   guest2     01:52:54:00:02:00:02
+ 2022-08-02 17:02:20   52:54:00:01:00:02   ipv4       192.168.152.71/24    guest1     01:52:54:00:01:00:02
+ 2022-08-02 16:49:10   52:54:00:01:00:03   ipv4       192.168.152.72/24    guest2     01:52:54:00:01:00:03
 
 [nick@host2 ~]$ 
 ....
@@ -49,13 +51,12 @@ View  leases in  private1.
 [source,shell]
 ....
 [nick@host2 ~]$ sudo virsh net-dhcp-leases private1
- Expiry Time   MAC address   Protocol   IP address   Hostname   Client ID or DUID
------------------------------------------------------------------------------------
+ Expiry Time           MAC address         Protocol   IP address           Hostname   Client ID or DUID
+------------------------------------------------------------------------------------------------------------
+ 2022-08-02 16:49:10   52:54:00:02:00:02   ipv4       192.168.162.114/24   guest2     01:52:54:00:02:00:02
 
 [nick@host2 ~]$ 
 ....
-
-Nothing!
 
 
 === try to connect using SSH
