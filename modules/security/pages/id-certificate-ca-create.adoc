@@ -13,6 +13,20 @@ It's not the only way - different processes are set up in different ways.
 
 This process sets up the required files in an ordinary user's home directory. 
 
+== other (and probably better) ways
+
+Other CLI tools for managing a CA and certificates
+
+* https://jamielinux.com/docs/openssl-certificate-authority/
+* https://github.com/smallstep/certificates 
+* https://www.gnutls.org/manual/html_node/certtool-Invocation.html and certtool, example at https://www.qemu.org/docs/master/system/tls.html
+
+Red Hat's docs
+
+* https://access.redhat.com/solutions/15497[How do I configure a CA and sign certificates using OpenSSL in Red Hat Enterprise Linux?]
+* https://access.redhat.com/documentation/en-us/red_hat_certificate_system/9/html/planning_installation_and_deployment_guide/setting_up_a_root_certificate_authority
+* https://access.redhat.com/products/red-hat-certificate-system/get-started
+
 == a server certificate 
 
 The process for adding a certificate to a service goes something like this. 
