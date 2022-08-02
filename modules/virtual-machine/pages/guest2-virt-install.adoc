@@ -77,9 +77,9 @@ POOL=images
 VOLUME=$HOST.qcow2
 OS_VARIANT=rhel9.0
 IF1_MAC=52:54:00:01:00:03
-IF1_BRIDGE=pubbr0
+IF1_BRIDGE=privbr0
 IF2_MAC=52:54:00:02:00:02
-IF2_BRIDGE=privbr0
+IF2_BRIDGE=privbr1
 ----
 
 Copy and paste the virt-install command into the file. 

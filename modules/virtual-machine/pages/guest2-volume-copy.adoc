@@ -178,7 +178,7 @@ It prints an activity log, along with seconds elapsed.
 
 [source,shell]
 ----
-[nick@host ~]$ virt-customize --add guest-images/guest2.qcow2 --root-password password:'x%5ckA-1' --hostname guest2.lab.example.com
+[nick@host ~]$ virt-customize --add guest2.qcow2 --root-password password:'x%5ckA-1' --hostname guest2.lab.example.com   --timezone       'Europe/London'  --selinux-relabel
 [   0.0] Examining the guest ...
 [   4.6] Setting a random seed
 [   4.6] Setting the machine ID in /etc/machine-id
@@ -193,3 +193,78 @@ It prints an activity log, along with seconds elapsed.
 This new QCOW image file is ready for use. 
 
 
+== write a script
+
+Use the root account. 
+
+[source,shell]
+----
+[nick@host1 ~]$ sudo su -
+[sudo] password for nick: 
+[root@host1 ~]# 
+----
+
+Use the libvirt directory. 
+This directory holds a few scripts used to create the libvirt networks. 
+
+[source,shell]
+....
+[root@host1 ~]# cd libvirt
+[root@host1 libvirt]# 
+....
+
+Create a shell script to hold the commands. 
+
+[source,shell]
+....
+[root@host1 libvirt]# vim vol-guest2-build.sh
+[root@host1 libvirt]# 
+....
+
+Add content. 
+The script exits if the file already exists. 
+This check makes it safer to run. 
+
+[source,shell]
+....
+GOLDEN_IMAGE=rhel-baseos-9.0-x86_64-kvm.qcow2 
+MY_COPY=guest2.qcow2
+SIZE=30G
+cd  /var/lib/libvirt/images/
+if [ -f $MY_COPY ]; then 
+  echo "file $MY_COPY already exists"
+  exit 1
+fi
+virsh vol-create-as --format qcow2 images $MY_COPY $SIZE 
+virt-resize --expand /dev/sda4 $GOLDEN_IMAGE $MY_COPY
+virt-customize \
+  --add            guest2.qcow2  \
+  --root-password  password:'x%5ckA-1'  \
+  --hostname       guest2.lab.example.com  \
+  --timezone       'Europe/London'  \
+  --selinux-relabel
+....
+
+Save your work. 
+
+Set the executable flag. 
+
+[source,shell]
+----
+[root@host2 libvirt]# chmod 754 vol-guest2-build.sh 
+[root@host2 libvirt]# 
+----
+
+Run the script. 
+
+If the volume already exists, the script exits with return code 1. 
+
+[source,shell]
+----
+[root@host2 libvirt]#  ./vol-guest2-build.sh 
+file guest2.qcow2 already exists
+[root@host2 libvirt]# 
+[root@host2 libvirt]# echo $?
+1
+[root@host2 libvirt]# 
+----
