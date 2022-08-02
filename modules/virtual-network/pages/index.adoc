@@ -10,6 +10,7 @@ Use libvirt to create a test network on my laptop.
 
 This physical machine is the host to many virtual machines. 
 
+
 .workstation, host and guests  
 ....
 .-----------------.      .------------------------------------------------------.     
@@ -65,6 +66,7 @@ For instance, if guest1 has a MAC address and an IP address that both end in 1, 
 * guest1 has two interfaces and a modern interface naming convention (enp1s0). 
 * guest2 also has two interfaces using the old naming convention (eth0).
 
+// https://docs.asciidoctor.org/asciidoc/latest/tables/build-a-basic-table/
 
 .bridges
 [%header,format=csv]
@@ -73,6 +75,7 @@ name,         interface, MAC,               IP,             domain
 *public0*,    *pubbr0*,  52:54:00:00:00:01, 192.168.1.1,    lab.example.com
 *private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
 *private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
+|===
 
 .guests attached to bridges
 [%header,format=csv]
@@ -87,5 +90,6 @@ guest2,       eth0,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
 *private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
 guest2,       eth1,      52:54:00:02:00:02, 192.168.152.3,  private.example.com
 guest3,       eth1,      52:54:00:02:00:03, 192.168.162.2,  private.example.com
+|===
 
 

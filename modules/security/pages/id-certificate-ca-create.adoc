@@ -20,6 +20,7 @@ Other CLI tools for managing a CA and certificates
 * https://jamielinux.com/docs/openssl-certificate-authority/
 * https://github.com/smallstep/certificates 
 * https://www.gnutls.org/manual/html_node/certtool-Invocation.html and certtool, example at https://www.qemu.org/docs/master/system/tls.html
+* https://github.com/OpenVPN/easy-rsa
 
 Red Hat's docs
 
