@@ -19,31 +19,8 @@ No repositories available
 [root@guest1 ~]# 
 ....
 
-== use your developer account to find the subscription pool ID
 
-These two lines can be customized,  to automatically entitle your new machine to updates from Red Hat. 
-
-[source,shell]
-....
-/usr/sbin/subscription-manager register --username=nick --password='some password!' 
-/usr/sbin/subscription-manager attach --pool=123456789abcdef123456789abcdef12
-....
-
-
-Open a web browser. 
-
-Visit the customer portal at https://access.redhat.com/.
-
-Log in with your name and password. These are the username and password you need for the kickstart file. 
-
-View the subscriptions page at https://access.redhat.com/management/subscriptions. An inventory table lists your subscriptions. The product name we are interested in is _Red Hat Developer Subscription for Individuals_.
-
-Click the _Subscription Number_ for _Red Hat Developer Subscription for Individuals_. Another table appears.
-
-Find the _Pool IDs_ row. The long string is the ID you need for the kickstart file. 
-
-
-== use your developer account to find the subscription pool ID
+== add subscription user, password and pool ID
 
 These two lines can be customized,  to automatically entitle your new machine to updates from Red Hat. 
 

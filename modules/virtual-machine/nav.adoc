@@ -2,6 +2,7 @@
 ** xref:libvirt-vm-plan.adoc[]
 ** xref:host-resources.adoc[]
 ** xref:guest1-kickstart-file.adoc[]
+** xref:pool-id-find.adoc[]
 ** xref:kickstart-subscription-pool.adoc[]
 ** xref:kickstart-check.adoc[]
 ** xref:guest1-virt-install.adoc[]

@@ -1,0 +1,35 @@
+= find your subscription pool ID
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+The subscription-manager utility uses your developer account to register a new machine. This utility talks to a central service named https://access.redhat.com/documentation/en-us/red_hat_subscription_management/1[Red Hat Subscription Management].
+
+Subscription-manager can use your subscription pool ID to entitle your machines to updates from Red Hat's CDN.
+There is another way - you can set https://access.redhat.com/articles/simple-content-access[SCA (Simple Content Access)]. This is enabled on your https://access.redhat.com/management[Red Hat Subscription Management] page. 
+
+== subscription-manager commands
+
+These two commands do the registration and subscription work. 
+They entitle your new machine to updates from Red Hat. 
+After running them, you can see your machines on your https://access.redhat.com/management/systems[customer portal systems page].
+
+[source,shell]
+....
+/usr/sbin/subscription-manager register --username=nick --password='some password!' 
+/usr/sbin/subscription-manager attach --pool=123456789abcdef123456789abcdef12
+....
+
+
+Open a web browser. 
+
+Visit the customer portal at https://access.redhat.com/.
+
+Log in with your name and password. These are the username and password you need for the kickstart file. 
+
+View the subscriptions page at https://access.redhat.com/management/subscriptions. An inventory table lists your subscriptions. The product name we are interested in is _Red Hat Developer Subscription for Individuals_.
+
+Click the _Subscription Number_ for _Red Hat Developer Subscription for Individuals_. Another table appears.
+
+Find the _Pool IDs_ row. The long string is the ID you need for the kickstart file. 
+
