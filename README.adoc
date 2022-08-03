@@ -5,9 +5,13 @@ Nick Hardiman
 
 
 Sometimes, I get the chance to write up my work. 
-These https://antora.org/[Antora]https://antora.org/ and 
-https://asciidoctor.org/[Asciidoctor] files are the source of https://hardiman.consulting/rhel/9/index.html. 
-Instructions on how to build the web site are posted at https://github.com/nickhardiman/docs-site.
+These https://antora.org/[Antora] and 
+https://asciidoctor.org/[Asciidoctor] files are the source of 
+https://hardiman.consulting/rhel/9/index.html. 
+
+If you have Antora, build a local copy of the web site for yourself. 
+Instructions on how to build the web site are posted at 
+https://github.com/nickhardiman/docs-site.
 
 [NOTE]
 ====
