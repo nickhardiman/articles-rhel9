@@ -1,17 +1,20 @@
-= assemble server hardware
+= add a server
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 31-12-2020
 
 
+Find a PC. 
 The PC is the case and all the parts inside it, such as motherboard, CPU, RAM, and storage. 
-The peripherals are the KVM (Keyboard, Video and Mouse) components.
 
-A server does not usually have KVM components attached - it's headless. 
+== peripherals
+
 The only essential part is the PC. 
+But installation is a lot easier with peripherals attached. 
+The peripherals are the KVM (Keyboard, Video and Mouse) components.
+A server does not usually have KVM components attached - it's headless. 
 
-
-
+.PC and peripherals
 [source,shell]
 ----
 +--------------------------+

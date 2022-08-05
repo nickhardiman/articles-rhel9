@@ -1,0 +1,60 @@
+= an ordinary home network
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 13-02-2022
+
+
+You probably already have a home network that look roughly like this. 
+
+.typical home network  
+....
+        +----------------------+----------------------+
+        |                      |                      | 
+.-------+-------.      .-------+-------.      .---------------.
+|               |      |               |      |               |
+|  workstation  |      |  router       |      | smart devices |
+|               |      |               |      |               |
+.---------------.      .---------------.      .---------------.
+....
+
+
+
+== the home network 
+
+Your home already contains a network. 
+This probaby has at least three boxes attached to it.
+
+.typical home network  
+....
+          network connections
+        +----------------------+----------------------+
+        |                      |                      | 
+.-------+-------.      .-------+-------.      .---------------.
+|               |      |               |      |               |
+|  workstation  |      |  router       |      | smart devices |
+|               |      |               |      |               |
+.---------------.      .---------------.      .---------------.
+....
+
+* your workstation, probably a laptop, maybe a gaming PC
+* the ISP's router, your gateway to the Internet
+* some smart devices, like a TV
+* network connections probaby use WiFi radio, not cables
+
+
+=== workstation 
+
+The workstation is whatever you work on - it might be a laptop running OS X or a gaming desktop running Windows.
+
+=== router
+
+The box the ISP gave you. 
+
+=== other devices 
+
+* smart devices. There are probably a whole load of smart devices on this home network, from phone to TV. We don't care about those. 
+* Network switch. This is probably built into your router. 
+* WiFi access point. This is also probably in your router. 
+* ethernet cables. 
+
+
