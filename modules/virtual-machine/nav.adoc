@@ -16,8 +16,6 @@
 ** xref:guest2-virt-install.adoc[]
 ** xref:guest2-connect.adoc[]
 ** xref:guest2-os-setup.adoc[]
-** xref:libvirt-network-private0-examine[]
-** xref:libvirt-network-private0-domain[]
 ** xref:guest2-network.adoc[]
 ** xref:guest2-dnsmasq-dhcp.adoc[]
 ** xref:guest3-install.adoc[]

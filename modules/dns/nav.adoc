@@ -1,4 +1,6 @@
 * xref:index.adoc[]
+** xref:libvirt-network-private0-examine[]
+** xref:libvirt-network-private0-domain[]
 ** xref:guest1-dnsmasq-ip-pool.adoc[]
 ** xref:guest1-dnsmasq-dhcp-dns.adoc[]
 ** xref:guest1-bind9-install.adoc[]
