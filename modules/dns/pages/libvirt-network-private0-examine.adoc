@@ -140,13 +140,3 @@ The IP pool config is between a pair of dhcp tags.
 [nick@host1 ~]$ 
 ....
 
-
-== /etc/hosts
-
-Out of the box, dnsmasq reads names and addresses from the /etc/hosts file. 
-
-A new host name, like _guest2.private.example.com_, can be added to two places. 
-
-* the host's /etc/hosts file, so the host can look up the guest's name
-* the host's dnsmasq configuration, so guests can look up the name
-
