@@ -1,0 +1,82 @@
+= bind9 and lab.example.com 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+https://www.isc.org/bind/[ISC Bind] answers DNS queries. 
+
+Use the name server bind9 to answer questions about the _lab.example.com_ domain. Bind is authoritative for this domain, so it manages names and addresses for hosts like guest1.lab.example.com. 
+
+
+.Bind9 on guest1 
+....
+  |  
+  | Internet
+  |
++-+-------------------------------------+
+|                                       |
+|     ISP router                        |
+|                                       |
++-+-------------------------------------+
+  |
+  | Bind9 forwards requests it can't answer  
+  | to the home network's DNS
+  |
++-+-------------------------------------+
+| enp1s0                                |
+|    Bind9 on guest1.lab.example.com    |
+| enp2s0                                |
++-+-------------------------------------+
+  |
+
+....
+
+
+
+== the ISP router 
+
+Bind9 forwards questions it can't answer to the home network's DNS server. 
+The ISP router usually has a DHCP server and a DNS server built into it. 
+This lets the home network manage names and addresses for the Internet.
+
+
+== not DHCP 
+
+Bind9 doesn't manage DHCP, like dnsmasq does. 
+When guest1 starts, it gets its IP address from the ISP router.
+Bind9 holds a copy of guest1's address. 
+
+
+== RPM packages 
+
+Two RPM packages, _bind_ and _bind-utils_, provide DNS server and utilities. 
+The bind package provides the named service, database and administrator tools like _rndc_ and _named-checkconf_.
+The bind_utils package provides more administrator tools like _dig_, _dnssec-keygen_ and _named-checkzone_.
+
+== domain _lab.example.com_
+
+
+== a zone 
+
+A zone is a set of names and addresses for a domain like _lab.example.com_. 
+The name server is authoritative for a zone - it's got the answers.
+Here, the zone and domain are the same. 
+In more complex setups, a domain can be split into many zones, managed by many name servers.  
+
+Bind's config has _zone_ options which tell Bind where these files are. 
+One zone option is in /etc/named.conf.
+
+[source,shell]
+----
+zone "." IN {
+	type hint;
+	file "named.ca";
+};
+----
+
+More zone options are in /etc/named.rfc1912.zones.
+https://tools.ietf.org/html/rfc1912[RFC 1912] is about "Common DNS Operational and Configuration Errors" and says "certain zones should always be present".
+The file _/etc/named.rfc1912.zones_ config file ticks that box. 
+
+
+

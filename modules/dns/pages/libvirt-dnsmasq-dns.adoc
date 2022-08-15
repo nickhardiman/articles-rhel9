@@ -1,0 +1,68 @@
+= dnsmasq's DNS service
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+Each host has a name and addresses. 
+
+* MAC address: *52:54:00:00:00:02*
+* IP address: *192.168.152.100*
+* https://en.wikipedia.org/wiki/Fully_qualified_domain_name[FQDN (Fully Qualified Domain Name)]: *guest1.private.example.com*
+
+A host name can be added to two places. 
+
+* the host's /etc/hosts file, so the host can look up the guest's name
+* the host's dnsmasq configuration, so guests can look up the name
+
+
+
+== host entries in libvirt's config
+
+Libvirt reads host details from a line like this in its XML config. 
+
+[source,XML]
+....
+<host mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />
+....
+
+
+== host entries in /etc/hosts
+
+Out of the box, dnsmasq reads names and addresses from the /etc/hosts file. 
+
+== host entries in dnsmasq's hostsfile
+
+See --dhcp-host and --dhcp-hostsfile in https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html 
+
+Extra dnsmasq config for hosts
+
+/var/lib/libvirt/dnsmasq/private0.hostsfile
+
+MAC address, host name 
+
+00:20:e0:3b:13:af,wap
+
+== host entries in dnsmasq's addnhosts
+
+Like /etc/hosts 
+
+/var/lib/libvirt/dnsmasq/private0.addnhosts
+
+
+== dnsmasq's DNS server
+
+dnsmasq's name resolution 
+
+Dnsmasq services for private0 only listen to the network address, 192.168.152.1. 
+
+[source,shell]
+....
+[nick@host1 ~]$ host guest1.private.example.com 192.168.152.1
+Using domain server:
+Name: 192.168.152.1
+Address: 192.168.152.1#53
+Aliases: 
+
+guest1.private.example.com has address 192.168.152.100
+[nick@host1 ~]$ 
+....

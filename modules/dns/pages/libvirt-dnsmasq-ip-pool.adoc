@@ -1,0 +1,64 @@
+= private0's IP pool 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+When the guest VM boots up, it is given the address 192.168.152...er...something. 
+The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
+
+When a VM starts, Libvirt's private0 network gives it an IP address to use from its IP pool. 
+
+
+== check the IP pool 
+
+View the dnsmasq configuration. 
+Its config files are in the folder /var/lib/libvirt/dnsmasq/. 
+
+This ``dhcp-range`` line tells dnsmasq what IP pool to manage for the _private0_ network. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo grep dhcp-range /var/lib/libvirt/dnsmasq/private0.conf
+[sudo] password for nick: 
+dhcp-range=192.168.152.2,192.168.152.254,255.255.255.0
+dhcp-range=2001:db8:ca2:3::1,ra-only
+[nick@host1 ~]$ 
+....
+
+View the libvirt configuration. 
+libvirt writes that dnsmasq configuration after reading its own network configuration.
+You can see libvirt's configuration  using the ``virsh net-dumpxml`` command.
+There are about 20 lines of XML that define the network.
+These are all listed further down. 
+
+The IP pool config is between a pair of dhcp tags.  
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-dumpxml private0
+...
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+    </dhcp>
+...
+[nick@host1 ~]$ 
+....
+
+
+== view reserved IP addresses 
+
+The DHCP service manages the IP pool. 
+
+These are IP addresses leased from the pool. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-dhcp-leases privbr0 
+[sudo] password for nick: 
+ Expiry Time           MAC address         Protocol   IP address          Hostname   Client ID or DUID
+-----------------------------------------------------------------------------------------------------------
+ 2021-01-12 21:27:31   52:54:00:00:00:02   ipv4       192.168.152.28/24   guest1     01:52:54:00:00:00:02
+
+[nick@host1 ~]$ 
+....
+

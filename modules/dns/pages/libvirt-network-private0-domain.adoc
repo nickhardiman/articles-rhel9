@@ -4,10 +4,16 @@ Nick Hardiman
 :revdate: 31-07-2022
 
 
-Add the domain _private.example.com_ before adding the name _guest2.private.example.com_.
+Add the domain _private.example.com_.
+
+Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
+
+== dnsmasq's security feature 
+
+Do this before adding the name _guest2.private.example.com_.
 
 dnsmasq has a security feature that ignores DNS domains it doesn't recognize. 
-The private0 configuration has no domain, so adding a full FQDN for the VM (_guest2.private.example.com_) won't work. 
+The private0 configuration has no domain, so adding a full FQDN for a VM like _guest2.private.example.com_ won't work. 
 Journalctl would show an error like this. 
 
 [source,shell]
@@ -15,8 +21,6 @@ Journalctl would show an error like this.
 May 29 18:17:15 host.private.example.com dnsmasq-dhcp[2380]: Ignoring domain private.example.com for DHCP host name guest2
 ....
 
-
-Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
 
 
 == edit libvirt config
