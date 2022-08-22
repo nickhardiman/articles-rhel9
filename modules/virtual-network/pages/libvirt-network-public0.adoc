@@ -40,15 +40,15 @@ Add the XML to a file.
 
 [source,shell]
 ....
-[root@host1 libvirt]# vi net-pubbr0.xml 
+[root@host1 libvirt]# vi net-public0.xml 
 ....
 
 Tell libvirt about the new configuration.
 
 [source,shell]
 ....
-[root@host1 libvirt]# virsh net-define net-pubbr0.xml
-Network public0defined from net-pubbr0.xml
+[root@host1 libvirt]# virsh net-define net-public0.xml
+Network public0defined from net-public0.xml
 
 [root@host1 libvirt]# 
 ....

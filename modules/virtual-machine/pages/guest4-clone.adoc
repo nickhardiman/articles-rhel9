@@ -1,15 +1,15 @@
-= clone guest2's image to create guest4 
+= clone guest1 to create guest4 
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 07-03-2021
 
 
-.guest1 and guest2 network interfaces
+.guest1 and guest1 network interfaces
 ----
             + pubbr0                                + privbr0                              + privbr1
             |                                       |                                      |
             |     +--------------------------+      |     +--------------------------+     | 
-   Internet |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |
+   Internet |     |  guest1.lab.example.com  |      |     |  guest1.lab.example.com  |     |
   <---------+     |                          |      +-----+ enp1s0            enp2s0 +-----+ 
             +-----+ enp1s0            enp2s0 +------+     |                          |     |
             |     |                          |      |     |                          |     |
@@ -24,82 +24,107 @@ Nick Hardiman
 ----
 
 
-Create another VM like guest2 using virt-clone, virt-sysprep and virt-customize. 
+Instead of installing _guest4_ from scratch, the way _guest1_ was created, make a copy.
+This procedure creates another VM like _guest1_ using *virt-clone*, *virt-inspector*, *virt-sysprep* and *virt-customize*. 
 This is almost an exact copy of machine layout and storage volume. 
 
-Instead of installing from scratch, the way _guest1_ was created, base it on guest2.
-
 Start by creating a new image file that holds the storage volume.
-Feel free to say _disk_, _storage volume_ or _image file_. 
+No need to call it an image file. Feel free to say _disk_ or _storage volume_. 
 
+* _host1_ thinks guest1.qcow2 is an image file. Try running `file /var/lib/libvirt/images/guest1.qcow2`
 * _guest4_ thinks it is a disk. 
-* _host1_ thinks it is an image file. 
 * _Libvirt_ thinks it is a file containing a storage volume. 
 
-The _guest2.qcow2_ storage volume has all the files guest4 needs.
-Make a copy of guest2's storage and customize it a little.
+The _guest1.qcow2_ storage volume has all the files guest4 needs.
+Make a copy of guest1's storage and customize it a little.
 This takes less time and effort than installing the OS from scratch.
 
-If guest2 is still running, virt-clone refuses to work, saying _Domain with devices to clone must be paused or shutoff_.
+If guest1 is still running, virt-clone refuses to work, saying _Domain with devices to clone must be paused or shutoff_.
+
+== stop the VM
 
 Use the root account. 
 
-Shutdown guest2. 
+Shutdown guest1 (`virsh suspend guest1` is OK too).
 
 [source,shell]
 ----
-[root@host1 ~]# virsh shutdown guest2
-Domain guest2 is being shutdown
+[root@host1 ~]# virsh shutdown guest1
+Domain guest1 is being shutdown
 
 [root@host1 ~]# 
-[root@host1 ~]# virsh list --all
+[root@host1 images]# virsh list --all
  Id   Name     State
 -------------------------
- 1    guest1   running
- -    guest2   shut off
+ 1    guest2   running
+ 2    guest3   running
+ -    guest1   shut off
 
-[root@host1 ~]# 
+[root@host1 images]# 
 ----
 
 
-Copy the guest2 VM.
+== copy the VM image
+
+Copy the guest1 VM.
 
 [source,shell]
 ----
-[root@host1 ~]# virt-clone --original rhel-baseos-9.0-x86_64-kvm.qcow2 --name guest4 --file /var/lib/libvirt/images/guest4.qcow2
-Allocating 'guest4.qcow2'                                          |  30 GB  00:00:03     
-Allocating 'guest4_VARS.fd'                                        | 528 kB  00:00:00     
+[root@host1 ~]# virt-clone --original guest1 --name guest4 --auto-clone
+Allocating 'guest4.qcow2'                                                         |  30 GB  00:00:05     
+Allocating 'guest4_VARS.fd'                                                       | 528 kB  00:00:00     
 
 Clone 'guest4' created successfully.
 [root@host1 ~]# 
 ----
 
-The new _guest4.qcow2_ file needs work. 
-For instance, it contains the wrong hostname. 
-
-== view the hostname with virt-inspector
-
-The _virt-inspector_ utility can display the hostname. 
-In fact, it produces a vast amount of data about all kinds of operating system things. 
-The output is an XML document - it's thousands of lines long, and mostly describes installed packages. 
-The _virt-customize_ utility is included in the _guestfs-tools_ package.
-
-Use XPATH to display the hostname part of the XML document. 
+There is now an extra virtual machine configured, with its own image file. 
 
 [source,shell]
 ----
-[root@host1 ~]# virt-inspector -a /var/lib/libvirt/images/guest4.qcow2 | virt-inspector --xpath '//hostname'
-<hostname>guest2.private.example.com</hostname>
+[root@host1 ~]# virsh list --all
+ Id   Name     State
+-------------------------
+ 1    guest2   running
+ 2    guest3   running
+ -    guest1   shut off
+ -    guest4   shut off
+
+[root@host1 ~]# 
+[root@host1 ~]# virsh vol-info guest4.qcow2 images
+Name:           guest4.qcow2
+Type:           file
+Capacity:       30.00 GiB
+Allocation:     2.53 GiB
+
 [root@host1 ~]# 
 ----
 
+If the new file is not there, tell libvirt to update its list with `virsh pool-refresh images`. 
 
+[source,shell]
+----
+[root@host1 libvirt]# virsh pool-refresh images
+Pool images refreshed
+
+[root@host1 libvirt]# 
+----
+
+
+The new _guest4_ file needs work. 
+For instance, remove old bash history, logs, and any mail. 
+Change the duplicate host name, machine ID and MAC address to something unique.  
 
 == reset the VM with virt-sysprep
 
-The new VM contains unwanted data.
-It has guest2's host keys, network settings. log entries and so on. 
-The virt-sysprep command can clean up the new machine by removing these. 
+The new VM has guest1's host keys, network settings, log entries and so on. 
+The _virt-sysprep_ command cleans up the new machine by removing unwanted data and replacing settings. 
+
+Most things we want to change, like the interface MAC addresses.
+One thing that doesn't change is file system UUIDs.
+These should be unique, but a new block ID causes boot problems. 
+
+
 
 [source,shell]
 ----
@@ -116,88 +141,83 @@ The virt-sysprep command can clean up the new machine by removing these.
 [root@host1 ~]# 
 ----
 
+To see the full list of things virt-sysprep does, run `virt-sysprep --list-operations`. 
+For instance, the  home directory of user _nick_ is still there, but the _~/.ssh_ directory is gone (see _ssh-userdir_). 
 
-== change the hostname with virt-customize 
+
+== view the hostname with virt-inspector
+
+The _virt-inspector_ utility can display the hostname. 
+In fact, it produces a vast amount of data about all kinds of operating system things. 
+The output is an XML document - it's thousands of lines long, and mostly describes installed packages. 
+The _virt-customize_ utility is included in the _guestfs-tools_ package.
+
+Use XPATH to display the hostname part of the XML document. 
+
+[source,shell]
+----
+[root@host1 ~]# virt-inspector -a /var/lib/libvirt/images/guest4.qcow2 | virt-inspector --xpath '//hostname'
+<hostname>guest1.private.example.com</hostname>
+[root@host1 ~]# 
+----
+
+== view new MAC addresses with virsh dumpxml
+
+The https://en.wikipedia.org/wiki/MAC_address[MAC address] 
+of each network interface is now something like _52:54:00:79:15:83_.
+The first half  is the same, but the last half is randomized. 
+
+This MAC address is made up of two halves. The first three octets _52:54:00_ are an  Organization ID, and the second  three octets _79:15:83_ are a unique ID.
+If it isn't unique, the network gets confused. 
+
+[source,shell]
+----
+[root@host2 ~]# virsh dumpxml guest4 | grep 'mac address'
+      <mac address='52:54:00:79:15:83'/>
+      <mac address='52:54:00:a5:1a:5f'/>
+[root@host2 ~]# 
+----
+
+
+== change settings with virt-customize 
 
 Change the hostname. 
+
 
 [source,shell]
 ----
 virt-customize \
   --add       /var/lib/libvirt/images/guest4.qcow2  \
-  --hostname  guest4.private.example.com \
-  --selinux-relabel
+  --hostname  guest4.lab.example.com \
+  --selinux-relabel \
+   --delete /etc/lvm/devices/system.devices
 ----
+
+The --delete option is related to https://bugzilla.redhat.com/show_bug.cgi?id=1965941
+
 
 Run the command. 
 
 [source,shell]
 ----
-[root@host1 ~]# virt-customize \
->   --add       /var/lib/libvirt/images/guest4.qcow2  \
->   --hostname  guest4.private.example.com \
->   --selinux-relabel
+[root@host1 ~]# virt-customize   --add /var/lib/libvirt/images/guest4.qcow2    --hostname guest4.lab.example.com   --selinux-relabel  --delete /etc/lvm/devices/system.devices 
 [   0.0] Examining the guest ...
-[   4.2] Setting a random seed
-[   4.2] Setting the hostname: guest4.private.example.com
-[   4.2] SELinux relabelling
-[  11.9] Finishing off
+[   6.3] Setting a random seed
+[   6.4] Setting the hostname: guest4.lab.example.com
+[   6.4] Deleting: /etc/lvm/devices/system.devices
+[   6.4] SELinux relabelling
+[  14.7] Finishing off
 [root@host1 ~]# 
 ----
 
 
 
-== view libvirt's list of volumes 
-
-Libvirt keeps a list of volumes in its storage pools. 
-It should already know about the new file guest4.qcow2. 
-
-List all the volumes in the _images_ storage pool with the `virsh vol-list images` command.
-
-If the new file is not there, tell libvirt to update its list with `virsh pool-refresh images`. 
-For instance, guest4.qcow2 is missing from this list. 
+== start both machines 
 
 [source,shell]
 ----
-[root@host1 ~]# virsh vol-list images
- Name                               Path
-----------------------------------------------------------------------------------------------
- guest1.qcow2                       /var/lib/libvirt/images/guest1.qcow2
- guest2.qcow2                       /var/lib/libvirt/images/guest2.qcow2
- rhel-8.3-x86_64-dvd.iso            /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
-...
-[root@host1 ~]# 
-----
-
-Refresh.
-
-[source,shell]
-----
-[root@host1 libvirt]# virsh pool-refresh images
-Pool images refreshed
-
-[root@host1 libvirt]# virsh vol-list images
- Name                               Path
-----------------------------------------------------------------------------------------------
- guest1.qcow2                       /var/lib/libvirt/images/guest1.qcow2
- guest2.qcow2                       /var/lib/libvirt/images/guest2.qcow2
- guest4.qcow2                       /var/lib/libvirt/images/guest4.qcow2
- rhel-8.3-x86_64-dvd.iso            /var/lib/libvirt/images/rhel-8.3-x86_64-dvd.iso
-...
-----
-
-
-Get more details with the _virsh vol-info_ command. 
-
-[source,shell]
-----
-[root@host1 libvirt]# virsh vol-info guest4.qcow2 images
-Name:           guest4.qcow2
-Type:           file
-Capacity:       30.00 GiB
-Allocation:     2.53 GiB
-
-[root@host1 libvirt]# 
+virsh start guest1
+virsh start guest4
 ----
 
 
@@ -207,14 +227,8 @@ If something goes wrong, remove the new machine and image file with this command
 
 [source,shell]
 ----
+virsh destroy guest4
 virsh undefine --nvram --remove-all-storage guest4
 ----
 
 
-== start both machines 
-
-[source,shell]
-----
-virsh start guest2
-virsh start guest4
-----
