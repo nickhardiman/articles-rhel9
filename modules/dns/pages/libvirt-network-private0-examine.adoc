@@ -80,6 +80,11 @@ or other application using the libvirt API.
 
 == view the dnsmasq config file
 
+View the dnsmasq configuration. 
+libvirt writes this configuration after reading its own network configuration.
+
+[source,shell]
+....
 [nick@host1 ~]$ sudo cat /var/lib/libvirt/dnsmasq/private0.conf
 ##WARNING:  THIS IS AN AUTO-GENERATED FILE. CHANGES TO IT ARE LIKELY TO BE
 ##OVERWRITTEN AND LOST.  Changes to this configuration should be made using:
@@ -103,6 +108,7 @@ dhcp-hostsfile=/var/lib/libvirt/dnsmasq/private0.hostsfile
 addn-hosts=/var/lib/libvirt/dnsmasq/private0.addnhosts
 dhcp-range=2001:db8:ca2:3::1,ra-only
 [nick@host1 ~]$ 
+....
 
 
 == check the IP pool 
