@@ -1,23 +1,23 @@
-= add host guest1.private.example.com to dnsmasq 
+= add host name and address to dnsmasq 
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 11-01-2021
 
 Set the _guest1_ VM's domain name and IP address.
 This is for the second interface _enp2s0_ only. 
-
-Edit libvirt's private0 network configuration. 
+Setting these values means adding a host element to libvirt's XML. 
 Libvirt will in turn edit dnsmasq's configuration.
-
 Libvirt reads host details from a line like this in its XML config. 
 
 [source,XML]
 ....
-<host mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />
+<host mac='52:54:00:01:00:02' name='guest1.private.example.com' ip='192.168.152.71' />
 ....
 
 
-== desired settings 
+Edit libvirt's private0 network configuration. 
+
+== desired settings for guest1
 
 When the guest VM boots up, it is given the address 192.168.152...er...something. 
 The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
@@ -27,11 +27,11 @@ We don't want an IP address that may change.
 Instead of searching for whatever was allocated after every boot, it's easier to assign fixed names and addresses. 
 These are the settings we want. 
 
-* MAC address: *52:54:00:00:00:02*
-* IP address: *192.168.152.100*
+* MAC address: *52:54:00:01:00:02*
+* IP address: *192.168.152.71*
 * FQDN: *guest1.private.example.com*
 
-Use dnsmasq to fix the IP address _192.168.152.100_ and the 
+Use dnsmasq to fix the IP address and the 
 https://en.wikipedia.org/wiki/Fully_qualified_domain_name[FQDN (Fully Qualified Domain Name)] _guest1.private.example.com_.
 
 
@@ -46,14 +46,32 @@ virsh shutdown guest1
 
 Check the current state of guest1 with ``virsh dominfo guest1``.
 
+[source,shell]
+....
+[root@host1 libvirt]# virsh dominfo guest1
+Id:             -
+Name:           guest1
+UUID:           50ef650a-b6c4-47b0-b17d-b474c6be5ea1
+OS Type:        hvm
+State:          shut off
+CPU(s):         2
+Max memory:     4194304 KiB
+Used memory:    4194304 KiB
+Persistent:     yes
+Autostart:      disable
+Managed save:   no
+Security model: selinux
+Security DOI:   0
 
-== assign a name and address
+[root@host1 libvirt]# 
+....
+
+== assign a name and address for guest1
 
 Add an XML tag to the network's configuration.
 
 This dnsmasq config file can't be edited directly because it's created by libvirt - any changes would be overwritten. 
 Instead, use ``virsh`` commands to add config. 
-
 
 
 === add the host line to libvirt's config
@@ -66,7 +84,7 @@ The ``--live`` and ``--config`` options make sure both the current configuration
 [source,shell]
 ....
 sudo virsh net-update private0 add ip-dhcp-host \
-    "<host  mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />" \
+    "<host  mac='52:54:00:01:00:02' name='guest1.private.example.com' ip='192.168.152.71' />" \
     --live \
     --config
 ....
@@ -75,7 +93,7 @@ Add the host line.
 
 [source,shell]
 ....
-[nick@host1 ~]$ sudo virsh net-update private0 add ip-dhcp-host "<host mac='52:54:00:00:00:02' name='guest1.private.example.com' ip='192.168.152.100' />" --live --config
+[nick@host1 ~]$ sudo virsh net-update private0 add ip-dhcp-host "<host mac='52:54:00:01:00:02' name='guest1.private.example.com' ip='192.168.152.71' />" --live --config
 Updated network private0 persistent config and live state
 [nick@host1 ~]$ 
 ....
@@ -91,7 +109,7 @@ Add a line to /etc/hosts.
 
 [source,shell]
 ....
-[nick@host1 ~]$ sudo bash -c 'echo "192.168.152.100 guest1 guest1.private.example.com" >> /etc/hosts'
+[nick@host1 ~]$ sudo bash -c 'echo "192.168.152.71 guest1 guest1.private.example.com" >> /etc/hosts'
 [nick@host1 ~]$ 
 ....
 
@@ -113,12 +131,12 @@ You can see the conversation taking place using ``journalctl``.
 ....
 [nick@host1 ~]$ journalctl -f
 ...
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(private0) 192.168.152.27 52:54:00:00:00:02
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPNAK(private0) 192.168.152.27 52:54:00:00:00:02 static lease available
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPDISCOVER(private0) 192.168.152.27 52:54:00:00:00:02
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPOFFER(private0) 192.168.152.100 52:54:00:00:00:02
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(private0) 192.168.152.100 52:54:00:00:00:02
-May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPACK(private0) 192.168.152.100 52:54:00:00:00:02 guest1
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(private0) 192.168.152.27 52:54:00:01:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPNAK(private0) 192.168.152.27 52:54:00:01:00:02 static lease available
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPDISCOVER(private0) 192.168.152.27 52:54:00:01:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPOFFER(private0) 192.168.152.71 52:54:00:01:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPREQUEST(private0) 192.168.152.71 52:54:00:01:00:02
+May 29 18:08:12 host.example.com dnsmasq-dhcp[2380]: DHCPACK(private0) 192.168.152.71 52:54:00:01:00:02 guest1
 ....
 
 
@@ -137,7 +155,7 @@ Name: 192.168.152.1
 Address: 192.168.152.1#53
 Aliases: 
 
-guest1.private.example.com has address 192.168.152.100
+guest1.private.example.com has address 192.168.152.71
 [nick@host1 ~]$ 
 ....
 
@@ -152,11 +170,11 @@ This is good.
 
 [source,shell]
 ....
-[nick@host1 ~]$ ping -c1 192.168.152.100
-PING 192.168.152.100 (192.168.152.100) 56(84) bytes of data.
-64 bytes from guest1 (192.168.152.100): icmp_seq=1 ttl=64 time=0.226 ms
+[nick@host1 ~]$ ping -c1 192.168.152.71
+PING 192.168.152.71 (192.168.152.71) 56(84) bytes of data.
+64 bytes from guest1 (192.168.152.71): icmp_seq=1 ttl=64 time=0.226 ms
 
---- 192.168.152.100 ping statistics ---
+--- 192.168.152.71 ping statistics ---
 1 packets transmitted, 1 received, 0% packet loss, time 0ms
 rtt min/avg/max/mdev = 0.226/0.226/0.226/0.000 ms
 [nick@host1 ~]$ 
@@ -166,15 +184,47 @@ This is bad.
 
 [source,shell]
 ....
-[root@host1 ~]# ping -c1 192.168.152.100
-PING 192.168.152.100 (192.168.152.100) 56(84) bytes of data.
+[root@host1 ~]# ping -c1 192.168.152.71
+PING 192.168.152.71 (192.168.152.71) 56(84) bytes of data.
 From 192.168.152.1 icmp_seq=1 Destination Host Unreachable
 
---- 192.168.152.100 ping statistics ---
+--- 192.168.152.71 ping statistics ---
 1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
 
 [root@host1 ~]# 
 ....
 
 
+== repeat for guest2
+
+The same procedure works with guest2.
+The host element has different attributes. 
+
+[source,shell]
+....
+[nick@host1 ~]$ sudo virsh net-update private0 add ip-dhcp-host "<host mac='52:54:00:01:00:03' name='guest2.private.example.com' ip='192.168.152.72' />" --live --config
+Updated network private0 persistent config and live state
+[nick@host1 ~]$ 
+....
+
+Check with the command `virsh net-dumpxml private0`.
+
+[source,shell]
+....
+<network>
+  <name>private0</name>
+  <uuid>c79cfa9e-ba50-4902-8781-2685212cc1a7</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:00:01:01'/>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+      <host mac='52:54:00:01:00:02' name='guest1.private.example.com' ip='192.168.152.71'/>
+      <host mac='52:54:00:01:00:03' name='guest2.private.example.com' ip='192.168.152.72'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
 

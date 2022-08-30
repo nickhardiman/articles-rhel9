@@ -3,8 +3,10 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 31-07-2022
 
+!!! No record of change, no IaC. this would be better by saving XML to a file with virsh net-dumpxml,  editing that,  and virsh net-create
 
-Add the domain _private.example.com_.
+Add the domain _private.example.com_ to libvirt's network configuration for private0.
+Working with libvirt's network configuration means working with an XML file.
 
 Adding a domain is a little painful, both because editing XML is never fun, and because the network must be stopped and started after this edit to pick up the configuration change. 
 
@@ -25,6 +27,8 @@ May 29 18:17:15 host.private.example.com dnsmasq-dhcp[2380]: Ignoring domain pri
 
 == edit libvirt config
 
+
+
 [source,shell]
 ....
 [nick@host1 ~]$ sudo virsh net-edit private0
@@ -38,8 +42,7 @@ virsh fires up the vi editor and displays this.
   <name>private0</name>
   <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
   <bridge name='private0' stp='on' delay='0'/>
-  <mac address='52:54:00:23:0f:f9'/>
-  <domain name='private.example.com' localOnly='yes'/>
+  <mac address='52:54:00:00:01:01'/>
   <ip address='192.168.152.1' netmask='255.255.255.0'>
     <dhcp>
       <range start='192.168.152.2' end='192.168.152.254'/>
@@ -50,9 +53,22 @@ virsh fires up the vi editor and displays this.
 </network>
 ....
 
+At the top and bottom are opening and closing tags for the XML element _network_. 
+This element is the parent to many more elements. 
+
+* name - nework name
+* uuid - https://en.wikipedia.org/wiki/Universally_unique_identifier[Universally Unique IDentifier]. A massive random number that's guaranteed to be unique (almost).
+* bridge - attributes define what bridge to use
+* mac - ehternet address
+* ip - many things related to the IP protocol, including DHCP, address pool and IPv6 settings.
+
+We'll add a couple more - domain and host.
+
 == add the domain
 
-Add a domain by adding this line between the network tags:   
+Add a new XML element to define the domain. 
+
+Add this line between the network tags:   
  ``<domain name='private.example.com' localOnly='yes'/>``.
 
 The file now looks like this. 
@@ -63,7 +79,7 @@ The file now looks like this.
   <name>private0</name>
   <uuid>88c35d22-05d7-4e1f-ae02-d1906f7a0bbc</uuid>
   <bridge name='private0' stp='on' delay='0'/>
-  <mac address='52:54:00:23:0f:f9'/>
+  <mac address='52:54:00:01:00:01'/>
   <domain name='private.example.com' localOnly='yes'/>
   <ip address='192.168.152.1' netmask='255.255.255.0'>
     <dhcp>
@@ -90,21 +106,31 @@ Network private0 XML configuration edited.
 Network private0 destroyed
 
 [nick@host1 ~]$ sudo virsh net-list --all
- Name                 State      Autostart     Persistent
-----------------------------------------------------------
- private0              inactive   yes           yes
+ Name       State      Autostart   Persistent
+-----------------------------------------------
+ default    active     yes         yes
+ private0   inactive   yes         yes
+ private1   active     yes         yes
+ public0    active     yes         yes
 
 [nick@host1 ~]$ 
 [nick@host1 ~]$ sudo virsh net-start private0
 Network private0 started
 
 [nick@host1 ~]$ 
+....
+
+Check again.
+
+[source,shell]
+....
 [nick@host1 ~]$ sudo virsh net-list --all
- Name      State      Autostart   Persistent
-----------------------------------------------
- default   active     yes         yes
- private0   active     yes         yes
- public0   active     yes         yes
+ Name       State    Autostart   Persistent
+---------------------------------------------
+ default    active   yes         yes
+ private0   active   yes         yes
+ private1   active   yes         yes
+ public0    active   yes         yes
 
 [nick@host1 ~]$ 
 ....

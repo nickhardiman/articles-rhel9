@@ -8,7 +8,8 @@ When the guest VM boots up, it is given the address 192.168.152...er...something
 The dnsmasq DHCP service assigns addresses from an IP pool, so the VM gets a random address from the range 192.168.152.0/24. 
 
 Instead of searching for the address after every boot, it's easier to assign a fixed IP address. 
-All we need to get started is the MAC address, and that was fixed by the _virt-install_ command when the VM was created (``52:54:00:00:00:03``). 
+All we need to get started is the MAC address, and that was fixed by the _virt-install_ command when the VM was created.
+The second network interface in the guest1 VM got ``52:54:00:01:00:02``. 
 
 People remember names better than numbers. A fixed IP address is easier to use than a random IP address, and a DNS name is easier still.  
 
@@ -43,7 +44,7 @@ There's a lot going on.
   <name>private0</name>
   <uuid>d9c5b855-4cbc-4a98-9779-93f075212a6e</uuid>
   <bridge name='privbr0' stp='on' delay='0'/>
-  <mac address='52:54:00:00:01:01'/>
+  <mac address='52:54:00:01:00:01'/>
   <ip address='192.168.152.1' netmask='255.255.255.0'>
     <dhcp>
       <range start='192.168.152.2' end='192.168.152.254'/>

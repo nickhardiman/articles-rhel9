@@ -1,0 +1,39 @@
+= forward DNS queries from dnsmasq to bind 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 31-08-2022
+
+
+[source,XML]
+....
+  <dns>
+    <forwarder addr='192.168.1.12'/>
+  </dns>
+....
+
+[source,XML]
+....
+<network connections='2'>
+  <name>private0</name>
+  <uuid>c79cfa9e-ba50-4902-8781-2685212cc1a7</uuid>
+  <bridge name='privbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:00:01:01'/>
+  <domain name='private.example.com' localOnly='yes'/>
+  <dns>
+    <forwarder addr='192.168.1.12'/>
+  </dns>
+  <ip address='192.168.152.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.152.2' end='192.168.152.254'/>
+      <host mac='52:54:00:01:00:02' name='guest1.private.example.com' ip='192.168.152.71'/>
+      <host mac='52:54:00:01:00:03' name='guest2.private.example.com' ip='192.168.152.72'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+  </ip>
+</network>
+....
+
+Try on guest2
+
+host capsule1.lab.example.com

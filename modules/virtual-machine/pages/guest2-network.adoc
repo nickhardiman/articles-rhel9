@@ -169,6 +169,13 @@ Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkMa
 
 == check routing 
 
+!!! if guest2 is attached to public0 and private0, this is OK
+ if guest2 is attached to private0 and private1, this doesnt work. fixed by:
+ ip route add default via 192.168.152.72
+ but thats not great.
+see https://hardiman.consulting/rhel/8/virtual-machine/guest2-os-setup.html
+
+
 Check the routing table. 
 
 Running _ip r_ is the same as running _ip route list_.
