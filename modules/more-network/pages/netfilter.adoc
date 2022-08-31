@@ -1,0 +1,179 @@
+= nftables
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 11-01-2021
+
+* intro with diagrams https://www.teldat.com/blog/nftables-and-netfilter-hooks-via-linux-kernel/
+* netfilter home https://www.netfilter.org/
+* netfilter https://en.wikipedia.org/wiki/Netfilter
+* nftables  https://paulgorman.org/technical/linux-nftables.txt.html
+* nftables  https://wiki.nftables.org/wiki-nftables/index.php/Quick_reference-nftables_in_10_minutes
+* nftables  https://developers.redhat.com/blog/2016/10/28/what-comes-after-iptables-its-successor-of-course-nftables#
+
+
+Libvirt adds rules to nftables. 
+
+
+
+== ruleset 
+
+Everything
+
+[source,shell]
+----
+[root@host2 ~]# nft list ruleset
+table inet firewalld {
+	ct helper helper-tftp-udp {
+		type "tftp" protocol udp
+		l3proto inet
+	}
+
+	chain mangle_PREROUTING {
+		type filter hook prerouting priority mangle + 10; policy accept;
+		jump mangle_PREROUTING_ZONES
+	}
+...(hundreds of lines)...
+table ip6 mangle {
+	chain LIBVIRT_PRT {
+	}
+
+	chain POSTROUTING {
+		type filter hook postrouting priority mangle; policy accept;
+		counter packets 21921 bytes 2898654 jump LIBVIRT_PRT
+	}
+}
+[root@host2 ~]# 
+----
+
+Back up the ruleset.
+
+[source,shell]
+----
+echo "nft flush ruleset" > backup.nft
+nft list ruleset >> backup.nft
+----
+
+
+== table 
+
+[source,shell]
+----
+[root@host2 ~]# nft list tables
+table inet firewalld
+table ip filter
+table ip nat
+table ip mangle
+table ip6 filter
+table ip6 nat
+table ip6 mangle
+[root@host2 ~]# 
+[root@host2 ~]# nft list table inet firewalld
+table inet firewalld {
+	ct helper helper-tftp-udp {
+		type "tftp" protocol udp
+		l3proto inet
+	}
+
+	chain mangle_PREROUTING {
+		type filter hook prerouting priority mangle + 10; policy accept;
+		jump mangle_PREROUTING_ZONES
+	}
+...(hundreds of lines)...
+	chain mangle_PRE_libvirt_allow {
+	}
+
+	chain mangle_PRE_libvirt_post {
+	}
+}
+[root@host2 ~]# 
+----
+
+== chain 
+
+== rule 
+
+== config 
+
+config /etc/nftables/
+
+examples /usr/share/doc/nftables/examples/
+
+
+== iptables 
+
+Chains 
+
+* LIBVIRT_INP
+* LIBVIRT_FWX
+* LIBVIRT_FWI
+* LIBVIRT_FWO
+* LIBVIRT_OUT
+
+[source,shell]
+----
+[root@host2 ~]# iptables -L
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination         
+LIBVIRT_INP  all  --  anywhere             anywhere            
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination         
+LIBVIRT_FWX  all  --  anywhere             anywhere            
+LIBVIRT_FWI  all  --  anywhere             anywhere            
+LIBVIRT_FWO  all  --  anywhere             anywhere            
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination         
+LIBVIRT_OUT  all  --  anywhere             anywhere            
+
+Chain LIBVIRT_FWI (1 references)
+target     prot opt source               destination         
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+ACCEPT     all  --  anywhere             192.168.124.0/24     ctstate RELATED,ESTABLISHED
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+
+Chain LIBVIRT_FWO (1 references)
+target     prot opt source               destination         
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+ACCEPT     all  --  192.168.124.0/24     anywhere            
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+REJECT     all  --  anywhere             anywhere             reject-with icmp-port-unreachable
+
+Chain LIBVIRT_FWX (1 references)
+target     prot opt source               destination         
+ACCEPT     all  --  anywhere             anywhere            
+ACCEPT     all  --  anywhere             anywhere            
+ACCEPT     all  --  anywhere             anywhere            
+
+Chain LIBVIRT_INP (1 references)
+target     prot opt source               destination         
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootps
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootps
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootps
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootps
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootps
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootps
+
+Chain LIBVIRT_OUT (1 references)
+target     prot opt source               destination         
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootpc
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootpc
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootpc
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootpc
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:domain
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:domain
+ACCEPT     udp  --  anywhere             anywhere             udp dpt:bootpc
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:bootpc
+[root@host2 ~]# 
+----

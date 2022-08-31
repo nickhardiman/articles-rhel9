@@ -1,4 +1,5 @@
 * xref:index.adoc[]
 ** xref:squid-proxy.adoc[]
 ** xref:ip-forwarding.adoc[]
+** xref:netfilter.adoc[]
 
