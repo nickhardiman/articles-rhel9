@@ -1,0 +1,6 @@
+= skeleton
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+I'm in the process of experimenting.

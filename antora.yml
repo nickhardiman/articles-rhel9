@@ -32,6 +32,7 @@ nav:
 - modules/virtual-network/nav.adoc 
 - modules/virtual-storage/nav.adoc 
 - modules/virtual-machine/nav.adoc 
+- modules/more-network/nav.adoc 
 - modules/dns/nav.adoc 
 - modules/security/nav.adoc 
 - modules/mail/nav.adoc 

@@ -1,0 +1,8 @@
+= more networking
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 25-09-2021
+
+The virtual network and virtual machines are in place.
+The basic tasks are complete.
+Carry out advanced tasks.

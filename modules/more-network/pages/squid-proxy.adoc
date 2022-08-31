@@ -1,0 +1,20 @@
+= add a squid proxy 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 24-02-2021
+
+
+== proxy 
+
+
+??? squid? 
+
+Use squid on guest2 
+
+[source,shell]
+....
+[root@guest2 ~]# vi /etc/profile.d/proxy.sh
+export http_proxy=192.168.152.11:3128
+export https_proxy=192.168.152.11:3128
+....
+

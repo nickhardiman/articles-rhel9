@@ -1,0 +1,92 @@
+= IP forwarding 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 29-07-2022
+
+??? required? 
+
+.a request from guest2 to the Internet
+----
+            + pubbr0                                + privbr0                              + privbr1
+            |                                       |                                      |
+            |     +--------------------------+      |     +--------------------------+     |
+            |     |  guest1.lab.example.com  |      |     |  guest2.lab.example.com  |     |
+  Internet  |     |                          |      |     |                          |     |
+  <---------+-----+ enp1s0            enp2s0 + <----+-----+ eth0                eth1 +     +
+            |     |                          |      |     |                          |     |
+            |     +--------------------------+      |     +--------------------------+     |
+----
+
+
+== routing table on guest2
+
+Check the routing table. 
+
+Running _ip r_ is the same as running _ip route list_.
+
+[source,shell]
+....
+[root@guest2 ~]# ip r
+default via 192.168.1.254 dev enp1s0 proto dhcp metric 100 
+192.168.1.0/24 dev enp1s0 proto kernel scope link src 192.168.1.217 metric 100 
+192.168.126.0/24 dev enp2s0 proto kernel scope link src 192.168.126.100 metric 101 
+[root@guest2 ~]# 
+....
+
+
+== never use enp2s0 as the default
+
+General traffic should be pushed out to the Internet, not towards the private network. 
+The only default route should be for enp1s0. 
+
+The attribute to change is never-default. 
+
+[source,shell]
+....
+[root@guest2 ~]# nmcli con show enp2s0 | grep never-default
+ipv4.never-default:                     no
+ipv6.never-default:                     no
+[root@guest2 ~]# 
+....
+
+Change the attribute. 
+
+[source,shell]
+....
+[root@guest2 ~]# nmcli connection modify enp2s0 ipv4.never-default yes
+[root@guest2 ~]# nmcli connection modify enp2s0 ipv6.never-default yes
+[root@guest2 ~]# 
+....
+
+Restart the connectin. 
+
+[source,shell]
+....
+[root@guest2 ~]# nmcli con down enp2s0
+Connection 'enp2s0' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+[root@guest2 ~]# 
+[root@guest2 ~]# nmcli con up enp2s0
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+[root@guest2 ~]# 
+....
+
+
+
+== test 
+
+Ping Google. 
+
+[source,shell]
+....
+[root@guest2 ~]# ping -c1 8.8.8.8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=10.4 ms
+
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 10.363/10.363/10.363/0.000 ms
+[root@guest2 ~]# 
+....
+
+
+
