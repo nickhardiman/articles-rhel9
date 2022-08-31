@@ -5,6 +5,7 @@
 ** xref:libvirt-dnsmasq-dns.adoc[]
 ** xref:libvirt-network-private0-examine.adoc[]
 ** xref:libvirt-network-private0-domain.adoc[]
+** xref:libvirt-network-private0-forwarder.adoc[]
 ** xref:guest1-dnsmasq-dhcp-dns.adoc[]
 ** xref:bind9-lab.example.com.adoc[]
 ** xref:guest1-bind9-install.adoc[]
