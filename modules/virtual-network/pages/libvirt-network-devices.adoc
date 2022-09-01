@@ -1,0 +1,96 @@
+= view virtual network devices
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 23-11-2020
+
+
+== NIC (Network Interface Card)
+
+The _host1_ computer has one physical network interface. This interface to attached to bridge pubbr0. 
+
+It's the same concept for virtual machines. A virtual machine thinks it has a NIC (Network Interface Card). 
+It's a virtual simulation that acts like the real thing. 
+
+
+=== libvirt interface config 
+
+The VM guest1 has two NICs, defined in libvirt config like this.
+
+Model type https://wiki.libvirt.org/page/Virtio[virtio] is the driver software that makes this work. 
+
+Address is where this NIC is attached. 
+It's where this pretend NIC is inserted into a pretend PCI slot on the pretend motherboard in the pretend PC. 
+
+[source,XML]
+....
+    <interface type='network'>
+      <mac address='52:54:00:00:00:02'/>
+      <source network='public0'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0'/>
+    </interface>
+    <interface type='network'>
+      <mac address='52:54:00:01:00:02'/>
+      <source network='private0'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x02' slot='0x00' function='0x0'/>
+    </interface>
+....
+
+== bridge 
+
+https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#bonded_interface
+A Linux bridge behaves like a network switch. ... Use a bridge when you want to establish communication channels between VMs, containers, and your hosts.
+
+The _host1_ computer has one physical network interface. 
+
+
+* Create a bridge called *pubbr0*. 
+* Attach host1's physical interface to this new bridge. 
+* Add more bridges using commands _nmcli_ and _virsh_. 
+
+
+=== all the bridges 
+
+* NAT bridge *virbr0*
+* public bridge *pubbr0*
+* private bridge *privbr0* 
+
+pubbr0 is a public bridge that makes VMs part of the home lab network. 
+
+Show a list of bridges.
+
+[source,shell]
+....
+[root@host2 libvirt]# ip -brief link show type bridge
+privbr0          UP             52:54:00:00:01:01 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+pubbr0           UP             7c:10:c9:b9:1e:b0 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+virbr0           DOWN           52:54:00:82:1a:be <NO-CARRIER,BROADCAST,MULTICAST,UP> 
+privbr1          DOWN           52:54:00:00:02:01 <NO-CARRIER,BROADCAST,MULTICAST,UP> 
+[root@host2 libvirt]# 
+....
+
+
+== tunnel
+
+A https://en.wikipedia.org/wiki/TUN/TAP[tunnel] is a virtual network device. 
+A tunnel is part of the system that gets traffic through the virtual network.
+It's a device that moves IP packets between two places. 
+
+A virtual machine has a virtual NIC (Network Interface Card). 
+This is connected to a tunnel. The other end of the tunnel is connected to the bridge. 
+IP packets move between the VM and the bridge.
+
+Every VM interface gets its own tunnel, with a name like _vnet0_. 
+
+Show a list of IP packet devices.
+
+[source,shell]
+....
+[root@host2 libvirt]# ip -brief link show type tun
+vnet0            UNKNOWN        fe:54:00:00:00:12 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+vnet1            UNKNOWN        fe:54:00:00:00:19 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+vnet2            UNKNOWN        fe:54:00:01:00:05 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+[root@host2 libvirt]# 
+....
+

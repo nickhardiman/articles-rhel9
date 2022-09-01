@@ -3,7 +3,13 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 23-11-2020
 
+A bridge is like a network switch that you plug many computers into. 
+
+https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#bonded_interface
+A Linux bridge behaves like a network switch. ... Use a bridge when you want to establish communication channels between VMs, containers, and your hosts.
+
 The _host1_ computer has one physical network interface. 
+
 
 * Create a bridge called *pubbr0*. 
 * Attach host1's physical interface to this new bridge. 
@@ -42,7 +48,7 @@ virbr0      c702daef-cb12-42eb-afa8-2d01857ce314  bridge    virbr0
 [root@host1 ~]# 
 ....
 
-A bridge is like a network switch that you can plug many computers into. 
+
 Plug in the physical interface. 
 
 [source,shell]
