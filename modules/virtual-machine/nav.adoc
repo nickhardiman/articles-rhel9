@@ -21,3 +21,4 @@
 ** xref:guest3-install.adoc[]
 ** xref:guest3-connect.adoc[]
 ** xref:guest4-clone.adoc[]
+** xref:vm-resource-check.adoc[]
