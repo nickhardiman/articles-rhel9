@@ -8,4 +8,4 @@
 ** xref:libvirt-network-public0.adoc[]
 ** xref:libvirt-network-private0-and-bridge.adoc[]
 ** xref:libvirt-network-private1-and-bridge.adoc[]
-** xref:libvirt-net-devices.adoc[]
+** xref:libvirt-network-devices.adoc[]
