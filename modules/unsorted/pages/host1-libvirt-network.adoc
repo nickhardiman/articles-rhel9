@@ -148,7 +148,7 @@ Problems
 192.168.1.195 host1.lab.example.com host1
 24:4b:fe:c8:40:a9
 
-Change guest1 to managed1, for ansible work.
+test0 is for Red Hat Satellite to provision hosts and provide services.
 
 .bridges
 [%header,format=csv]
@@ -157,6 +157,7 @@ name,         interface, MAC,               IP,             domain
 *public0*,    *pubbr0*,  52:54:00:00:00:01, 192.168.1.1,    lab.example.com
 *private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
 *private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
+*net-test0*,   *test0*, 52:54:00:03:00:01, 192.168.132.1,  private.example.com
 |===
 
 .guests attached to bridges
@@ -167,13 +168,13 @@ name,         interface, MAC,               IP,             domain
 host1,        enp1s0,    12:34:56:12:34:56, 192.168.1.35,   home.network
 guest1,       enp1s0,    52:54:00:00:00:02, 192.168.1.217,  lab.example.com
 satellite1,      eth0,   52:54:00:00:00:03, 192.168.1.2,  lab.example.com
-ansiblet1,       eth0,   52:54:00:00:00:04, 192.168.1.3,  lab.example.com
-rhel71,          eth0,   52:54:00:00:00:05, 192.168.1.5,  lab.example.com
-rhel81,          eth0,   52:54:00:00:00:06, 192.168.1.6,  lab.example.com
-aapc1,           eth0,   52:54:00:00:00:07, 192.168.1.7,  lab.example.com
-aaph1,           eth0,   52:54:00:00:00:08, 192.168.1.8,  lab.example.com
-aape1,           eth0,   52:54:00:00:00:09, 192.168.1.9,  lab.example.com
-aape1,           eth0,   52:54:00:00:00:10, 192.168.1.10, lab.example.com
+ ,           ,           52:54:00:00:00:04, 192.168.1.3,  lab.example.com
+ ,           ,           52:54:00:00:00:05, 192.168.1.5,  lab.example.com
+ ,           ,           52:54:00:00:00:06, 192.168.1.6,  lab.example.com
+control1,      enp1s0,   52:54:00:00:00:07, 192.168.1.7,  lab.example.com
+hub1,          enp1s0,   52:54:00:00:00:08, 192.168.1.8,  lab.example.com
+execution1,    enp1s0,   52:54:00:00:00:09, 192.168.1.9,  lab.example.com
+ ,           ,           52:54:00:00:00:10, 192.168.1.10, lab.example.com
 managed1,        eth0,   52:54:00:00:00:11, 192.168.1.11, lab.example.com
 name1,         enp1s0,   52:54:00:00:00:12, 192.168.1.12, lab.example.com
 git1,            eth0,   52:54:00:00:00:13, 192.168.1.13, lab.example.com
@@ -182,8 +183,8 @@ builder1,        eth0,   52:54:00:00:00:15, 192.168.1.15, lab.example.com
 controller1,     eth0,   52:54:00:00:00:16, 192.168.1.16, lab.example.com
 antora1,         eth0,   52:54:00:00:00:17, 192.168.1.17, lab.example.com
 jenkins1,        eth0,   52:54:00:00:00:18, 192.168.1.18, lab.example.com
-capsule1,        eth0,   52:54:00:00:00:19, 192.168.1.19,  lab.example.com
-isolatedn1,      eth0,   52:54:00:00:00:20, 192.168.1.5,  lab.example.com
+capsule1,        eth0,   52:54:00:00:00:19, 192.168.1.19, lab.example.com
+ ,           ,           52:54:00:00:00:20, 192.168.1.5,  lab.example.com
 *private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
 guest1,       enp2s0,    52:54:00:01:00:02, 192.168.152.2,  private.example.com
 guest2,       eth0,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
@@ -193,6 +194,8 @@ isolatedn1,      eth0,   52:54:00:01:00:06, 192.168.152.5,  private.example.com
 *private1*,   *privbr1*, 52:54:00:02:00:01, 192.168.162.1,  private.example.com
 guest2,       eth1,      52:54:00:02:00:02, 192.168.162.3,  private.example.com
 guest3,       eth1,      52:54:00:02:00:03, 192.168.162.2,  private.example.com
+*net-test0*,   *test0*, 52:54:00:03:00:01, 192.168.132.1,  private.example.com
+
 |===
 
 
