@@ -179,12 +179,14 @@ managed1,        eth0,   52:54:00:00:00:11, 192.168.1.11, lab.example.com
 name1,         enp1s0,   52:54:00:00:00:12, 192.168.1.12, lab.example.com
 git1,            eth0,   52:54:00:00:00:13, 192.168.1.13, lab.example.com
 repo1,           eth0,   52:54:00:00:00:14, 192.168.1.14, lab.example.com
-builder1,        eth0,   52:54:00:00:00:15, 192.168.1.15, lab.example.com
+builder1,      enp1s0,   52:54:00:00:00:15, 192.168.1.15, lab.example.com
 controller1,     eth0,   52:54:00:00:00:16, 192.168.1.16, lab.example.com
 antora1,         eth0,   52:54:00:00:00:17, 192.168.1.17, lab.example.com
 jenkins1,        eth0,   52:54:00:00:00:18, 192.168.1.18, lab.example.com
 capsule1,        eth0,   52:54:00:00:00:19, 192.168.1.19, lab.example.com
- ,           ,           52:54:00:00:00:20, 192.168.1.5,  lab.example.com
+builder2,      enp1s0,   52:54:00:00:00:20, 192.168.1.20,  lab.example.com
+control2,      enp1s0,   52:54:00:00:00:21, 192.168.1.21,  lab.example.com
+hub2,          enp1s0,   52:54:00:00:00:22, 192.168.1.22,  lab.example.com
 *private0*,   *privbr0*, 52:54:00:01:00:01, 192.168.152.1,  private.example.com
 guest1,       enp2s0,    52:54:00:01:00:02, 192.168.152.2,  private.example.com
 guest2,       eth0,      52:54:00:01:00:03, 192.168.152.3,  private.example.com
