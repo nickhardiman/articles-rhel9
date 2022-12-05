@@ -1,0 +1,210 @@
+= add a second volume to a VM
+Nick Hardiman <nhardima@redhat.com>
+:source-highlighter: pygments
+:toc: 
+:revdate: 21-11-2020
+
+Create another libvirt storage volume.
+Add it to a VM.
+
+This example creates a 100GB volume for holding web content. 
+It is used by vm repo. 
+
+
+
+== create
+
+This is a qcow2 (QEMU v2) disk image. 
+There are many other volume formats, from bochs to vpc. 
+
+This huge volume is contained in a very small file. 
+This is a sparse volume. 
+The whole 100 GiB is not allocated now - space is added later, when it is required.
+
+[source,console]
+----
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# 
+[root@host1 images]# virsh vol-create-as --format qcow2  images repo-docroot.qcow2 100G 
+Vol repo-docroot.qcow2 created
+
+[root@host1 images]# 
+----
+
+Check. 
+
+[source,console]
+----
+[root@host1 images]# ls -lZ repo-docroot.qcow2
+-rw-------. 1 qemu qemu system_u:object_r:svirt_image_t:s0:c465,c640 198208 Dec  5 16:42 repo-docroot.qcow2
+[root@host1 images]# ls -lh repo-docroot.qcow2
+-rw-------. 1 qemu qemu 194K Dec  5 16:42 repo-docroot.qcow2
+[root@host1 images]# 
+----
+
+== attach 
+
+[source,console]
+----
+[root@host1 images]# virsh attach-disk --domain repo --source /var/lib/libvirt/images/repo-docroot.qcow2 --target vdb --persistent --subdriver qcow2
+Disk attached successfully
+
+[root@host1 images]# 
+----
+
+Check 
+
+[source,console]
+----
+[root@repo ~]# lsblk
+NAME          MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sr0            11:0    1 1024M  0 rom  
+vda           252:0    0   50G  0 disk 
+├─vda1        252:1    0  600M  0 part /boot/efi
+├─vda2        252:2    0    1G  0 part /boot
+└─vda3        252:3    0   46G  0 part 
+  ├─rhel-root 253:0    0    4G  0 lvm  /
+  ├─rhel-swap 253:1    0  256M  0 lvm  [SWAP]
+  └─rhel-var  253:2    0   40G  0 lvm  /var
+vdb           252:16   0  100G  0 disk 
+[root@repo ~]# 
+----
+
+If the subdriver is not specified in the attach command, vdb is a tiny 194K, the file size.
+
+== format 
+
+[source,console]
+----
+[root@repo ~]# mkfs.xfs /dev/vdb
+meta-data=/dev/vdb               isize=512    agcount=4, agsize=6553600 blks
+         =                       sectsz=512   attr=2, projid32bit=1
+         =                       crc=1        finobt=1, sparse=1, rmapbt=0
+         =                       reflink=1    bigtime=1 inobtcount=1
+data     =                       bsize=4096   blocks=26214400, imaxpct=25
+         =                       sunit=0      swidth=0 blks
+naming   =version 2              bsize=4096   ascii-ci=0, ftype=1
+log      =internal log           bsize=4096   blocks=12800, version=2
+         =                       sectsz=512   sunit=0 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+Discarding blocks...Done.
+[root@repo ~]# 
+----
+
+
+== copy current docroot files
+
+Use rsync. 
+Does not preserve SELinux file type. 
+
+[source,console]
+----
+[root@repo ~]# dnf install rsync
+...
+Installed:
+  rsync-3.2.3-18.el9.x86_64                                                                                        
+
+Complete!
+[root@repo ~]# 
+----
+
+[source,console]
+----
+[root@repo ~]# rsync --progress -ah  /var/www/html/* /mnt &
+[3] 7088
+[root@repo ~]# sending incremental file list
+repos/
+repos/cdn-rhel-8-for-x86_64-appstream-rpms/
+repos/cdn-rhel-8-for-x86_64-appstream-rpms/Packages/
+repos/cdn-rhel-8-for-x86_64-appstream-rpms/Packages/3/
+...
+----
+
+Or use cp. 
+Messes perms. 
+
+[source,console]
+----
+----
+
+Move the current docroot files out of the way.
+
+[source,console]
+----
+[root@repo ~]# mv /var/www/html/repos /var/tmp/
+[root@repo ~]# ls -lZ /var/www/html/
+total 0
+[root@repo ~]# 
+----
+
+Mount the new docroot. 
+
+[source,console]
+----
+[root@repo ~]# umount /mnt
+[root@repo ~]# 
+[root@repo ~]# mount /dev/vdb /var/www/html/
+[root@repo ~]# 
+----
+
+Restore SELinux file type. 
+
+[source,console]
+----
+[root@repo ~]# restorecon -R /var/www/html/
+[root@repo ~]# 
+----
+
+Check SElinux file type, permissions, size and file count. 
+
+[source,console]
+----
+[root@repo ~]# restorecon -R /var/www/html/
+[root@repo ~]# ls -lZ /var/www/html/
+total 0
+drwxr-xr-x. 6 root root unconfined_u:object_r:httpd_sys_content_t:s0 168 Dec  5 16:20 repos
+[root@repo ~]# 
+[root@repo ~]# du -sh /var/www/html/
+24G	/var/www/html/
+[root@repo ~]# 
+[root@repo ~]# find /var/www/html -type f | wc -l
+10807
+[root@repo ~]# 
+----
+
+Remove duplicate content. 
+
+[source,console]
+----
+[root@repo ~]# rm -rf /var/tmp/repos
+[root@repo ~]# 
+----
+
+
+== detach 
+
+[source,console]
+----
+[root@host1 images]# virsh detach-disk --domain repo /var/lib/libvirt/images/repo-docroot.qcow2  --persistent
+Disk detached successfully
+
+[root@host1 images]# 
+----
+
+
+== delete 
+
+If you want to remove this new file and start again, delete it with _virsh vol-delete_. 
+Don't use the bash command _rm_ because it removes the file and leaves behind libvirt's configuration about this file. 
+The _vol-delete_ command removes both the file and libvirt's config. 
+
+[source,console]
+----
+[root@host1 images]# virsh vol-delete repo-docroot.qcow2 images
+Vol repo-docroot.qcow2 deleted
+
+[root@host1 images]# 
+----
+
+
+
