@@ -1,0 +1,57 @@
+= move a virtual machine from one host to another
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 06-01-2023
+
+
+Move a virtual machine from one machine to another. 
+The machines are physical, a source host and destination host, with libvirt. 
+
+The move is a combination of stopping, copying, starting and deleting. 
+
+== stop the original VM
+
+Find the domain name for the machine. 
+eg. repo-rhel9
+
+Stop the VM. 
+virsh shutdown repo-rhel9 
+
+== copy the storage file 
+
+Use the source host. 
+
+Find the volume file in /var/lib/libvirt/images/.
+
+Copy the file to the destination host.
+
+
+== copy the machine definition
+
+Use the source host. 
+
+virsh dumpxml repo-rhel9 > vm-repo-rhel9.xml 
+
+Copy this XML file to the destination host
+
+Use the destination host.
+
+virsh define vm-repo-rhel9.xml
+
+
+== start the copied VM
+
+Start and watch the console. 
+
+[source,shell]
+----
+[root@host1 libvirt]# virsh start repo-rhel9 && virsh console repo-rhel9
+Domain 'repo-rhel9' started
+
+Connected to domain 'repo-rhel9'
+Escape character is ^] (Ctrl + ])
+...
+----
+
+== delete the original VM
+

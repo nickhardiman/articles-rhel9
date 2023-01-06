@@ -18,4 +18,5 @@
 ** xref:libvirt-pool-volume-rhel8-qcow2.adoc[]
 ** xref:libvirt-volume-add.adoc[]
 ** xref:libvirt-machine-myfirstvm.adoc[]
+** xref:libvirt-machine-migrate.adoc[]
 ** xref:image-builder.adoc[]
