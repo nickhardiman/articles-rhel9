@@ -4,22 +4,11 @@ Nick Hardiman <nick@silvan.uk>
 :revdate: 01-01-2021
 
 
+xref:author.adoc[I'm Nick]. 
 The site you are looking at here is my collection of hardware and software docs. 
 
 If you are looking for tech help, stick a word in the search bar above. 
 I hope you find something that helps. 
-
-== me
-
-image::nick-headshot-2019-small.jpg[title="Nick Hardiman",float="right",width=200]
-
-I'm Nick, an infrastructure consultant at Red Hat.
-"Infrastructure" means I work on platforms, automation and containers in the IT world. If you know Red Hat products, think 
-https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux[RHEL OS],  
-https://www.redhat.com/en/technologies/management/ansible[Ansible Automation Platform],  
-https://www.redhat.com/en/technologies/cloud-computing/openshift/container-platform[Openshift Container Platform] - that kind of thing. "Consultant" means I spend most of my time with customers, providing expert advice and delivering projects. I'm also a https://rhtapps.redhat.com/verify?certId=160-229-787[Red Hat Certified Professional].
-
-If you want to hear my English accent, check out my Red Hat Summit On-Demand Session https://events.experiences.redhat.com/widget/redhat/sum22/SessionCatalog22/session/1639849813644001fptx[Installing Red Hat Enterprise Linux on a remote bare-metal server, using Ansible, Kickstart, and Redfish]. 
 
 
 == here, on this site 
