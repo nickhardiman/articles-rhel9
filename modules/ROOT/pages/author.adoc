@@ -1,0 +1,65 @@
+= Err, where am I? 
+Nick Hardiman <nick@silvan.uk>
+:source-highlighter: highlight.js
+:revdate: 01-01-2021
+
+
+The site you are looking at here is my collection of hardware and software docs. 
+
+If you are looking for tech help, stick a word in the search bar above. 
+I hope you find something that helps. 
+
+== me
+
+image::nick-headshot-2019-small.jpg[title="Nick Hardiman",float="right",width=200]
+
+I'm Nick, an infrastructure consultant and automation architect at Red Hat.
+"Infrastructure" means I work on platforms, automation and containers in the IT world. If you know Red Hat products, think 
+https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux[RHEL OS],  
+ 
+https://www.redhat.com/en/technologies/cloud-computing/openshift/container-platform[Openshift Container Platform] - that kind of thing. "Consultant" means I spend most of my time with customers, providing expert advice, building things and delivering projects. I'm also a https://rhtapps.redhat.com/verify?certId=160-229-787[Red Hat Certified Professional].
+For automation, think https://www.redhat.com/en/technologies/management/ansible[Ansible Automation Platform] and  architect means I design as well as build. 
+
+If you want to hear my English accent, check out my Red Hat Summit On-Demand Session https://events.experiences.redhat.com/widget/redhat/sum22/SessionCatalog22/session/1639849813644001fptx[Installing Red Hat Enterprise Linux on a remote bare-metal server, using Ansible, Kickstart, and Redfish]. 
+
+
+== here, on this site 
+
+The _Here_ option above, up top in the navbar, can take you to my other documentation sections. There's a pop-up selector bottom left that does the same kind of thing. 
+
+Here's my wishlist of things to document. 
+
+*  Fedora on a Raspberry Pi 4 
+*  RHEL on an ASUS PN50 
+*  OCP4 on an ASUS PN51 
+*  Satellite 6 on an HPE Proliant Gen10 Microserver
+*  VMware Vsphere 7 on an Intel NUC
+*  Ansible to tie it all together
+
+
+== this section 
+
+[NOTE]
+====
+These docs have nothing to do with the official https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/[Product Documentation for Red Hat Enterprise Linux].
+====
+
+What can you do with a free Red Hat Developer subscription?  
+A surprising amount, actually. 
+As you can see from the navbar on the left, articles cover sysadmin tasks like these.  
+
+* Install RHEL on a physical machine
+* Create a network of virtual machines.
+* Add containers to VMs. 
+* Set up developer environments. 
+
+These pages are for system administrators, not business administrators. 
+The kind of people who enjoy hands on a keyboard, can cope with the CLI, and want to learn.
+
+
+== get in touch
+
+Something wrong? 
+https://github.com/nickhardiman/articles-rhel8/issues[Open an issue on GitHub].
+
+
