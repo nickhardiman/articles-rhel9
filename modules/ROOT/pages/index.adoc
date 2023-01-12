@@ -10,19 +10,8 @@ The site you are looking at here is my collection of hardware and software docs.
 If you are looking for tech help, stick a word in the search bar above. 
 I hope you find something that helps. 
 
-
-== here, on this site 
-
-The _Here_ option above, up top in the navbar, can take you to my other documentation sections. There's a pop-up selector bottom left that does the same kind of thing. 
-
-Here's my wishlist of things to document. 
-
-*  Fedora on a Raspberry Pi 4 
-*  RHEL on an ASUS PN50 
-*  OCP4 on an ASUS PN51 
-*  Satellite 6 on an HPE Proliant Gen10 Microserver
-*  VMware Vsphere 7 on an Intel NUC
-*  Ansible to tie it all together
+This section is all about RHEL and the many sysadmin things you can do with a free Red Hat Developer subscription.  
+There's a pop-up selector bottom left that takes you to my other documentation sections.  
 
 
 == this section 
