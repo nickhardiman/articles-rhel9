@@ -1,0 +1,8 @@
+= more virtualization
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 05-01-2022
+
+More procedures related to KVM, qemu, and libvirt. 
+Also Image Builder, Ansible and NetworkManager.
+

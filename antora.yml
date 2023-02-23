@@ -43,4 +43,5 @@ nav:
 - modules/developer/nav.adoc 
 - modules/cgroup/nav.adoc 
 - modules/container/nav.adoc 
+- modules/more-virtualization/nav.adoc 
 - modules/unsorted/nav.adoc 

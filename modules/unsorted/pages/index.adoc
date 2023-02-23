@@ -1,7 +1,0 @@
-= unsorted
-Nick Hardiman 
-:source-highlighter: highlight.js
-:revdate: 05-01-2022
-
-I'm in the process of experimenting with a free developer subscription and RHEL 9 on an Asus PN50  mini-PC in my home lab. 
-I'm writing about my experiments here. 
