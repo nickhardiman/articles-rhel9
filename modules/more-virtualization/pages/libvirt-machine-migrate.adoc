@@ -4,54 +4,124 @@ Nick Hardiman
 :revdate: 06-01-2023
 
 
-Move a virtual machine from one machine to another. 
-The machines are physical, a source host and destination host, with libvirt. 
+Move a virtual guest machine from one host machine to another. 
+The host machines are physical. The source host and destination host run a hypervisor, and libvirt is used to do the VM work.
 
 The move is a combination of stopping, copying, starting and deleting. 
+Copy the original source VM to make a new destination VM, check it, then delete the original. 
 
 == stop the original VM
 
-Find the domain name for the machine. 
-eg. repo-rhel9
+Find the domain name for the machine  eg. _utility_. 
+
+Log into the source host. Use the root account.
+
+[source,shell]
+----
+# source host
+[nick@host1 ~]$ sudo -i
+[sudo] password for nick: 
+[root@host1 ~]# 
+----
 
 Stop the VM. 
-virsh shutdown repo-rhel9 
+
+[source,shell]
+----
+HOST=utility
+virsh shutdown $HOST 
+----
 
 == copy the storage file 
 
 Use the source host. 
 
-Find the volume file in /var/lib/libvirt/images/.
+Find the storage file in /var/lib/libvirt/images/.
 
-Copy the file to the destination host.
+Copy the file to the destination host. Before doing this, set up key-based login. Copy root's public key from _/root/.ssh/id_rsa.pub_ on the source host to the destination host's _/root/.ssh/authorized_keys_ file first. RHEL 9 allows the root user on one host to log into another host with a key-based login, but not with a password-based login.
 
-
-== copy the machine definition
-
-Use the source host. 
-
-virsh dumpxml repo-rhel9 > vm-repo-rhel9.xml 
-
-Copy this XML file to the destination host
-
-Use the destination host.
-
-virsh define vm-repo-rhel9.xml
-
-
-== start the copied VM
-
-Start and watch the console. 
+This example copies the storage file _$HOST.qcow2_ from host1 to host2. 
 
 [source,shell]
 ----
-[root@host1 libvirt]# virsh start repo-rhel9 && virsh console repo-rhel9
-Domain 'repo-rhel9' started
+[root@host1 ~]# cd /var/lib/libvirt/images/
+[root@host1 images]# ls -lh $HOST.qcow2 
+-rw-------. 1 qemu qemu 31G Feb 23 17:08 $HOST.qcow2
+[root@host1 images]# 
+[root@host1 images]# scp $HOST.qcow2 host2:/var/lib/libvirt/images/
+...
+$HOST.qcow2                          8% 2459MB 111.7MB/s   04:13 ETA
+...
+----
 
-Connected to domain 'repo-rhel9'
+== copy the machine definition
+
+Copy machine configuration from source host to destination host. 
+
+First, copy config into an XML file in root's home directory. 
+
+[source,shell]
+----
+virsh dumpxml $HOST > ~/vm-$HOST.xml 
+----
+
+Copy this XML file to the destination host.
+
+[source,shell]
+----
+scp vm-$HOST.xml host2:
+----
+
+== create a new machine on the destination host
+
+Create the new machine on the destination host.
+
+[source,shell]
+----
+# destination host
+HOST=utility
+# check before
+virsh list --all
+# create
+virsh define vm-$HOST.xml
+# check after
+virsh list --all
+----
+
+Virsh displays a table like this. 
+
+[source,shell]
+----
+ Id   Name         State
+-----------------------------
+ -    antora1      shut off
+----
+
+Start the copied VM and watch the console. 
+
+[source,shell]
+----
+[root@host2 libvirt]# virsh start $HOST && virsh console $HOST
+Domain '$HOST' started
+
+Connected to domain '$HOST'
 Escape character is ^] (Ctrl + ])
 ...
 ----
 
+Many messages scroll up the screen for a minute. 
+Disconnect from the console with the key combination 
+kbd:[Ctrl + ++]++ ]
+
 == delete the original VM
 
+Once the machine is up and running on the destination host, it can be deleted from the source host. 
+
+Delete machine configuration and the storage file. 
+
+[source,shell]
+----
+virsh destroy $HOST
+virsh undefine --nvram $HOST 
+virsh vol-delete $HOST.qcow2 --pool images
+----
