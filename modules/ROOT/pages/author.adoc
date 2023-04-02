@@ -5,7 +5,7 @@ Nick Hardiman
 
 
 
-image::nick-headshot-2019-small.jpg[title="Nick Hardiman",float="right",width=200]
+image::nick-stormtroopers.jpg[title="One of these is me.",float="right"]
 
 I'm Nick, an infrastructure consultant and automation architect at Red Hat.
 "Infrastructure" means I work on platforms, automation and containers in the IT world. If you know Red Hat products, think 
