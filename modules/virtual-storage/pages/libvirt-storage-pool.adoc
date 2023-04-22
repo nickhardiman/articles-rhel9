@@ -2,6 +2,7 @@
 = libvirt storage pool
 Nick Hardiman 
 :source-highlighter: highlight.js
+:revdate: 01-01-2023
 
 The https://libvirt.org/[libvirt] project provides a virtualization management system. 
 Create a libvirt storage pool using the ``virsh`` command. 

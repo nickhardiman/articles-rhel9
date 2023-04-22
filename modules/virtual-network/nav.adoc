@@ -1,7 +1,7 @@
 * xref:index.adoc[]
-** xref:libvirt-qemu-kvm.adoc[]
 ** xref:libvirt-net-plan.adoc[]
 ** xref:dnf-group-virtualization-host.adoc[]
+** xref:libvirt-qemu-kvm.adoc[]
 ** xref:libvirt-enable.adoc[]
 ** xref:libvirt-network-default.adoc[]
 ** xref:bridge-pubbr0.adoc[]
