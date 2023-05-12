@@ -1,0 +1,13 @@
+= put a script in an RPM package 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 27-04-2023
+
+Install tools
+
+[source,shell]
+----
+[nick@guest1 ~]$ python3 -m venv new/virtual/environment
+[nick@guest1 ~]$
+----
+
