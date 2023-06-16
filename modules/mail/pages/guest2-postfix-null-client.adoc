@@ -5,3 +5,69 @@ Nick Hardiman
 
 https://access.redhat.com/solutions/74893
 How do I configure postfix as a null client?
+
+[source,shell]
+....
+# tasks file for smtp_server
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/automating_system_administration_by_using_rhel_system_roles/index#assembly_postfix-role-variables-in-system-roles_automating-system-administration-by-using-rhel-system-roles
+# https://www.redhat.com/en/blog/automating-postfix-installation-and-configuration-rhel-system-roles
+#
+# other approaches
+# https://access.redhat.com/solutions/6761851
+# Postfix Dovecot OpenLdap Mail server implementation
+# https://github.com/bertvv/ansible-role-mailserver
+....
+
+
+== manage the mail queue
+
+Create an undeliverable message. 
+
+No external access, so this mail can't get relayed. 
+
+[source,shell]
+....
+[root@git ~]# echo "body" | mail -s subject user@gmail.com
+[root@git ~]# 
+....
+
+Display all waiting messages. 
+
+[source,shell]
+....
+[root@git ~]# postqueue -p
+-Queue ID-  --Size-- ----Arrival Time---- -Sender/Recipient-------
+42849106C6B4     441 Fri Jun 16 14:00:31  root@lab.example.com
+(host message.lab.example.com[192.168.135.6] said: 454 4.7.1 <user@gmail.com>: Relay access denied (in reply to RCPT TO command))
+                                         user@gmail.com
+
+-- 0 Kbytes in 1 Request.
+[root@git ~]# 
+[root@git ~]# postqueue -p
+-Queue ID-  --Size-- ----Arrival Time---- -Sender/Recipient-------
+42849106C6B4     441 Fri Jun 16 14:00:31  root@lab.example.com
+(host message.lab.example.com[192.168.135.6] said: 454 4.7.1 <user@gmail.com>: Relay access denied (in reply to RCPT TO command))
+                                         user@gmail.com
+
+-- 0 Kbytes in 1 Request.
+[root@git ~]# 
+....
+
+Delete all waiting messages. 
+Purge. 
+
+[source,shell]
+....
+[root@git ~]# postsuper -d ALL
+postsuper: Deleted: 1 message
+[root@git ~]# 
+....
+
+Display all waiting messages. 
+
+[source,shell]
+....
+[root@git ~]# postqueue -p
+Mail queue is empty
+[root@git ~]# 
+....
