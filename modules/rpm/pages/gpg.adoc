@@ -1,0 +1,94 @@
+= use GPG (Gnu Privacy Guard)
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 21-06-2023
+
+ GPG (Gnu Privacy Guard)
+
+gpg commands
+
+!!! does not use a password to protect the private key.
+install packages
+
+[source,shell]
+----
+dnf install gnupg pinentry
+----
+
+create public and private key pair
+
+[source,shell]
+----
+gpg \
+  --quick-gen-key \
+  --batch \
+  --pinentry-mode loopback \
+  --passphrase '' \
+  'Package Manager (RPM Signing Key) <pmanager@example.com>'
+----
+
+show private key fingerprint
+[source,shell]
+----
+gpg --list-secret-keys
+----
+
+show public key fingerprint
+[source,shell]
+----
+gpg --list-keys
+----
+
+export private key and public key
+[source,shell]
+----
+gpg --export-secret-keys --armor  --output signing-key-private-and-public.asc
+----
+
+export public key only
+[source,shell]
+----
+gpg --export --armor --output verify-key-public.asc
+----
+
+same thing with an RPM-friendly name
+[source,shell]
+----
+gpg --export --armor --output RPM-GPG-KEY-pmanager
+----
+
+delete private key
+use key fingerprint, not name
+[source,shell]
+----
+gpg --delete-secret-keys --batch --yes \
+  25B81851CC45EEEB0950E63C9F566C538158A4E7
+----
+
+delete public key after deleting private key
+use key fingerprint or name
+[source,shell]
+----
+gpg --delete-keys --batch --yes  \
+  73085D01A75B108FEB90F69D7E584E4311EF7699
+----
+
+or
+[source,shell]
+----
+gpg --delete-keys --batch --yes  \
+  'Package Manager (RPM Signing Key) <pmanager@example.com>'
+----
+
+import private key and public key
+[source,shell]
+----
+gpg --import signing-key-private-and-public.asc
+----
+
+trust keys
+create a string like this: (key fingerprint):(trust level):
+[source,shell]
+----
+echo "527861DB5859391DA2228EC2632DC774CE6AA695:6:" | gpg --import-ownertrust
+----

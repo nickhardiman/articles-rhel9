@@ -1,0 +1,81 @@
+= sign an RPM
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 21-06-2023
+
+
+install packages
+
+[source,shell]
+----
+dnf install rpm-sign
+----
+
+check a package signature
+unsigned package shows (none)
+
+[source,shell]
+----
+rpm -qip ~/bello-0.0.1-1.el9.noarch.rpm | grep Signature
+----
+
+sign a package
+add private key and public key to the GPG keyring
+
+[source,shell]
+----
+gpg --import signing-key-private-and-public.asc
+----
+
+add RPM macros to config file 
+ [source,shell]
+----
+cat <<EOF>>~/.rpmmacros
+%_signature gpg
+%_gpg_path ~/.gnupg
+%_gpg_name Package Manager
+%_gpgbin /usr/bin/gpg2
+%__gpg_sign_cmd %{__gpg} gpg --force-v3-sigs --batch --verbose \
+    --no-armor --no-secmem-warning --local-user "%{_gpg_name}" \
+    --sign --detach-sign --output %{__signature_filename} \
+    --digest-algo sha256 %{__plaintext_filename}
+EOF
+----
+
+    
+sign a package
+
+[source,shell]
+----
+rpm --addsign ~/bello-0.0.1-1.el9.noarch.rpm
+----
+
+check a package signature
+signed package shows a line with warning...NOKEY and a line with RSA/SHA256...
+
+[source,shell]
+----
+rpm -qip ~/bello-0.0.1-1.el9.noarch.rpm | grep Signature
+----
+
+list public keys in RPM database
+
+[source,shell]
+----
+rpm -q gpg-pubkey --qf '%{name}-%{version}-%{release} --> %{summary}\n'
+----
+
+add the public key to the RPM database
+fixes NOKEY warning
+
+[source,shell]
+----
+sudo rpm --import RPM-GPG-KEY-pmanager 
+----
+
+remove the public key from the RPM database
+
+[source,shell]
+----
+sudo rpm -e gpg-pubkey-352c64e5-52ae6884
+----

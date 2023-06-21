@@ -7,7 +7,5 @@ Install tools
 
 [source,shell]
 ----
-[nick@guest1 ~]$ python3 -m venv new/virtual/environment
-[nick@guest1 ~]$
 ----
 

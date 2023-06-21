@@ -1,0 +1,8 @@
+= DNF and RPM
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 21-06-2023
+
+
+DNF (DaNdiFied yum) and RPM (Red hat Package Manager). 
+Dodgy acronyms.
