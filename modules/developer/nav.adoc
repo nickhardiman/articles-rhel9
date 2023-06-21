@@ -3,4 +3,3 @@
 ** xref:dev-python3-module.adoc[]
 ** xref:dev-python3-virtualenv.adoc[]
 ** xref:dev-mojolicious-hello-world.adoc[]
-** xref:rpm-create.adoc[]
