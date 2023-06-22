@@ -2,4 +2,5 @@
 ** xref:gpg.adoc[]
 ** xref:rpm-sign.adoc[]
 ** xref:rpm-create.adoc[]
+** xref:dnf.adoc[]
 

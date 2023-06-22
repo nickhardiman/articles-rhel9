@@ -1,0 +1,32 @@
+= use DNF 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 27-04-2023
+
+Install a package
+
+[source,shell]
+----
+dnf install mypackage
+----
+
+erase 
+[source,shell]
+----
+----
+
+
+update
+[source,shell]
+----
+----
+
+
+
+list files in a package
+
+[source,shell]
+----
+dnf repoquery -l mypackage
+----
+
