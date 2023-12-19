@@ -1,0 +1,105 @@
+= configure rsyslog
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 10-12-2023
+
+== links
+
+https://en.wikipedia.org/wiki/Syslog
+
+https://datatracker.ietf.org/doc/html/rfc5424#appendix-A.1
+
+[source,shell]
+----
+            +----------+         +---------+
+            |Originator|---->----|Collector|
+            +----------+         +---------+
+
+            +----------+         +-----+         +---------+
+            |Originator|---->----|Relay|---->----|Collector|
+            +----------+         +-----+         +---------+
+----
+
+
+== facility 
+
+
+== severity
+
+
+== priority 
+
+number contained within angle brackets 
+
+https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/deep-dive-how-to-debug-syslog-ingestion-for-sentinel-and-log/ba-p/2007056
+
+multiply the Facility number by 8 then add the numerical value of the Severity
+
+
+== ASCII 
+
+"<" ('less-than' character, %d60), followed by a number, which is followed by a ">" ('greater-than' character, %d62)
+
+https://en.wikipedia.org/wiki/ASCII
+
+
+== module
+
+https://www.rsyslog.com/doc/v8-stable/configuration/modules/imtcp.html
+
+https://www.rsyslog.com/doc/v8-stable/configuration/modules/imptcp.html
+
+https://serverfault.com/questions/1141165/issue-getting-rsyslog-tls-configuration-working
+
+https://www.rsyslog.com/doc/v8-stable/configuration/modules/omfwd.html
+
+== listener
+
+[source,shell]
+----
+----
+
+
+== forwarder
+
+[source,shell]
+----
+----
+
+
+== network stream driver 
+
+https://www.rsyslog.com/doc/v8-stable/concepts/netstrm_drvr.html
+
+https://www.rsyslog.com/doc/v8-stable/concepts/ns_gtls.html
+
+https://www.rsyslog.com/doc/v8-stable/concepts/ns_ptcp.html
+
+
+== authentication
+
+x.509
+
+== TLS
+
+https://cromwell-intl.com/cybersecurity/rsyslog-tls/
+
+[source,shell]
+----
+----
+
+
+== test
+
+ss -tlnp
+
+ss -ulnp
+
+telnet
+
+openssl s_client
+
+tcpdump
+
+logger
+

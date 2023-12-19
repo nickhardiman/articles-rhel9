@@ -1,4 +1,4 @@
-= exaine network settings
+= examine network settings
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 13-09-2021
