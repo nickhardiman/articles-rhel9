@@ -2,5 +2,6 @@
 ** xref:id-certificate-ca-create.adoc[]
 ** xref:id-certificate-ca-certificate.adoc[]
 ** xref:id-certificate-ca-trust.adoc[]
+** xref:id-certificate-server-create.adoc[]
 ** xref:aide.adoc[]
 ** xref:auditd.adoc[]

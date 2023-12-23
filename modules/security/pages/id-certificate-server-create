@@ -1,0 +1,8 @@
+= create a server certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 12-12-2023
+
+== links
+
+https://github.com/nickhardiman/ansible-collection-platform/blob/main/roles/server_cert/tasks/main.yml
