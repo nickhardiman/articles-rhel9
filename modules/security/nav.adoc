@@ -5,3 +5,5 @@
 ** xref:id-certificate-server-create.adoc[]
 ** xref:aide.adoc[]
 ** xref:auditd.adoc[]
+** xref:ssh-host-keys.adoc[]
+** xref:ssh-certificate-create.adoc[]

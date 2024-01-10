@@ -1,4 +1,4 @@
-= create a server certificate
+= create an X.509 server certificate
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 12-12-2023

@@ -1,0 +1,198 @@
+= SSH host keys
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 12-12-2023
+
+
+
+== ssh host keys 
+
+Every RHEL host already has a few keys. 
+
+The SSH config directory holds pairs of public and private keys.
+One key is used to encrypt a message and the other one decrypts the message.
+It doesn't matter which key is used. 
+The public key encrypts and the private key decrypts, or vice versa. 
+
+The key pairs are made using three different algorithms.
+
+* https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm[ECDSA (Elliptic Curve Digital Signature Algorithm)]
+* https://en.wikipedia.org/wiki/EdDSA#Ed25519[Ed25519], a variant of EdDSA (Edwards-curve Digital Signature Algorithm) modified for X86 computers
+* https://en.wikipedia.org/wiki/RSA_(cryptosystem)[RSA (Rivest–Shamir–Adleman)]
+
+[source,shell]
+----
+[nick@secret ~]$ ls -1 /etc/ssh/ssh_host_*
+/etc/ssh/ssh_host_ecdsa_key
+/etc/ssh/ssh_host_ecdsa_key.pub
+/etc/ssh/ssh_host_ed25519_key
+/etc/ssh/ssh_host_ed25519_key.pub
+/etc/ssh/ssh_host_rsa_key
+/etc/ssh/ssh_host_rsa_key.pub
+[nick@secret ~]$ 
+----
+
+All three private keys are used by default by SSHD. 
+The config file has default values hashed out. 
+Run _man sshd_config_ for more details. 
+
+
+[source,shell]
+----
+[nick@secret ~]$ sudo grep HostKey /etc/ssh/sshd_config
+[sudo] password for nick: 
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_ecdsa_key
+#HostKey /etc/ssh/ssh_host_ed25519_key
+[nick@secret ~]$ 
+----
+
+Keys are turned into printable strings and stored in these files. 
+See https://www.openssh.com/txt/rfc4716.txt
+
+The SSH server keeps private keys safe and distributes public keys to clients. 
+
+
+== rotate keys 
+
+Occasionally, keys must be replaced, such as when you've just published your private keys on the web. 
+When the time comes to rotate these keys, a new set can be created. 
+Give SSH clients a while to notice and cache the new keys.
+Then delete the old keys and config. 
+
+[source,shell]
+----
+cd /etc/ssh/
+mkdir old 
+mv ssh_host_* old
+ssh-keygen -A
+echo '
+# old keys
+HostKey /etc/ssh/old/ssh_host_rsa_key
+HostKey /etc/ssh/old/ssh_host_ecdsa_key
+HostKey /etc/ssh/old/ssh_host_ed25519_key
+# new keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+' >> sshd_config
+systemctl restart sshd
+----
+
+
+== host private keys 
+
+[source,shell]
+----
+[root@secret ~]#  cd /etc/ssh/
+[root@secret ssh]# 
+[root@secret ssh]# cat ssh_host_ecdsa_key
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAaAAAABNlY2RzYS
+1zaGEyLW5pc3RwMjU2AAAACG5pc3RwMjU2AAAAQQST3mXXDEBJjl9Cec7rPujN4a+9CyNj
+gSnpsFjZ5N8dB715WBmrZxZGiuhl2EZpX4ZDBBs8dPa1NOQ4JMI6oKmdAAAAmH2lxjZ9pc
+Y2AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJPeZdcMQEmOX0J5
+zus+6M3hr70LI2OBKemwWNnk3x0HvXlYGatnFkaK6GXYRmlfhkMEGzx09rU05DgkwjqgqZ
+0AAAAgcn2hSE0dXYvJbLFdc3k31cJqSO3/bydtpFmbJSJPIs0AAAAA
+-----END OPENSSH PRIVATE KEY-----
+[root@secret ssh]# 
+[root@secret ssh]# cat ssh_host_ed25519_key
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACCDvGc3MuwNuR95OisXt3iYyF7r5o1kzSFIcd0wXzjQhQAAAIi4xzTJuMc0
+yQAAAAtzc2gtZWQyNTUxOQAAACCDvGc3MuwNuR95OisXt3iYyF7r5o1kzSFIcd0wXzjQhQ
+AAAEAT5s5PgRJeJD1eRzdqwiX1yamLhLp316RMPvPgeKa9RIO8Zzcy7A25H3k6Kxe3eJjI
+XuvmjWTNIUhx3TBfONCFAAAAAAECAwQF
+-----END OPENSSH PRIVATE KEY-----
+[root@secret ssh]# 
+[root@secret ssh]# cat ssh_host_rsa_key
+-----BEGIN OPENSSH PRIVATE KEY-----
+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
+tJ11NjnJcQKNMAAAAAAQID
+-----END OPENSSH PRIVATE KEY-----
+[root@secret ssh]# 
+----
+
+
+
+== host public keys 
+
+[source,shell]
+----
+[root@secret ssh]# cat ssh_host_ecdsa_key.pub 
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJPeZdcMQEmOX0J5zus+6M3hr70LI2OBKemwWNnk3x0HvXlYGatnFkaK6GXYRmlfhkMEGzx09rU05DgkwjqgqZ0= 
+[root@secret ssh]# 
+[root@secret ssh]# cat ssh_host_ed25519_key.pub 
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO8Zzcy7A25H3k6Kxe3eJjIXuvmjWTNIUhx3TBfONCF 
+[root@secret ssh]# 
+[root@secret ssh]# cat ssh_host_rsa_key.pub 
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC22zfhGkudv9MxPylX6bNyEXfjiz5CDYYy3niSab/0YWaX+FmatyPCuWjuXiXz9AGL4yZ12r1WmFeQWlXx5sH3XMTt46VlmCL8ZefV9LjDAvCj3G8gHTbnfaRCDlW5S8vqOeXt5y9YAQZbTIeo3Gz+EQtRoDW/xohm8+hoJQnvFkp9G6OFoCbCtukd7zxlCVxjEOpzxi3W34X0n9sROklZ7odPL/KUWuU7sVp76SwxWwVzW5KSl5XE4/ZMwJtXoLtdUbI3nWBCP8PCQEy9LWoIlAqpkQ+hEoaCIsn6cEIpK26oYAdxawCEUWeXT+V+rDJ/0IxmLKmPoWkeaHnNTLOSQhB2mKY1+UWCXFv2v9nhD43Aj1qge7UtDsXDuxXrlvwK6AhcqbChKX44CwHOtJ/sCwENxiW7NNoZ1oCUzmVpCD0tIn/gunuLOtRD8a4Uxx2XhjQzA1JkQaX9irV/LNPJC6yl07KZzN3/FZlysjwiCuSAYhRqAzlMQgFtOFgPZ5U= 
+[root@secret ssh]# 
+----
+
+== the authenticity challenge
+
+The first time an SSH client connects to a server, the client warns that the server is unknown and so possibly dangerous. 
+
+The client displays a fingerprint - a unique ID. 
+The fingerprint is not the public key.
+In theory, this key fingerprint can be used to check the server is the right one. 
+In practice, this is where users unthinkingly answer, "yeah, sure, whatever".
+
+[source,shell]
+----
+nickhardiman@nhardima-mac .ssh % ssh nick@secret.source.example.com     
+The authenticity of host 'secret.source.example.com (192.168.11.8)' can't be established.
+ED25519 key fingerprint is SHA256:Rc9vMcofMv6sZii0kDGxhxHb9kwmLIvBvVgNTRVH7bc.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+----
+
+This server is now trusted by the SSH client. 
+
+The server hands over public keys.
+These are stored in the .ssh/known_hosts file, and used to secure the conversation.
+
+[source,shell]
+----
+nick@workstation .ssh % grep secret known_hosts
+secret.source.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIO8Zzcy7A25H3k6Kxe3eJjIXuvmjWTNIUhx3TBfONCF
+secret.source.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC22zfhGkudv9MxPylX6bNyEXfjiz5CDYYy3niSab/0YWaX+FmatyPCuWjuXiXz9AGL4yZ12r1WmFeQWlXx5sH3XMTt46VlmCL8ZefV9LjDAvCj3G8gHTbnfaRCDlW5S8vqOeXt5y9YAQZbTIeo3Gz+EQtRoDW/xohm8+hoJQnvFkp9G6OFoCbCtukd7zxlCVxjEOpzxi3W34X0n9sROklZ7odPL/KUWuU7sVp76SwxWwVzW5KSl5XE4/ZMwJtXoLtdUbI3nWBCP8PCQEy9LWoIlAqpkQ+hEoaCIsn6cEIpK26oYAdxawCEUWeXT+V+rDJ/0IxmLKmPoWkeaHnNTLOSQhB2mKY1+UWCXFv2v9nhD43Aj1qge7UtDsXDuxXrlvwK6AhcqbChKX44CwHOtJ/sCwENxiW7NNoZ1oCUzmVpCD0tIn/gunuLOtRD8a4Uxx2XhjQzA1JkQaX9irV/LNPJC6yl07KZzN3/FZlysjwiCuSAYhRqAzlMQgFtOFgPZ5U=
+secret.source.example.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJPeZdcMQEmOX0J5zus+6M3hr70LI2OBKemwWNnk3x0HvXlYGatnFkaK6GXYRmlfhkMEGzx09rU05DgkwjqgqZ0=
+nick@workstation .ssh % 
+----
+

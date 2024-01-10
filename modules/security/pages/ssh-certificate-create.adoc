@@ -1,0 +1,44 @@
+= create an SSH host certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 12-12-2023
+
+
+https://goteleport.com/blog/comparing-ssh-keys/
+
+rotate host keys 
+https://unix.stackexchange.com/questions/334597/how-to-roll-over-ssh-host-keys
+https://lwn.net/Articles/637156/
+
+== stuff
+
+Use SSH certificates for host authentication. 
+An SSH certificate is not the same as an X.509 certificate used for securing the web. 
+They both contain public keys and are both signed by a Certificate Authority, but the SSH certificate is simpler.
+
+* CA RSA keys
+* SSH host certificate
+* SSH user certificate 
+* SSH config
+
+man ssh-keygen
+----
+CERTIFICATES
+     ssh-keygen supports signing of keys to produce certificates that may be
+     used for user or host authentication.  Certificates consist of a public
+     key, some identity information, zero or more principal (user or host)
+     names and a set of options that are signed by a Certification Authority
+     (CA) key.  Clients or servers may then trust only the CA key and verify
+     its signature on a certificate rather than trusting many user/host keys.
+     Note that OpenSSH certificates are a different, and much simpler, format
+     to the X.509 certificates used in ssl(8).
+----
+
+
+
+== ssh certificate login test
+
+CA on secret.source.example.com
+
+try nick@git.source.example.com --> nick@capsule.source.example.com
+
