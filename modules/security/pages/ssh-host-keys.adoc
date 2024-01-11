@@ -139,7 +139,10 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC22zfhGkudv9MxPylX6bNyEXfjiz5CDYYy3niSab/0
 [root@secret ssh]# 
 ----
 
-== the authenticity challenge
+
+== the "Are you sure" TOFU challenge
+
+https://en.wikipedia.org/wiki/Trust_on_first_use
 
 The first time an SSH client connects to a server, the client warns that the server is unknown and so possibly dangerous. 
 
@@ -148,19 +151,31 @@ The fingerprint is not the public key.
 In theory, this key fingerprint can be used to check the server is the right one. 
 In practice, this is where users unthinkingly answer, "yeah, sure, whatever".
 
+The SSH server on the host hands over public keys.
+If the client does not recognize any key, it asks what to do. 
+
 [source,shell]
 ----
-nickhardiman@nhardima-mac .ssh % ssh nick@secret.source.example.com     
+nickhardiman@workstation .ssh % ssh nick@secret.source.example.com     
 The authenticity of host 'secret.source.example.com (192.168.11.8)' can't be established.
 ED25519 key fingerprint is SHA256:Rc9vMcofMv6sZii0kDGxhxHb9kwmLIvBvVgNTRVH7bc.
 This key is not known by any other names.
-Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Are you sure you want to continue connecting (yes/no/[fingerprint])?   
 ----
 
-This server is now trusted by the SSH client. 
+Yes, sure, why not? 
+What's the worst that can happen?
 
-The server hands over public keys.
-These are stored in the .ssh/known_hosts file, and used to secure the conversation.
+[source,shell]
+----
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.13.186' (ED25519) to the list of known hosts.
+(nick@secret.source.example.com) Password:  
+----
+
+This host is now trusted by the SSH client. 
+
+These are stored in the .ssh/known_hosts file on the client, and used to secure the conversation.
 
 [source,shell]
 ----
@@ -170,3 +185,11 @@ secret.source.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC22zfhGkudv9MxPy
 secret.source.example.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJPeZdcMQEmOX0J5zus+6M3hr70LI2OBKemwWNnk3x0HvXlYGatnFkaK6GXYRmlfhkMEGzx09rU05DgkwjqgqZ0=
 nick@workstation .ssh % 
 ----
+
+== Red Hat Identity Manager helps
+
+This doesn't happen if the SSH client and server hosts are registered with Red Hat Identity Manager. 
+It's not common, but it happens. 
+
+IDM stores host public keys and provides them to the client's SSS daemon, which passes them onto SSH, which then assumes the host is trusted. 
+

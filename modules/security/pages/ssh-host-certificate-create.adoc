@@ -3,6 +3,24 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 12-12-2023
 
+Use an SSH host certificate for trust, instead of https://en.wikipedia.org/wiki/Trust_on_first_use[TOFU (Trust On First Use)].
+
+This setup requires three hosts.
+
+* secret.source.example.com is the CA host. This creates SSH certificates.
+* git.source.example.com is the SSH client host. This trusts the CA's public key.
+* test02.build.example.com is the SSH server host. This has an SSH host certificate. 
+
+The procedure involves a fair bit of jumping back and forth between hosts. 
+
+. Check before making any changes. Log in from git.source.example.com to see if the "Are you sure" login prompt disappears.
+. Create an SSH certificate CA on secret.source.example.com.
+. Get a public host key from test02.build.example.com and use it to create an SSH host certificate.
+. Test the complete setup. Does the SSH host certificate make the SSH client on git trust the SSH server on test02?
+
+Trusting an SSH host certificate does not affect user trust. 
+
+
 == links
 
 https://goteleport.com/blog/comparing-ssh-keys/
@@ -20,6 +38,23 @@ https://www.lorier.net/docs/ssh-ca.html
 !!!
 SSSD complicates things. 
 /var/lib/sss/pubconf/known_hosts
+
+
+== check before - get the "Are you sure" TOFU prompt
+
+
+SSH from  git.source.example.com to test02.build.example.com.
+The git host is registered with IDM, but test02 is not.
+
+[source,shell]
+----
+[nick@git ~]$ ssh 192.168.13.186
+The authenticity of host '192.168.13.186 (<no hostip for proxy command>)' can't be established.
+ED25519 key fingerprint is SHA256:1m9OlIEcoIDwKbqZXrlMfUiryWTjSxlAoIQCzK+gxBE.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+----
+
 
 == SSH certificate stuff
 
@@ -51,7 +86,6 @@ CERTIFICATES
 
 Create an RSA key pair.
 These will be used to sign each host's SSH public key certificate.
-
 
 Use the root account on secret.
 
@@ -115,19 +149,172 @@ drwxr-xr-x. 6 root root 4096 Jan 11 18:02 ..
 ----
 
 
-== get the first public key to sign
+== distribute the CA public key to git (the SSH client host)
 
-Fetch a host public key from 
-This is a fiddly process.
+Copy ca.pub from secret.source.example.com to git.source.example.com.
 
+[source,shell]
+----
+[nick@git ~]$ sudo -i
+[sudo] password for nick: 
+[root@git ~]# mkdir /etc/ssh/certificate/
+[root@git ~]# cd /etc/ssh/certificate/
+[root@git certificate]# 
+[root@git certificate]# scp nick@secret.source.example.com:/etc/ssh/certificate/ca.pub .
+(nick@secret.source.example.com) Password: 
+ca.pub                                                                       100%  584     1.8MB/s   00:00    
+[root@git certificate]# 
+[root@git certificate]# ls -l
+total 4
+-rw-r--r--. 1 root root 584 Jan 11 19:18 ca.pub
+[root@git certificate]# 
+----
+
+== configure the SSH client on git
+
+Tell SSH to use this public key as the CA key.
+
+The _GlobalKnownHostsFile_ directive tells SSH client to look for this file by default.
+For more information, run _man ssh_config_.
+
+[source,shell]
+----
+[root@git ssh]# echo "@cert-authority * $(cat /etc/ssh/certificate/ca.pub)" >> /etc/ssh/ssh_known_hosts
+[root@git ssh]# 
+----
+
+
+=== workaround for Red Hat IDM 
+
+File /etc/ssh/ssh_config.d/04-ipa.conf overrides the value of _GlobalKnownHostsFile_.
+Put the cert-authority line in the user known_hosts file instead.
+
+[source,shell]
+----
+[nick@git ssh]# echo "@cert-authority * $(cat /etc/ssh/certificate/ca.pub)" >> ~/.ssh/known_hosts
+[nick@git ssh]# 
+----
+
+== get the first public key to sign from test02 (the SSH server host)
+
+Fetch a host public key from test02.build.example.com.
+
+[source,shell]
+----
+[root@secret certificate]# scp nick@192.168.13.186:/etc/ssh/ssh_host_ed25519_key.pub .
+The authenticity of host '192.168.13.186 (<no hostip for proxy command>)' can't be established.
+ED25519 key fingerprint is SHA256:1m9OlIEcoIDwKbqZXrlMfUiryWTjSxlAoIQCzK+gxBE.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.13.186' (ED25519) to the list of known hosts.
+(nick@192.168.13.186) Password: 
+ssh_host_ed25519_key.pub                                                     100%   82    31.4KB/s   00:00    
+[root@secret certificate]# 
+----
+
+
+== create the SSH certificate on secret (the CA host)
+
+[source,shell]
+----
+ssh-keygen \
+  -s /etc/ssh/certificate/ca \
+  -I "test02.build.example.com host key" \
+  -V -5m:+365d \
+  -h  \
+  /etc/ssh/certificate/ssh_host_ed25519_key.pub
+----
+
+This creates a new file, ssh_host_ed25519_key-cert.pub.
+
+[source,shell]
+----
+[root@secret certificate]# ls
+ca  ca.pub  ssh_host_ed25519_key.pub
+[root@secret certificate]# ssh-keygen \
+  -s /etc/ssh/certificate/ca \
+  -I "test02.build.example.com host key" \
+  -V -5m:+365d \
+  -h  \
+  /etc/ssh/certificate/ssh_host_ed25519_key.pub
+Signed host key /etc/ssh/certificate/ssh_host_ed25519_key-cert.pub: id "test02.build.example.com host key" serial 0 valid from 2024-01-11T19:36:43 to 2025-01-10T19:41:43
+[root@secret certificate]# 
+[root@secret certificate]# ls 
+ca  ca.pub  ssh_host_ed25519_key-cert.pub  ssh_host_ed25519_key.pub
+[root@secret certificate]# 
+----
+
+
+== copy files to test02
+
+Copy the certificate back to git.
+
+This is a little fiddly.
 SSH does not allow root to log in remotely.
-Directory permissions don't allow anyone but root to write to /etc/ssh/certificate/.
+Anyone can read a public key, but 
+directory permissions don't allow anyone but root to write to /etc/ssh/.
+
+[source,shell]
+----
+[root@test02 ssh]# scp nick@secret.source.example.com:/etc/ssh/certificate/ssh_host_ed25519_key-cert.pub .
+(nick@secret.source.example.com) Password: 
+ssh_host_ed25519_key-cert.pub                                                100% 1424   400.7KB/s   00:00    
+[root@test02 ssh]# 
+----
+
+Check the new certificate. 
+
+[source,shell]
+----
+[root@test02 ssh]# ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub
+/etc/ssh/ssh_host_ed25519_key-cert.pub:
+        Type: ssh-ed25519-cert-v01@openssh.com host certificate
+        Public key: ED25519-CERT SHA256:1m9OlIEcoIDwKbqZXrlMfUiryWTjSxlAoIQCzK+gxBE
+        Signing CA: RSA SHA256:GlaFhR7feyqVAELvLqB9tcv3OXAeemrs1oiA8tKeFOI (using rsa-sha2-512)
+        Key ID: "test02.build.example.com host key"
+        Serial: 0
+        Valid: from 2024-01-11T19:36:43 to 2025-01-10T19:41:43
+        Principals: (none)
+        Critical Options: (none)
+        Extensions: (none)
+[root@test02 ssh]# 
+----
+
+== configure SSH on test02
+
+Tell the SSH server about the certificate
+
+!!!
+Dont think I need this, its a default.
+HostKey /etc/ssh/ssh_host_ecdsa_key
+
+[source,shell]
+----
+echo 'HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub' >> /etc/ssh/sshd_config
+echo "TrustedUserCAKeys /etc/ssh/ca.pub" >>/etc/ssh/sshd_config
+systemctl reload sshd
+systemctl status sshd
+----
 
 
+== test
 
-== ssh certificate login test
+The SSH server host is trusted.
+No TOFU prompt.
 
-CA on secret.source.example.com
+The user password prompt still appears. 
+The SSH host certificate does not affect user trust. 
 
-try nick@git.source.example.com --> nick@capsule.source.example.com
-
+[source,shell]
+----
+[nick@git ~]$ ssh  -v 192.168.13.186
+OpenSSH_8.7p1, OpenSSL 3.0.7 1 Nov 2022
+debug1: Reading configuration data /etc/ssh/ssh_config
+...
+debug1: Server host certificate: ssh-ed25519-cert-v01@openssh.com SHA256:1m9OlIEcoIDwKbqZXrlMfUiryWTjSxlAoIQCzK+gxBE, serial 0 ID "test02.build.example.com host key" CA ssh-rsa SHA256:GlaFhR7feyqVAELvLqB9tcv3OXAeemrs1oiA8tKeFOI valid from 2024-01-11T19:36:43 to 2025-01-10T19:41:43
+...
+debug1: Host '192.168.13.186' is known and matches the ED25519-CERT host certificate.
+debug1: Found CA key in /etc/ssh/ssh_known_hosts:1
+...
+(nick@192.168.13.186) Password: 
+----
