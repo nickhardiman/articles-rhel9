@@ -1,0 +1,119 @@
+= rotate SSH host keys
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 12-12-2023
+
+
+
+== rotate SSH host keys 
+
+Occasionally, keys must be replaced, such as when you've just published your private keys on the web. 
+When the time comes to rotate these keys, a new set can be created. 
+Give SSH clients a while to notice and cache the new keys.
+Then delete the old keys and config. 
+
+[source,shell]
+----
+cd /etc/ssh/
+mkdir old 
+mv ssh_host_* old
+ssh-keygen -A
+echo '
+# old keys
+HostKey /etc/ssh/old/ssh_host_rsa_key
+HostKey /etc/ssh/old/ssh_host_ecdsa_key
+HostKey /etc/ssh/old/ssh_host_ed25519_key
+# new keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+' >> sshd_config
+systemctl restart sshd
+----
+
+== record the change in IDM
+
+If using Red Hat Identity Manager, that has copies of the old keys. 
+Update IDM.
+
+https://access.redhat.com/solutions/6966906
+HowTo: update SSH host public keys of an IdM host
+
+Get a Kerberos ticket. 
+
+[source,shell]
+----
+[root@secret ~]# kinit admin@BUILD.EXAMPLE.COM
+Password for admin@BUILD.EXAMPLE.COM: 
+Password expired.  You must change it now.
+Enter new password: 
+Enter it again: 
+[root@secret ~]# klist
+Ticket cache: KCM:0
+Default principal: admin@BUILD.EXAMPLE.COM
+
+Valid starting     Expires            Service principal
+11/01/24 18:31:59  12/01/24 18:18:59  krbtgt/BUILD.EXAMPLE.COM@BUILD.EXAMPLE.COM
+[root@secret ~]# 
+----
+
+Send the new public keys.  
+
+[source,shell]
+----
+[root@secret ~]#  ipa host-mod secret.source.example.com --updatedns --sshpubkey "$(< /etc/ssh/ssh_host_rsa_key.pub)"
+-----------------------------------------
+Modified host "secret.source.example.com"
+-----------------------------------------
+  Host name: secret.source.example.com
+  Platform: x86_64
+  Operating system: 5.14.0-284.30.1.el9_2.x86_64
+  Principal name: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  Principal alias: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  SSH public key: ssh-rsa
+                  AAAAB3NzaC1yc2EAAAADAQABAAABgQCGfnR8C7SH+wgV9vce5Svbwlt0Bs+nqlFkeRmBQoehAZ2qtxaBPtWtgiud7ruCJkos5Usud7Q2XDi/KpBaoOnoJ8wKwDS4NFflGJN6Y8Ay8Iq5xhbsBzBgcdLgGA/H2g/AgOLdEI83+LU7qndIe0Zy45sU+cWxJH4bL9DP/f7amLFkOCLfzEMYwoQ/hiewZK26RAdSw/8xBoQklB/LxgBU6Ub+OvKrBnb7UAU8F9Ns7UrIclrYveIfMnYAyJxxhg5L/IoZmqNpYqTdUZsAI+/RXL7DtVye8gwjfOZRecqwPr8zpx0ywHps+NlMRRt+Y4B9hVt3hgabywYHQ54WLvCvT0EkYvNj1yH41+vFIjLgxMlByQiFmzdMcBernaHGzOfE/ZCEIaHAhXc+0LmchFVVkzKQ8yxJrTr0XEiQGlp+qsty6r8IRKxiffNPZgWPx38fe2I0WIhaEJxgVa8v/cLK3jwEyI6931H+r28YnW4mqrb+438L1Y5H7MxyAQ8iEkk=
+                  root@secret.source.example.com
+  SSH public key fingerprint: SHA256:VKiDQ65jRxxlD5jmeBz9j3ctMWTxN5X/4fuXlqwAP2A root@secret.source.example.com
+                              (ssh-rsa)
+  Password: False
+  Keytab: True
+  Managed by: secret.source.example.com
+[root@secret ~]# 
+[root@secret ~]# 
+[root@secret ~]#  ipa host-mod secret.source.example.com --updatedns --sshpubkey "$(< /etc/ssh/ssh_host_ecdsa_key.pub)"
+-----------------------------------------
+Modified host "secret.source.example.com"
+-----------------------------------------
+  Host name: secret.source.example.com
+  Platform: x86_64
+  Operating system: 5.14.0-284.30.1.el9_2.x86_64
+  Principal name: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  Principal alias: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  SSH public key: ecdsa-sha2-nistp256
+                  AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIf6nliqvfvdlRyKnq+3WJBLT0eFiFpDf6nf1ZMFhwx5BDw/Gw9c1AvuSW5Ry1K/BUYVRYW8F92FEhs0jykfvyQ=
+                  root@secret.source.example.com
+  SSH public key fingerprint: SHA256:2NAlHTC8TSbWjbWklaGM5kCYAW9ICcD1IwhTzWcrdFU root@secret.source.example.com
+                              (ecdsa-sha2-nistp256)
+  Password: False
+  Keytab: True
+  Managed by: secret.source.example.com
+[root@secret ~]# 
+[root@secret ~]#  ipa host-mod secret.source.example.com --updatedns --sshpubkey "$(< /etc/ssh/ssh_host_ed25519_key.pub)"
+-----------------------------------------
+Modified host "secret.source.example.com"
+-----------------------------------------
+  Host name: secret.source.example.com
+  Platform: x86_64
+  Operating system: 5.14.0-284.30.1.el9_2.x86_64
+  Principal name: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  Principal alias: host/secret.source.example.com@BUILD.EXAMPLE.COM
+  SSH public key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDkaJrhSP7PI0UKWLmx9nC2aN3ALBRsNwv+fBBN6cp97
+                  root@secret.source.example.com
+  SSH public key fingerprint: SHA256:Rc9vMcofMv6sZii0kDGxhxHb9kwmLIvBvVgNTRVH7bc root@secret.source.example.com
+                              (ssh-ed25519)
+  Password: False
+  Keytab: True
+  Managed by: secret.source.example.com
+[root@secret ~]# 
+----
+

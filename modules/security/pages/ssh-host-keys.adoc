@@ -1,4 +1,4 @@
-= SSH host keys
+= view SSH host keys
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 12-12-2023
@@ -51,33 +51,6 @@ Keys are turned into printable strings and stored in these files.
 See https://www.openssh.com/txt/rfc4716.txt
 
 The SSH server keeps private keys safe and distributes public keys to clients. 
-
-
-== rotate keys 
-
-Occasionally, keys must be replaced, such as when you've just published your private keys on the web. 
-When the time comes to rotate these keys, a new set can be created. 
-Give SSH clients a while to notice and cache the new keys.
-Then delete the old keys and config. 
-
-[source,shell]
-----
-cd /etc/ssh/
-mkdir old 
-mv ssh_host_* old
-ssh-keygen -A
-echo '
-# old keys
-HostKey /etc/ssh/old/ssh_host_rsa_key
-HostKey /etc/ssh/old/ssh_host_ecdsa_key
-HostKey /etc/ssh/old/ssh_host_ed25519_key
-# new keys
-HostKey /etc/ssh/ssh_host_rsa_key
-HostKey /etc/ssh/ssh_host_ecdsa_key
-HostKey /etc/ssh/ssh_host_ed25519_key
-' >> sshd_config
-systemctl restart sshd
-----
 
 
 == host private keys 
@@ -148,8 +121,10 @@ tJ11NjnJcQKNMAAAAAAQID
 ----
 
 
-
 == host public keys 
+
+Unlike the private key files, each of these  public key files only contain one line.
+It's a long line.
 
 [source,shell]
 ----
@@ -195,4 +170,3 @@ secret.source.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC22zfhGkudv9MxPy
 secret.source.example.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJPeZdcMQEmOX0J5zus+6M3hr70LI2OBKemwWNnk3x0HvXlYGatnFkaK6GXYRmlfhkMEGzx09rU05DgkwjqgqZ0=
 nick@workstation .ssh % 
 ----
-

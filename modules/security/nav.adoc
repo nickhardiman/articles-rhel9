@@ -6,4 +6,5 @@
 ** xref:aide.adoc[]
 ** xref:auditd.adoc[]
 ** xref:ssh-host-keys.adoc[]
-** xref:ssh-certificate-create.adoc[]
+** xref:ssh-host-keys-rotate.adoc[]
+** xref:ssh-host-certificate-create.adoc[]
