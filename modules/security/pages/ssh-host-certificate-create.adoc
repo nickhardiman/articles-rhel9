@@ -296,6 +296,13 @@ systemctl reload sshd
 systemctl status sshd
 ----
 
+Check the config. 
+
+[source,shell]
+----
+ ssh -G -v 192.168.13.186
+----
+
 
 == test
 

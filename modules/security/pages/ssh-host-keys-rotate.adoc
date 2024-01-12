@@ -36,8 +36,10 @@ systemctl restart sshd
 If using Red Hat Identity Manager, that has copies of the old keys. 
 Update IDM.
 
+For background, see 
+https://access.redhat.com/discussions/1346673[Offending ECDSA key in /var/lib/sss/pubconf/known_hosts] and 
 https://access.redhat.com/solutions/6966906
-HowTo: update SSH host public keys of an IdM host
+[HowTo: update SSH host public keys of an IdM host]
 
 Get a Kerberos ticket. 
 
