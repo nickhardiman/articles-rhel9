@@ -1,0 +1,24 @@
+= create an SSH user certificate
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 12-12-2023
+
+Use an SSH user certificate to log in.
+
+This setup requires three hosts.
+
+* secret.source.example.com is the CA host. This creates SSH certificates.
+* git.source.example.com is the SSH client host. This trusts the CA's public key.
+* test02.build.example.com is the SSH server host. This has an SSH host certificate. 
+
+== create an SSH user public key certificate
+
+[source,shell]
+----
+ssh-keygen \
+    -s /etc/ssh/ca   \
+    -I nick   \
+    -n nick  \
+    -V -5m:+365d    \
+    /home/nick/.ssh/id_rsa.pub 
+----
