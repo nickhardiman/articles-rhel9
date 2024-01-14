@@ -93,9 +93,9 @@ Certificates consist of a public key, some identity information, zero or more pr
 Values are supplied with these command options.
 
 *    -s  CA private key (file /etc/ssh/ca)
-*    -I  certificate identity
+*    -I  certificate identity (a label, "nick")
 *    -n  principal (the user account that can be authenticated by the operating system)
-*    -V  validity interval
+*    -V  validity interval (from 5 minutes ago to 365 days)
 
 [source,shell]
 ----
