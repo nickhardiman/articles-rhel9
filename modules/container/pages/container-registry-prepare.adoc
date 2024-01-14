@@ -110,7 +110,7 @@ For the web server, this variable was set to _www.lab.example.com_.
 [nick@guest1 cert]$ SERVER=docker-registry.lab.example.com
 ....
 
-* xref:security:id-certificate-ca-certificate.adoc[]
+* xref:security:x509-certificate-ca-certificate.adoc[]
 
 Store the certificate and private key in these files. 
 
