@@ -1,4 +1,4 @@
-= trust a CA certificate
+= trust an X.509 CA certificate
 Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 30-01-2021

@@ -5,11 +5,57 @@ Nick Hardiman
 
 Use an SSH host certificate for trust, instead of https://en.wikipedia.org/wiki/Trust_on_first_use[TOFU (Trust On First Use)].
 
+if you are worried about security and don't want users deciding to trust hosts, then SSH host certificates may be a better option.
+After setting up SSH host certificates, this prompt no longer appears. 
+
+[source,shell]
+----
+[nick@workstation ~]$ ssh some-new-host
+...
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+----
+
 This setup requires three hosts.
 
 * secret.source.example.com is the CA host. This creates SSH certificates.
 * git.source.example.com is the SSH client host. This trusts the CA's public key.
 * test02.build.example.com is the SSH server host. This has an SSH host certificate. 
+
+This is how to create the CA (on _secret_). 
+The CA private key is used to encode data in the certificate.
+Any host with the public key can decode this data and prove the certificate is good.
+
+. Create a CA key pair.
+
+This is how the CA and SSH client host (_secret_ and _git_) set up SSH host certificate trust. 
+The SSH client (git) will trust all host certificates signed by the CA public key.
+
+. copy secret's CA public key to git
+. configure _@cert-authority_ on git
+
+This is how the CA and SSH server host  (_secret_ and _test02_) create an SSH host certificate. 
+
+. test02's host public key is copied to secret
+. secret uses test02's public key and the CA private key to create the SSH host certificate
+. secret copies the new host certificate to test02
+. configure _HostCertificate_ on test02
+
+This is how the client and server use an SSH host certificate.
+
+----
+ git     --(can I connect)-->       test02
+ git      <--(my host key)--        test02
+ git checks signature is from the trusted CA
+ git  --(I trust this host, continue)-->  test02
+----
+
+That's it for host authentication. 
+Client and server move onto user authentication.
+
+----
+ git  <--(who are you)--  test02
+----
+
 
 The procedure involves a fair bit of jumping back and forth between hosts. 
 
@@ -19,6 +65,11 @@ The procedure involves a fair bit of jumping back and forth between hosts.
 . Test the complete setup. Does the SSH host certificate make the SSH client on git trust the SSH server on test02?
 
 Trusting an SSH host certificate does not affect user trust. 
+
+Copying files back and forth is a little fiddly.
+SSH does not allow root to log in remotely with a password, and we have not set up key-based login.
+Anyone can read a host public key in the config directory /etc/ssh, but 
+directory permissions don't allow anyone but root to write to /etc/ssh/.
 
 
 == links
@@ -149,7 +200,7 @@ drwxr-xr-x. 6 root root 4096 Jan 11 18:02 ..
 ----
 
 
-== distribute the CA public key to git (the SSH client host)
+== distribute the CA public key to SSH client hosts (git)
 
 Copy ca.pub from secret.source.example.com to git.source.example.com.
 
@@ -195,7 +246,8 @@ Put the cert-authority line in the user known_hosts file instead.
 [nick@git ssh]# 
 ----
 
-== get the first public key to sign from test02 (the SSH server host)
+
+== get the SSH host public key from the SSH server host (test02))
 
 Fetch a host public key from test02.build.example.com.
 
@@ -213,7 +265,7 @@ ssh_host_ed25519_key.pub                                                     100
 ----
 
 
-== create the SSH certificate on secret (the CA host)
+== create the SSH host certificate on the CA host (secret)
 
 [source,shell]
 ----
@@ -245,14 +297,10 @@ ca  ca.pub  ssh_host_ed25519_key-cert.pub  ssh_host_ed25519_key.pub
 ----
 
 
-== copy files to test02
+== copy certificate to the SSH server host (test02)
 
 Copy the certificate back to git.
 
-This is a little fiddly.
-SSH does not allow root to log in remotely.
-Anyone can read a public key, but 
-directory permissions don't allow anyone but root to write to /etc/ssh/.
 
 [source,shell]
 ----
@@ -291,7 +339,6 @@ HostKey /etc/ssh/ssh_host_ecdsa_key
 [source,shell]
 ----
 echo 'HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub' >> /etc/ssh/sshd_config
-echo "TrustedUserCAKeys /etc/ssh/ca.pub" >>/etc/ssh/sshd_config
 systemctl reload sshd
 systemctl status sshd
 ----
@@ -308,6 +355,8 @@ Check the config.
 
 The SSH server host is trusted.
 No TOFU prompt.
+
+Use the verbose option _-v_ to see what the SSH client is doing. 
 
 The user password prompt still appears. 
 The SSH host certificate does not affect user trust. 

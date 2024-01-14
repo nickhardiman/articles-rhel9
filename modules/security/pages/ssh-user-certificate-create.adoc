@@ -11,14 +11,146 @@ This setup requires three hosts.
 * git.source.example.com is the SSH client host. This trusts the CA's public key.
 * test02.build.example.com is the SSH server host. This has an SSH host certificate. 
 
+This is how to create the CA (on _secret_). 
+The CA private key is used to encode data in the certificate.
+Any host with the public key can decode this data and prove the certificate is good.
+
+. Create a CA key pair.
+
+This is how the CA and SSH client host (_secret_ and _git_) set up a new SSH user certificate. 
+
+. the git user creates a key pair
+. the user's public key is copied to secret
+. secret uses the user's public key and the CA private key to create the SSH host certificate
+. secret copies the new user certificate to the git user
+
+Set up the CA and SSH server host  (_secret_ and _test02_) to trust SSH user certificates.
+
+. secret copies the CA public key to test02
+. configure _TrustedUserCAKeys_ on test02
+
+This is how the client and server use an SSH host certificate.
+
+----
+ git  --(hi)--> test02
+ git  <--(negotiate things, trust the host)--> test02
+ git  --(here's my SSH user certificate)--> test02
+ git  <--(I trust this user, carry on)-- test02
+----
+
+
+==  create a key pair
+
+Create files _id_rsa_ and _id_rsa.pub_.
+
+This less interactive version of the command does not ask for a passphrase or file location.
+
+[source,shell]
+....
+ssh nick@git.source.example.com
+ssh-keygen -t rsa -N '' -f /home/nick/.ssh/id_rsa
+....
+
+
+==  copy the public key from the SSH client to the CA
+
+Use the certificate config directory on _secret_.
+
+[source,shell]
+----
+nickhardiman@workstation ~ % ssh nick@secret.source.example.com
+Web console: https://secret.source.example.com:9090/ or https://192.168.11.8:9090/
+
+Last login: Thu Jan 11 18:38:41 2024 from 192.168.11.7
+[nick@secret ~]$ 
+[nick@secret ~]$ sudo -i
+[sudo] password for nick: 
+[root@secret ~]# 
+[root@secret ~]# cd /etc/ssh/certificate/
+[root@secret certificate]# 
+----
+
+Copy the public key file from git.
+
+[source,shell]
+----
+[root@secret certificate]# scp nick@git.source.example.com:/home/nick/.ssh/id_rsa.pub .
+(nick@git.source.example.com) Password: 
+id_rsa.pub                                    100%  581   948.6KB/s   00:00    
+[root@secret certificate]# 
+----
+
+
 == create an SSH user public key certificate
 
 [source,shell]
 ----
 ssh-keygen \
-    -s /etc/ssh/ca   \
+    -s ./ca   \
     -I nick   \
     -n nick  \
     -V -5m:+365d    \
-    /home/nick/.ssh/id_rsa.pub 
+    ./id_rsa.pub 
 ----
+
+Create the new file _id_rsa-cert.pub_.
+
+[source,shell]
+----
+[root@secret certificate]# ls id_*
+id_rsa.pub
+[root@secret certificate]# 
+[root@secret certificate]# ssh-keygen \
+    -s ./ca   \
+    -I nick   \
+    -n nick  \
+    -V -5m:+365d    \
+    ./id_rsa.pub 
+Signed user key ./id_rsa-cert.pub: id "nick" serial 0 for nick valid from 2024-01-14T13:09:06 to 2025-01-13T13:14:06
+[root@secret certificate]# 
+[root@secret certificate]# ls id_*
+id_rsa-cert.pub  id_rsa.pub
+[root@secret certificate]# 
+----
+
+== copy the SSH user certificate from the CA to the SSH client
+
+
+[source,shell]
+----
+[root@secret certificate]# scp id_rsa-cert.pub nick@git.source.example.com:/home/nick/.ssh/
+(nick@git.source.example.com) Password: 
+id_rsa-cert.pub                               100% 2022     5.5MB/s   00:00    
+[root@secret certificate]# 
+----
+
+
+== configure the SSH server host to trust user certificates 
+
+Use the root account on the SSH server host.
+
+[source,shell]
+----
+nickhardiman@workstation ~ % ssh  nick@192.168.13.186
+...
+[nick@test02 ~]$ 
+[nick@test02 ~]$ sudo -i
+[sudo] password for nick: 
+[root@test02 ~]# 
+----
+
+
+[source,shell]
+----
+----
+
+
+[source,shell]
+----
+----
+
+
+[source,shell]
+----
+----
+

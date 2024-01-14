@@ -36,5 +36,5 @@ This less interactive version of the command does not ask for a passphrase or fi
 
 [source,shell]
 ....
-keygen -t rsa -N '' -f /home/nick/.ssh/id_rsa
+ssh-keygen -t rsa -N '' -f /home/nick/.ssh/id_rsa
 ....
