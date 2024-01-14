@@ -8,8 +8,8 @@ Use an SSH user certificate to log in.
 This setup requires three hosts.
 
 * secret.source.example.com is the CA host. This creates SSH certificates.
-* git.source.example.com is the SSH client host. This trusts the CA's public key.
-* test02.build.example.com is the SSH server host. This has an SSH host certificate. 
+* git.source.example.com is the SSH client host. User _nick_ has an SSH user certificate.
+* test02.build.example.com is the SSH server host. This trusts all SSH user certificates signed by the CA.
 
 This is how to create the CA (on _secret_). 
 The CA private key is used to encode data in the certificate.
@@ -82,18 +82,20 @@ id_rsa.pub                                    100%  581   948.6KB/s   00:00
 
 
 == create an SSH user public key certificate
-
-[source,shell]
-----
-ssh-keygen \
-    -s ./ca   \
-    -I nick   \
-    -n nick  \
-    -V -5m:+365d    \
-    ./id_rsa.pub 
-----
+ 
 
 Create the new file _id_rsa-cert.pub_.
+
+from man ssh-keygen
+
+Certificates consist of a public key, some identity information, zero or more principal (user or host) names and a set of options
+
+Values are supplied with these command options.
+
+*    -s  CA private key (file /etc/ssh/ca)
+*    -I  certificate identity
+*    -n  principal (the user account that can be authenticated by the operating system)
+*    -V  validity interval
 
 [source,shell]
 ----
@@ -113,6 +115,31 @@ id_rsa-cert.pub  id_rsa.pub
 [root@secret certificate]# 
 ----
 
+View the new certificate.
+
+[source,shell]
+----
+[root@secret certificate]# ssh-keygen -L -f id_rsa-cert.pub 
+id_rsa-cert.pub:
+        Type: ssh-rsa-cert-v01@openssh.com user certificate
+        Public key: RSA-CERT SHA256:U2LUnbMIj9wJYNRREJvlwvGBEvo+F1XdQdLC3bd6lPo
+        Signing CA: RSA SHA256:GlaFhR7feyqVAELvLqB9tcv3OXAeemrs1oiA8tKeFOI (using rsa-sha2-512)
+        Key ID: "nick"
+        Serial: 0
+        Valid: from 2024-01-14T13:09:06 to 2025-01-13T13:14:06
+        Principals: 
+                nick
+        Critical Options: (none)
+        Extensions: 
+                permit-X11-forwarding
+                permit-agent-forwarding
+                permit-port-forwarding
+                permit-pty
+                permit-user-rc
+[root@secret certificate]# 
+----
+
+
 == copy the SSH user certificate from the CA to the SSH client
 
 
@@ -125,7 +152,7 @@ id_rsa-cert.pub                               100% 2022     5.5MB/s   00:00
 ----
 
 
-== configure the SSH server host to trust user certificates 
+== copy the CA public key from the CA to the SSH client
 
 Use the root account on the SSH server host.
 
@@ -139,14 +166,45 @@ nickhardiman@workstation ~ % ssh  nick@192.168.13.186
 [root@test02 ~]# 
 ----
 
+Copy file ca.pub.
 
 [source,shell]
 ----
+[root@test02 ~]# scp nick@secret.source.example.com:/etc/ssh/certificate/ca.pub /etc/ssh/
+(nick@secret.source.example.com) Password: 
+ca.pub                                        100%  584   107.5KB/s   00:00    
+[root@test02 ~]# 
 ----
+
+
+== configure the SSH server host to trust user certificates 
+
+[source,shell]
+----
+[root@test02 ~]# echo "TrustedUserCAKeys /etc/ssh/ca.pub" >>/etc/ssh/sshd_config
+[root@test02 ~]# 
+[root@test02 ~]# systemctl reload sshd
+[root@test02 ~]# 
+----
+
+
+== test
+
+Connect from git to test02.
+
+If the host is already trusted, the command prompt appears.
 
 
 [source,shell]
 ----
+[nick@git ~]$ ssh -v 192.168.13.186
+OpenSSH_8.7p1, OpenSSL 3.0.7 1 Nov 2022
+debug1: Reading configuration data /etc/ssh/ssh_config
+...
+debug1: Offering public key: /home/nick/.ssh/id_rsa RSA-CERT SHA256:U2LUnbMIj9wJYNRREJvlwvGBEvo+F1XdQdLC3bd6lPo
+debug1: Server accepts key: /home/nick/.ssh/id_rsa RSA-CERT SHA256:U2LUnbMIj9wJYNRREJvlwvGBEvo+F1XdQdLC3bd6lPo
+...
+[nick@test02 ~]$ 
 ----
 
 

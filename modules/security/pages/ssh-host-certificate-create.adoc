@@ -107,7 +107,7 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])?
 ----
 
 
-== SSH certificate stuff
+== an SSH certificate is not an X.509 certificate
 
 Use SSH certificates for host authentication. 
 An SSH certificate is not the same as an X.509 certificate used for securing the web. 
