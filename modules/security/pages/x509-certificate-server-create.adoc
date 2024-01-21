@@ -3,6 +3,259 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 12-12-2023
 
+. Create a private key.
+. Create a config file to add optional extensions.
+. Create a Certificate Signing Request.
+. Use the Certificate Authority.
+. Sign the CSR and create an X.509 certificate.
+
+
 == links
 
 https://github.com/nickhardiman/ansible-collection-platform/blob/main/roles/server_cert/tasks/main.yml
+
+CA certificate and key
+
+https://github.com/nickhardiman/ansible-playbook-build/blob/main/bootstrap.sh
+
+== Satellite and extensions
+
+Red Hat Satellite is fussy about its optional extras. 
+https://access.redhat.com/documentation/en-us/red_hat_satellite/6.14/html-single/installing_satellite_server_in_a_connected_network_environment/index#Configuring_Server_with_a_Custom_SSL_Certificate_satellite
+
+https://access.redhat.com/solutions/4254781
+How to check Custom SSL certificate information after Satellite 6.x is installed?
+
+https://access.redhat.com/articles/6433461
+Consolidated Troubleshooting Article for Red Hat Satellite 6.x SSL Certificates Issues
+
+
+a simple cert causes errors
+----
+Checking Key Usage extension on certificate for Key Encipherment 
+[FAIL]
+
+The /etc/pki/tls/certs/satellite.build.example.com.pem does not allow for the 'Key Encipherment' key usage.
+----
+
+== make a directory to work in
+
+[source,shell]
+....
+mkdir ~/pki
+....
+
+
+== pick a server name 
+
+[source,shell]
+....
+[nick@guest1 ~]$ cd pki
+[nick@guest1 pki]$ NAME=satellite.build.example.com
+[nick@guest1 pki]$ 
+....
+
+
+== create a private key
+
+[source,shell]
+....
+[nick@guest1 pki]$ openssl genrsa -out $NAME.key 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+................................................+++++
+...+++++
+e is 65537 (0x010001)
+[nick@guest1 pki]$ 
+....
+
+View the file. 
+
+This file is not encrypted, unlike the myca.key file.  
+
+[source,shell]
+....
+[nick@guest1 pki]$ cat myservice.lab.example.com.key 
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAvJ/8MbRtlwwhw0hnYAfdApT1H/ZSbfWWjrwmLvKJzxR2E7HH
+NyOsc/PnGxy7Flub+rfWXKnM7nBOt40vXWXetKDX8/lVCE2E3nq6tpK4s6EG+Gc7
+t3V0KChvpU5Ar4sJ4EwZ5zqo4W38BbsSlDn2h7lVrw+DlnDp8iSKx0cN3VR+5bQi
+...
+9nTKgBSMolEAngGPBL1tfIGlak9aBkVy5ABp2rLBHmoAnNWExYjibG2noIZE13bZ
+IViohwKBgCc+4d9AaYN5cwwiIzxHKl4EYigACh+PXjhmtwSMxISIzFOCy5hbgmmM
+RS81/ON3Gns1SF/UDZgvKHC80T46nPOET+8pIhpIzGKkmaGJYje2Cv0RuUkiqv/L
+gA+T7Vv27V0cK06En1TAljEr3g1U/0zBDEV4urTmSI2aVmWRf6Xp
+-----END RSA PRIVATE KEY-----
+[nick@guest1 pki]$ 
+....
+
+
+== create a config file with a request for extensions
+
+[source,shell]
+....
+vim openssl.cnf
+....
+
+Both the distinguished name and the alternative name are set to the server name.
+
+Each field is in the format attribute=value. 
+
+
+[source,ini]
+....
+[ req ]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+x509_extensions = usr_cert
+prompt = no
+
+[ req_distinguished_name ]
+CN = satellite.build.example.com
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth, clientAuth, codeSigning, emailProtection
+subjectAltName = @alt_names
+
+[ usr_cert ]
+basicConstraints=CA:FALSE
+nsCertType = client, server, email
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth, codeSigning, emailProtection
+nsComment = "OpenSSL Generated Certificate"
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+
+[ alt_names ]
+DNS.1 = satellite.build.example.com
+....
+
+The Distinguished Name can have many more optional attributes, not included here. 
+
+[source,shell]
+....
+[ req_distinguished_name ]
+C=
+ST=
+L=
+O=
+OU=
+CN=
+....
+
+== create a Certificate Signing Request
+
+[source,shell]
+....
+openssl req \
+  -new \
+  -key ~/pki/satellite_cert_key.pem \
+  -config ~/pki/openssl.cnf \
+  -out ~/pki/satellite_cert_csr.pem
+....
+
+Check extensions.
+
+[source,shell]
+----
+openssl req -text -in ./satellite_cert_csr.pem | grep -i -A10 attributes
+----
+
+[source,shell]
+----
+[root@host.build.example.com satellite_cert]# openssl req -text -in ./satellite_cert_csr.pem | grep -i -A10 attributes
+        Attributes:
+            Requested Extensions:
+                X509v3 Basic Constraints: 
+                    CA:FALSE
+                X509v3 Key Usage: 
+                    Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment
+                X509v3 Extended Key Usage: 
+                    TLS Web Server Authentication, TLS Web Client Authentication, Code Signing, E-mail Protection
+                X509v3 Subject Alternative Name: 
+                    DNS:satellite.build.example.com
+    Signature Algorithm: sha256WithRSAEncryption
+[root@host.build.example.com satellite_cert]# 
+----
+
+
+== sign the CSR 
+
+Certificate Authority files are required. 
+These are on a different host. 
+
+* host: host.build.example.com
+* CA certificate, including CA public key:   /etc/pki/ca-trust/source/anchors/ca-certificate.pem 
+* CA private key:  /etc/pki/tls/private/ca-certificate.key 
+
+Copy CSR and config to the CA host.
+
+[source,shell]
+----
+----
+
+Use the root account. 
+
+Sign the CSR.
+
+Extensions are not copied from CSR to certificate by default. 
+Use the _--copy_extensions copyall_ option. 
+
+[source,shell]
+....
+openssl x509 \
+  -req \
+  -days 365 \
+  -in     /root/satellite_cert/satellite_cert_csr.pem \
+  -CA     /etc/pki/ca-trust/source/anchors/ca-certificate.pem \
+  -CAkey  /etc/pki/tls/private/ca-certificate.key \
+  -out    /root/satellite_cert/satellite_cert.pem \
+  -set_serial 01 \
+  -sha256 \
+  -copy_extensions copyall
+....
+
+Check the new certificate.
+
+[source,shell]
+----
+[root@host.build.example.com satellite_cert]# openssl x509 -text -in ./satellite_cert.pem  | grep -A15 extensions
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Key Usage: 
+                Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication, TLS Web Client Authentication, Code Signing, E-mail Protection
+            X509v3 Subject Alternative Name: 
+                DNS:satellite.build.example.com
+            X509v3 Subject Key Identifier: 
+                69:17:86:AD:84:8F:ED:AC:A8:40:55:59:09:81:51:7D:5D:05:DE:EC
+            X509v3 Authority Key Identifier: 
+                keyid:A4:DD:2F:F6:AC:13:6B:DA:B6:CC:5A:4D:C5:80:75:8F:CF:3E:85:2B
+
+    Signature Algorithm: sha256WithRSAEncryption
+         72:70:88:f8:94:e8:d1:71:0c:7e:e1:93:7e:67:84:f7:18:e2:
+[root@host.build.example.com satellite_cert]# 
+----
+
+Copy certificate to the requesting host.
+
+[source,shell]
+----
+----
+
+
+== check a Satellite certificate
+
+Check cert, key and CA together.
+
+[source,shell]
+----
+katello-certs-check \
+  -c /root/satellite_cert/satellite_cert.pem \
+  -k /root/satellite_cert/satellite_cert_key.pem \
+  -b /etc/pki/ca-trust/source/anchors/ca.build.example.com-cert.pem
+----
+
