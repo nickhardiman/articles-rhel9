@@ -20,20 +20,34 @@ Ever wondered why the prompt looks like this?
 
 [source,shell]
 ---- 
-[nick@host1 ~]$ 
+[nick@capsule ~]$ 
 ----
 
 A special set of symbols define how the prompt looks. 
 A special bash variable named PS1 configures the prompt. 
-This isn\t the only PS variable - there are more, numbered from 0 to 4. 
-These are described in `man bash`.
 
 [source,shell]
 ---- 
-[nick@host1 ~]$ echo $PS1
+[nick@capsule ~]$ echo $PS1
 [\u@\h \W]\$
-[nick@host1 ~]$ 
+[nick@capsule ~]$ 
 ----
+
+This isn't the only PS variable - there are more, numbered from 0 to 4. 
+These are described in `man bash`.
+
+[source,shell]
+----
+[nick@capsule ~]$ man bash
+...
+PROMPTING
+       When executing interactively, bash displays the primary prompt PS1 when
+       it is ready to read a command, and the secondary  prompt  PS2  when  it
+       needs  more  input  to  complete a command.  Bash displays PS0 after it
+       reads a command but before executing  it.   Bash  allows  these  prompt
+...
+----
+
 
 == special characters 
 
@@ -46,6 +60,48 @@ It has a big list of backslash-escaped special characters, like the ones used he
 * \W - current directory (not the full path)
 
 
+
+== display Fully Qualified Domain Name, not only host name.
+
+Assuming host name is set to the FQDN, 
+Change _\h_ to _\H_.
+
+[source,shell]
+----
+PS1='[\u@\H \W]\$ '
+----
+
+The bash man page explains what these special characters mean. 
+
+[source,shell]
+----
+[nick@capsule ~]$ man bash
+...
+PROMPTING
+...
+              \h     the hostname up to the first `.'
+              \H     the hostname
+...
+----
+
+
+[source,shell]
+----
+[nick@capsule ~]$ hostnamectl status
+   Static hostname: capsule.source.example.com
+         Icon name: computer-vm
+           Chassis: vm
+        Machine ID: 77c1c888d5df442f981f365af0513f8b
+           Boot ID: 5aed96b65500496fb65a250dc47d2ff8
+    Virtualization: kvm
+  Operating System: Red Hat Enterprise Linux 8.9 (Ootpa)
+       CPE OS Name: cpe:/o:redhat:enterprise_linux:8::baseos
+            Kernel: Linux 4.18.0-513.11.1.el8_9.x86_64
+      Architecture: x86-64
+[nick@capsule ~]$ 
+[nick@capsule ~]$ PS1='[\u@\H \W]\$ '
+[nick@capsule.source.example.com ~]$
+----
 
 == add unicode
 
@@ -60,9 +116,12 @@ The result looks like this.
 
 [source,shell]
 ----
-[nick@host1 ~]$ PS1=$'\u2605 \u \u2605 \W]\$ '
+[nick@capsule ~]$ PS1=$'\u2605 \u \u2605 \W]\$ '
 ★ nick ★ ~]$ 
 ----
+
+
+== back to default
 
 Undo your changes. 
 Set the PS1 environment variable back to what it was.
@@ -73,3 +132,14 @@ PS1='[\u@\h \W]\$ '
 ----
 
 
+== make the change permanent
+
+Set the PS1 environment variable in your bash resource config file.
+
+[source,shell]
+----
+[nick@capsule ~]$ echo "PS1='[\u@\H \W]\$ '" >> ~/.bashrc
+[nick@capsule ~]$ 
+[nick@capsule ~]$ source ~/.bashrc
+[nick@capsule.source.example.com ~]$ 
+----
