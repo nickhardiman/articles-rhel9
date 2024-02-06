@@ -1,0 +1,102 @@
+= RHC (Remote Host Configuration)
+Nick Hardiman <nhardima@redhat.com>
+:source-highlighter: highlight.js
+:revdate: 11-12-2023
+
+== links 
+
+https://access.redhat.com/articles/rhc
+
+https://red.ht/connector
+> https://console.redhat.com/insights/connector
+
+
+== rhc cli 
+
+[source,shell]
+----
+[nick@test.build.example.com ~]$ rhc
+NAME:
+   rhc - control the system's connection to Red Hat
+
+USAGE:
+   rhc [global options] command [command options] [arguments...]
+
+VERSION:
+   0.2.2
+
+DESCRIPTION:
+   The rhc command controls the system's connection to Red Hat.
+   
+   To connect the system using an activation key:
+     rhc connect --organization ID --activation-key KEY
+   
+   To connect the system using a username and password:
+     rhc connect --username USERNAME --password PASSWORD
+   
+   To disconnect the system:
+     rhc disconnect
+   
+   Run 'rhc command --help' for more details.
+
+COMMANDS:
+   connect     Connects the system to Red Hat
+   disconnect  Disconnects the system from Red Hat
+   status      Prints status of the system's connection to Red Hat
+   help, h     Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --no-color     (default: false) [$NO_COLOR]
+   --help, -h     show help (default: false)
+   --version, -v  print the version (default: false)
+[nick@test.build.example.com ~]$ rhc status
+Connection status for test.build.example.com:
+
+● Connected to Red Hat Subscription Management
+● Not connected to Red Hat Insights
+● The Remote Host Configuration daemon is inactive
+
+Manage your connected systems: https://red.ht/connector
+[nick@test.build.example.com ~]$
+----
+
+[source,shell]
+----
+[nick@test.build.example.com ~]$ sudo -i
+[sudo] password for nick: 
+[root@test ~]# rhc connect
+Connecting test.build.example.com to Red Hat.
+This might take a few seconds.
+
+● This system is already connected to Red Hat Subscription Management
+● Connected to Red Hat Insights
+● Activated the Remote Host Configuration daemon
+● Enabled console.redhat.com services: insights, remediations, remote configuration, compliance
+
+Successfully connected to Red Hat!
+
+Manage your connected systems: https://red.ht/connector
+[root@test ~]# 
+----
+
+
+== rhcd
+
+[source,shell]
+----
+[root@test ~]# systemctl status rhcd --no-pager --full
+× rhcd.service - Remote Host Configuration daemon
+     Loaded: loaded (/usr/lib/systemd/system/rhcd.service; enabled; preset: disabled)
+     Active: failed (Result: exit-code) since Mon 2023-12-11 12:49:18 GMT; 7min ago
+   Duration: 30.071s
+       Docs: https://github.com/redhatinsights/yggdrasil
+    Process: 50914 ExecStart=/usr/sbin/rhcd (code=exited, status=1/FAILURE)
+   Main PID: 50914 (code=exited, status=1/FAILURE)
+        CPU: 27ms
+
+Dec 11 12:48:48 test.build.example.com systemd[1]: Started Remote Host Configuration daemon.
+Dec 11 12:49:18 test.build.example.com rhcd[50914]: cannot connect to broker: network Error : dial tcp 92.123.140.81:443: i/o timeout
+Dec 11 12:49:18 test.build.example.com systemd[1]: rhcd.service: Main process exited, code=exited, status=1/FAILURE
+Dec 11 12:49:18 test.build.example.com systemd[1]: rhcd.service: Failed with result 'exit-code'.
+[root@test ~]# 
+----

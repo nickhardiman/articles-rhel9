@@ -9,3 +9,4 @@
 ** xref:dnf-examine.adoc[]
 ** xref:dnf-update.adoc[]
 ** xref:dnf-group-examine.adoc[]
+** xref:rhc.adoc[]

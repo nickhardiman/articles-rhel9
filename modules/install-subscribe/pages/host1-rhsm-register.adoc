@@ -67,7 +67,6 @@ The registered system name is: host1.lab.example.com
 [root@host1 ~]# 
 ----
 
-
 === check the portal 
 
 
@@ -83,3 +82,11 @@ Unregistering from: subscription.rhsm.redhat.com:443/subscription
 System has been unregistered.
 [root@host1 ~]# 
 ----
+
+
+
+== an entitlement certificate
+
+Why entitlement certificates are getting refreshed in regular interval of time ?
+https://access.redhat.com/solutions/6968606
+
