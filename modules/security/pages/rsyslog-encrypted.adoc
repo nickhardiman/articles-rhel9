@@ -1,0 +1,82 @@
+= create an encrypted syslog channel
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 06-02-2024
+
+== links 
+
+https://github.com/nickhardiman/articles-rhel9/blob/main/modules/sysadmin/pages/rsyslog.adoc
+
+https://cromwell-intl.com/cybersecurity/rsyslog-tls/
+
+https://serverfault.com/questions/1141165/issue-getting-rsyslog-tls-configuration-working
+
+
+== authentication
+
+x.509
+
+== TLS
+
+https://en.wikipedia.org/wiki/Transport_Layer_Security[TLS (Transport Layer Security)] is the protocol defining how encryption works. 
+The example below encrypts traffic and autheticates the server using an X.509 server certificate.
+It does not authenticate syslog clients using client certificates - any client can connect to the rsyslog server. 
+
+Two common sets of software used to make TLS work are GnuTLS and OpenSSL.
+
+https://cromwell-intl.com/cybersecurity/rsyslog-tls/
+
+As for cryptography, the OpenSSL project was founded in 1998. It provides a command-line tool and a library of cryptographic functions that applications can use.
+
+Richard Stallman had a meltdown over how OpenSSL was open source but came with a license description he didn't prefer. So, the GnuTLS project was initially started around March–November 2000.
+
+== stream driver
+
+Requires either the 
+https://www.rsyslog.com/doc/concepts/ns_gtls.html[Gnu TLS]
+stream driver or the 
+https://www.rsyslog.com/doc/concepts/ns_ossl.html[OpenSSL] stream driver. 
+
+== config
+
+https://www.rsyslog.com/doc/tutorials/tls_cert_server.html#sample-syslog-conf
+
+[source,shell]
+----
+module(load="imtcp" # TCP listener
+    StreamDriver.Name="gtls"
+    StreamDriver.Mode="1" # run driver in TLS-only mode
+    StreamDriver.Authmode="anon"
+    )
+
+# make gtls driver the default and set certificate files
+global(
+    DefaultNetstreamDriver="gtls"
+    DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+    DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+    DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+    )
+
+    # start up listener at port 6514
+    input(
+    type="imtcp"
+    port="6514"
+    )
+----
+
+
+== test
+
+ss -tlnp
+
+ss -ulnp
+
+telnet
+
+openssl s_client
+
+tcpdump
+
+logger
+
+

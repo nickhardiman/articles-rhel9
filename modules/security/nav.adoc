@@ -9,3 +9,4 @@
 ** xref:ssh-host-keys-rotate.adoc[]
 ** xref:ssh-host-certificate-create.adoc[]
 ** xref:ssh-user-certificate-create.adoc[]
+** xref:rsyslog-encrypted.adoc[]

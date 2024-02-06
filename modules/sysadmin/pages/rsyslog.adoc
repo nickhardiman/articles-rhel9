@@ -9,6 +9,23 @@ https://en.wikipedia.org/wiki/Syslog
 
 https://datatracker.ietf.org/doc/html/rfc5424#appendix-A.1
 
+https://www.rootusers.com/how-to-change-log-rate-limiting-in-linux/
+
+
+== journald and rsyslog
+
+Back in the UNIX days, a 
+https://en.wikipedia.org/wiki/Syslog[syslog] server managed local logging of system activity messages. 
+Now the systemd journal service _systemd-journald_ manages local logging. 
+The https://www.rsyslog.com/doc/index.html[rsyslog] tool does the job of syslog, but now picks up its messages from journald. 
+
+Messages are passed from one host to another across the network. 
+Rsyslog is the default syslog worker for RHEL, filling three roles.
+
+* An originator is a client that sends a message.
+* A relay both receives and transmits. It passes a message from one host to another
+* A collector is a server that receives and stores a message.
+
 [source,shell]
 ----
             +----------+         +---------+
@@ -20,14 +37,21 @@ https://datatracker.ietf.org/doc/html/rfc5424#appendix-A.1
             +----------+         +-----+         +---------+
 ----
 
+Rsyslog is not the only software to do these jobs. 
+The way syslog works was standardized in a series of 
+https://datatracker.ietf.org/doc/html/rfc5424[RFC]s, 
+so many software writers built syslog-compatible applications.
 
-== facility 
+
+== message 
+
+=== facility 
 
 
-== severity
+=== severity
 
 
-== priority 
+=== priority 
 
 number contained within angle brackets 
 
@@ -36,38 +60,62 @@ https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/deep-div
 multiply the Facility number by 8 then add the numerical value of the Severity
 
 
-== ASCII 
+=== ASCII 
 
 "<" ('less-than' character, %d60), followed by a number, which is followed by a ">" ('greater-than' character, %d62)
 
 https://en.wikipedia.org/wiki/ASCII
 
 
-== module
+== config
+
+
+[source,shell]
+----
+# Provides TCP syslog reception
+# for parameters see http://www.rsyslog.com/doc/imtcp.html
+#module(load="imtcp") # needs to be done just once
+#input(type="imtcp" port="514")
+----
+
+
+[source,shell]
+----
+# Provides TCP syslog reception
+# for parameters see http://www.rsyslog.com/doc/imtcp.html
+#module(load="imtcp") # needs to be done just once
+#input(type="imtcp" port="514")
+----
+
+
+
+=== module
 
 https://www.rsyslog.com/doc/v8-stable/configuration/modules/imtcp.html
 
 https://www.rsyslog.com/doc/v8-stable/configuration/modules/imptcp.html
 
-https://serverfault.com/questions/1141165/issue-getting-rsyslog-tls-configuration-working
-
 https://www.rsyslog.com/doc/v8-stable/configuration/modules/omfwd.html
 
-== listener
+The 
+https://www.rsyslog.com/doc/configuration/modules/imptcp.html[imptcp] module implements Plain TCP Syslog.
+It does not encrypt anything with TLS - that's the job of the similarly named imtcp module. 
+
+=== listener
 
 [source,shell]
 ----
 ----
 
 
-== forwarder
+=== forwarder
 
 [source,shell]
 ----
 ----
 
 
-== network stream driver 
+=== network stream driver 
 
 https://www.rsyslog.com/doc/v8-stable/concepts/netstrm_drvr.html
 
@@ -76,17 +124,6 @@ https://www.rsyslog.com/doc/v8-stable/concepts/ns_gtls.html
 https://www.rsyslog.com/doc/v8-stable/concepts/ns_ptcp.html
 
 
-== authentication
-
-x.509
-
-== TLS
-
-https://cromwell-intl.com/cybersecurity/rsyslog-tls/
-
-[source,shell]
-----
-----
 
 
 == test
@@ -96,8 +133,6 @@ ss -tlnp
 ss -ulnp
 
 telnet
-
-openssl s_client
 
 tcpdump
 
