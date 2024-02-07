@@ -6,6 +6,10 @@ Nick Hardiman
 https://access.redhat.com/solutions/74893
 How do I configure postfix as a null client?
 
+my role
+https://github.com/nickhardiman/ansible-collection-platform/blob/main/roles/smtp_client/tasks/main.yml
+
+
 [source,shell]
 ....
 # tasks file for smtp_server
@@ -70,4 +74,9 @@ Display all waiting messages.
 [root@git ~]# postqueue -p
 Mail queue is empty
 [root@git ~]# 
+....
+
+[source,shell]
+....
+echo "hello" | mail -s "test from client" nick@message.lab.example.com
 ....

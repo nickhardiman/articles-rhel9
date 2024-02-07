@@ -96,3 +96,29 @@ org ID: 12345678
 https://access.redhat.com/management/subscriptions
 
 image::portal-subscriptions.png[title="Subscription Inventory",float="right",width=400]
+
+
+== view an entitlement certificate
+
+https://access.redhat.com/solutions/3653861[What are Entitlement Certificates in Red Hat Subscription Management?]
+
+[source,shell]
+----
+[root@capsule ~]# openssl x509 -text -in /etc/pki/entitlement/6275000073028958432.pem 
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1234560073028958432 (0x12345651ee70f8e0)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = US, ST = North Carolina, L = Raleigh, O = Katello, OU = SomeOrgUnit, CN = satellite.build.example.com
+        Validity
+            Not Before: Jan 21 13:06:20 2024 GMT
+            Not After : Jan 21 13:06:20 2025 GMT
+...
+7T0aiHkrvVviupFmSbh9+BwD3eMH/T2vDAjqwXAS346Jd4gLrODxMnICN+rOnhZS
+e1/0OB/rhUTv7ricmhtRjVALTAeR6Ej69MOiab50Wtq4IZyb/R+DZfonNPuNrNHl
+7sQ=
+-----END CERTIFICATE-----
+[root@capsule ~]# 
+----
+
