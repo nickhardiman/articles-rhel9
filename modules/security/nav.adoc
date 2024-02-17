@@ -10,3 +10,5 @@
 ** xref:ssh-host-certificate-create.adoc[]
 ** xref:ssh-user-certificate-create.adoc[]
 ** xref:rsyslog-encrypted.adoc[]
+** xref:keycloak.adoc[]
+** xref:keycloak-idm.adoc[]

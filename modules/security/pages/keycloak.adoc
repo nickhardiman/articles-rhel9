@@ -1,0 +1,832 @@
+= run keycloak 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 16-02-2024
+
+
+== links 
+
+downstream project 
+rh-sso7
+SSO for Red Hat solutions 
+https://access.redhat.com/products/red-hat-single-sign-on
+
+upstream project 
+Keycloak project 
+https://www.keycloak.org/
+
+SSO protocols (OpenID, SAML)
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6/html/server_administration_guide/sso_protocols
+W3C web authn
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6/html/server_administration_guide/configuring-authentication_server_administration_guide#webauthn_server_administration_guide
+
+https://www.google.com/search?q=red+hat+blog+install+saml+keycloak
+What MFAs are available in RH-SSO ?
+https://access.redhat.com/solutions/3344641
+
+
+
+
+== make JBoss EAP and SSO repos available
+
+Use the Red Hat customer portal.
+
+Use the Subscription Allocations page to edit the manifest.
+https://access.redhat.com/management/subscription_allocations >
+(manifest name) > Subscriptions
+
+This should be replaced by 
+https://console.redhat.com/subscriptions/manifests but I don't have edit privileges there.
+
+Add these two repositories to the Satellite manifest.
+
+* name: JBoss Enterprise Application Platform 7.4 (RHEL 9) (RPMs) 
+* name: Single Sign-On 7.6 for RHEL 9 x86_64 (RPMs)
+
+Log into Satellite. 
+https://satellite.build.example.com/
+
+Refresh the manifest.
+https://satellite.build.example.com/subscriptions > Manage manifest
+> Refresh
+
+Find the two RHEL 9 repositories for these products. 
+Content > Red Hat Repositories
+Search Available.  
+
+* product_name  ~ JBoss Enterprise Application Platform 7.4
+* product_name  ~ Single Sign-On 7.6
+
+Move the JBoss and SSO repositories from Available Repositories to Enabled Repositories.
+Click x86_64 +.
+
+
+== synchronize products
+
+Adding these creates two new products. 
+https://satellite.build.example.com/products
+
+* JBoss Enterprise Application Platform
+* Red Hat Single Sign-On
+
+Click on _Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_.
+Content shows no packages.
+----
+0 Packages
+0 Errata
+0 Package Groups
+0 Module Streams
+----
+
+Synchronize _Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_.
+
+Select Action > Sync Now
+
+_Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_ content changes to show there are packages.
+----
+25 Packages
+10 Errata
+1 Package Groups
+0 Module Streams
+----
+
+Update the sync plan.
+Add the two new products to _Daily Sync_.
+
+
+== add repos to a content view
+
+Create cv-sso-rhel9
+
+Publish
+
+Edit ccv-rhel-sat-9
+
+Add cv-sso-rhel9
+
+Publish and promote to lce-build
+
+
+== enable the new repositories
+
+On secret
+refresh or reregister?
+
+Enable the new repositories.
+Use the repository labels. 
+
+[source,shell]
+----
+subscription-manager repos --enable=jb-eap-7.4-for-rhel-9-x86_64-rpms 
+subscription-manager repos --enable=rh-sso-7.6-for-rhel-9-x86_64-rpms
+----
+
+
+== install on a RHEL 9 host
+
+[source,shell]
+----
+# 156 packages!
+dnf group install rh-sso7
+----
+
+== configure the RHEL 9 host
+
+Open the required firewall ports.
+
+[source,shell]
+----
+firewall-cmd --permanent --add-port=8080/tcp
+firewall-cmd --permanent --add-port=9990/tcp
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
+----
+
+
+Change the listen port.
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/
+vim standalone/configuration/standalone.xml
+# from
+# <socket-binding name=”https” port=”${jboss.https.port:8443}”/> 
+# to 
+# <socket-binding name=”https” port=”${jboss.https.port:443}”/>
+----
+
+Set a password and start the single sign-on server
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin
+bin/add-user-keycloak.sh --user admin --password 'Password;1'
+# changes /opt/rh/rh-sso7/root/usr/share/keycloak/standalone/configuration/keycloak-add-user.json
+# restart server
+----
+
+
+== start keycloak
+
+Start in the foreground. 
+
+[source,shell]
+----
+ssh nick@gatewaybuild.home
+sudo -i
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin
+# run in foreground with logging
+./standalone.sh -b=0.0.0.0
+----
+
+This displays many log messages and takes a few seconds to be ready. 
+
+[source,shell]
+----
+6:59:21,733 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0025: Red Hat Single Sign-On 7.6.7.GA (WildFly Core 15.0.33.Final-redhat-00001) started in 12892ms - Started 595 of 873 services (584 services are lazy, passive or on-demand)
+16:59:21,735 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0060: Http management interface listening on http://127.0.0.1:9990/management
+16:59:21,735 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0051: Admin console listening on http://127.0.0.1:9990
+----
+
+Check.
+
+https://secret.source.example.com/ > (accept self-signed certificate warning) > Administration Console > Sign in to your account
+
+
+stop 
+
+[source,shell]
+----
+^c
+----
+
+
+=== systemd unit file rh-sso7
+
+rh-sso7 unit file does not work.
+Tried tinkering with 
+/usr/lib/systemd/system/rh-sso7.service
+and jboss ownership of 
+/var/opt/rh/rh-sso7/log/keycloak/standalone/
+and just got a series of Java stack traces.
+
+
+The WildFly Application Server (standalone mode)
+
+[source,shell]
+----
+[root@gateway ~]# systemctl status rh-sso7
+○ rh-sso7.service - The WildFly Application Server (standalone mode)
+     Loaded: loaded (/usr/lib/systemd/system/rh-sso7.service; disabled; preset: disabled)
+     Active: inactive (dead)
+[root@gateway ~]# 
+----
+
+The WildFly Application Server (domain mode)
+
+[source,shell]
+----
+[root@gateway ~]# systemctl status rh-sso7-domain
+○ rh-sso7-domain.service - The WildFly Application Server (domain mode)
+     Loaded: loaded (/usr/lib/systemd/system/rh-sso7-domain.service; disabled; preset: disabled)
+     Active: inactive (dead)
+[root@gateway ~]# 
+----
+
+This works 
+
+----
+/opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh /usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64 java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin /opt/rh/rh-sso7/root/usr/share/keycloak/modules /opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh standalone.xml 0.0.0.0 /var/opt/rh/rh-sso7/log/keycloak/standalone/console.log
+----
+
+This doesn't
+----
+/usr/bin/scl enable $RH_SSO7_SCLS_ENABLED -- /opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh $JAVA_HOME $JAVAPTH $WILDFLY_MODULEPATH $WILDFLY_SH $WILDFLY_SERVER_CONFIG $WILDFLY_BIND $WILDFLY_CONSOLE_LOG
+----
+
+tried 
+
+dnf install java-1.8.0-openjdk.x86_64
+no better
+
+
+== install keycloak on rhel 8
+
+short version 
+https://www.redhat.com/en/blog/integrating-identity-management-single-sign-red-hat-solutions
+
+[source,shell]
+----
+su -
+hostnamectl set-hostname sso.example.com
+# Installing SSO
+subscription-manager repos --enable=jb-eap-7.4-for-rhel-8-x86_64-rpms 
+subscription-manager repos --enable=rh-sso-7.5-for-rhel-8-x86_64-rpms
+dnf groupinstall rh-sso7
+----
+
+Deploy Keycloak single sign-on with Ansible
+https://developers.redhat.com/articles/2022/04/20/deploy-keycloak-single-sign-ansible
+
+
+== configure keycloak on rhel 8
+
+Open the required firewall ports
+
+[source,shell]
+----
+firewall-cmd --permanent --add-port=8080/tcp
+firewall-cmd --permanent --add-port=9990/tcp
+firewall-cmd --permanent --add-port=443/tcp
+firewall-cmd --reload
+----
+
+Change the listen port.
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/
+vim standalone/configuration/standalone.xml
+# from
+# <socket-binding name=”https” port=”${jboss.https.port:8443}”/> 
+# to 
+# <socket-binding name=”https” port=”${jboss.https.port:443}”/>
+----
+
+Set a password and start the single sign-on server.
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin
+./standalone.sh -b=0.0.0.0
+./add-user-keycloak.sh --user admin --password 'Password;1'
+# changes /opt/rh/rh-sso7/root/usr/share/keycloak/standalone/configuration/keycloak-add-user.json
+# restart server
+----
+
+== cert shenanigans
+
+Add CA, server cert and key for secret.source.example.com to a java keystore.
+
+Create a keystore and private key.
+
+Create a CSR (Certificate Signing Request).
+
+Create a certificate using the CSR.
+
+Add certificate and chain to the keystore.
+
+Configure keycloak to use the keystore. 
+
+https://stackoverflow.com/questions/50573426/adding-private-key-to-a-keystore
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6/html-single/server_installation_and_configuration_guide/index#enabling_https_ssl_for_the_red_hat_single_sign_on_server
+
+
+=== create a keystore and private key
+
+Open a terminal on the keycloak host. 
+
+Use the root account. 
+
+Use the working directory  _kc_ to store files in.
+
+[source,shell]
+----
+keytool \
+  -genkey \
+  -alias secret.source.example.com \
+  -keyalg RSA \
+  -keystore keycloak.jks \
+  -validity 10950 \
+  -storepass secret
+----
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ mkdir kc
+[root@secret.source.example.com ~]$ cd kc
+[root@secret.source.example.com kc]$ 
+[root@secret.source.example.com kc]$ keytool -genkey -alias secret.source.example.com -keyalg RSA -keystore keycloak.jks -validity 10950 -storepass secret
+What is your first and last name?
+  [Unknown]:  secret.source.example.com
+What is the name of your organizational unit?
+  [Unknown]:  Keycloak
+What is the name of your organization?
+  [Unknown]:  Red Hat
+What is the name of your City or Locality?
+  [Unknown]:  Westford
+What is the name of your State or Province?
+  [Unknown]:  MA
+What is the two-letter country code for this unit?
+  [Unknown]:  US
+Is CN=secret.source.example.com, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US correct?
+  [no]:  yes
+
+[root@secret.source.example.com kc]$ 
+----
+
+
+=== create a CSR (Certificate Signing Request)
+
+
+[source,shell]
+----
+keytool \
+  -certreq \
+  -alias secret.source.example.com \
+  -keystore keycloak.jks \
+  -storepass secret \
+> keycloak.careq
+----
+
+
+
+[source,shell]
+----
+[root@secret.source.example.com kc]$ keytool -certreq -alias secret.source.example.com -keystore keycloak.jks -storepass secret > keycloak.careq
+[root@secret.source.example.com kc]$ 
+[root@secret.source.example.com kc]$ cat keycloak.careq 
+-----BEGIN NEW CERTIFICATE REQUEST-----
+MIIC6zCCAdMCAQAwdjELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAk1BMREwDwYDVQQH
+EwhXZXN0Zm9yZDEQMA4GA1UEChMHUmVkIEhhdDERMA8GA1UECxMIS2V5Y2xvYWsx
+IjAgBgNVBAMTGXNlY3JldC5zb3VyY2UuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQCUml+KSvpgnmEK8MJqGKo9DGDeJhW2VhfrwUJz
+oOBFj9ylM/cGcL7Gow/8hhRO+pdfTPzMDiwJe6jCyEv5SMuvlDEKzmwmBn0O97Os
+voXKOWHSXSffdhdGfd2nIbZ1lhX82Lfh6ZoboypV5CBCZCL6FuVhOJDcgUGE/Rzi
+2lqmvmfx2hLMQ1kWZzMQnLe5yth308cm6YPsAceVgoIXfZUuBa4PV+42SQVY/9Et
+U3PUQgsCFhyfufOEULbU1L1FNcp49QsaYr79Cq1fNLpImke8NoeWK123iYLCMPka
+skyK57XUkgkdWV41OHPxIEgsZXCrqUrnv7BgCJ8gba8TCNtPAgMBAAGgMDAuBgkq
+hkiG9w0BCQ4xITAfMB0GA1UdDgQWBBSjV6FkEcC0Mq7Eq24eBBgLzvd1tzANBgkq
+hkiG9w0BAQsFAAOCAQEAfW/3TpAT9GbEj3gy62rW3eLuElzWFQYq3pYXAUnbDEqg
+T5EJrstguIRqXzF8s8fNYqg/8W936hLQYv3+fzPFJ5dosFGsnQaoGkTEUS96KWmn
+OgdiNRtljdHqpd6oytHpG2iNNFfczAeLXGBkNJR9FwmnGw/OQnHcmDTfAoZe5rxT
+Q5FDmAxAfisXl0SH2tEaspk8MXxfMf27s7sQaAFc2e+hVWNDTk6b8L9I1tV6vhgQ
+AZFsbonftj1IX9W6njHVg0rvRHbYTiNFcKELm41Iv8lGFmlliGD4PYuV/YvODcTY
+qcCDIfCTm1j6ELS9m8CPXUCseDGN8TCarDRJFzQvWw==
+-----END NEW CERTIFICATE REQUEST-----
+[root@secret.source.example.com kc]$ 
+[root@secret.source.example.com kc]$ cp keycloak.careq /var/tmp/
+[root@secret.source.example.com kc]$ 
+----
+
+
+=== create a certificate using the CSR
+
+Certificate Authority files are required. 
+These are on a different host. 
+
+* CA host: host.source.example.com
+* CA certificate, including CA public key:   /etc/pki/ca-trust/source/anchors/ca-certificate.pem 
+* CA private key:  /etc/pki/tls/private/ca-certificate.key 
+
+Open a terminal on the CA host. 
+
+Use the root account. 
+
+Use the working directory  _pki_ to store files in.
+
+Copy CSR and config to the CA host.
+
+[source,shell]
+----
+[root@host.source.example.com ~]# cd pki
+[root@host.source.example.com pki]# 
+[root@host.source.example.com pki]# scp nick@secret.source.example.com:/var/tmp/keycloak.careq .
+The authenticity of host 'secret.source.example.com (192.168.11.8)' can't be established.
+ED25519 key fingerprint is SHA256:Rc9vMcofMv6sZii0kDGxhxHb9kwmLIvBvVgNTRVH7bc.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'secret.source.example.com' (ED25519) to the list of known hosts.
+(nick@secret.source.example.com) Password: 
+keycloak.careq                         100% 1113     1.8MB/s   00:00    
+[root@host.source.example.com pki]# 
+----
+
+Sign the CSR.
+
+Extensions are not copied from CSR to certificate by default. 
+Use the _--copy_extensions copyall_ option. 
+
+[source,shell]
+....
+openssl x509 \
+  -req \
+  -days 365 \
+  -in     ./keycloak.careq \
+  -CA     /etc/pki/ca-trust/source/anchors/ca-certificate.pem \
+  -CAkey  /etc/pki/tls/private/ca-certificate.key \
+  -out    ./keycloak.cer \
+  -set_serial 01 \
+  -sha256 \
+  -copy_extensions copyall
+....
+
+Check the new certificate.
+
+[source,shell]
+----
+openssl x509 -text -in ./keycloak.cer 
+# check issuer, subject and date only
+openssl x509 -text -in ./keycloak.cer | head -n 10
+----
+
+[source,shell]
+----
+[root@host.source.example.com pki]# openssl x509 -text -in ./keycloak.cer | head -n 10
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = UK, ST = mystate, O = myorg, OU = myou, CN = ca.source.example.com
+        Validity
+            Not Before: Feb 17 13:42:44 2024 GMT
+            Not After : Feb 16 13:42:44 2025 GMT
+        Subject: C = US, ST = MA, L = Westford, O = Red Hat, OU = Keycloak, CN = secret.source.example.com
+[root@host.source.example.com pki]# 
+----
+
+Copy certificate to the requesting host.
+
+[source,shell]
+----
+scp \
+  keycloak.cer \
+  nick@secret.source.example.com:/var/tmp/
+----
+
+Copy the CA public key certificate across as well, to complete the certificate chain.
+
+[source,shell]
+----
+scp \
+  /etc/pki/ca-trust/source/anchors/ca-certificate.pem \
+  nick@secret.source.example.com:/var/tmp/
+----
+
+Back on the keycloak server, copy files to the working directory. 
+
+[source,shell]
+----
+cp /var/tmp/keycloak.cer /var/tmp/ca-certificate.pem .
+----
+
+There are now four files on the requesting host. 
+
+[source,shell]
+----
+[root@secret.source.example.com kc]$ ls
+ca-certificate.pem  keycloak.careq  keycloak.cer  keycloak.jks
+[root@secret.source.example.com kc]$ 
+----
+
+
+=== add certificate and chain to the keystore
+
+The certificate chain is only two files: CA certificate and server certificate. 
+
+Import CA certificate.
+
+[source,shell]
+----
+keytool \
+  -import \
+  -keystore keycloak.jks \
+  -file ca-certificate.pem \
+  -alias root \
+  -storepass secret
+----
+
+[source,shell]
+----
+[root@secret.source.example.com kc]$ keytool -import -keystore keycloak.jks -file ca-certificate.pem -alias root -storepass secret
+Owner: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Issuer: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Serial number: 4631ef2146a3d31a19edf9b11f034911adb25d24
+Valid from: Fri Nov 10 20:46:58 GMT 2023 until: Sat Nov 09 20:46:58 GMT 2024
+Certificate fingerprints:
+	 SHA1: AE:77:79:55:4F:56:D6:3A:00:36:EC:D1:D6:3E:C4:FB:5D:DA:E4:B8
+	 SHA256: E4:DF:88:C5:46:7A:9D:37:B6:34:5A:B0:77:DF:75:AE:D0:21:74:BF:92:B9:57:62:F8:A2:F4:B4:41:24:B0:98
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.35 Criticality=false
+AuthorityKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+#2: ObjectId: 2.5.29.19 Criticality=true
+BasicConstraints:[
+  CA:true
+  PathLen:2147483647
+]
+
+#3: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+Trust this certificate? [no]:  yes
+Certificate was added to keystore
+[root@secret.source.example.com kc]$ 
+----
+
+Import server certificate.
+
+[source,shell]
+----
+keytool \
+  -import \
+  -alias secret.source.example.com \
+  -keystore keycloak.jks \
+  -file keycloak.cer \
+  -storepass secret
+----
+
+[source,shell]
+----
+[root@secret.source.example.com kc]$ keytool -import -alias secret.source.example.com -keystore keycloak.jks -file keycloak.cer -storepass secret
+Certificate reply was installed in keystore
+[root@secret.source.example.com kc]$ 
+----
+
+
+[source,shell]
+----
+keytool \
+  -list \
+  -v \
+  -keystore ./keycloak.jks  \
+  -storepass secret
+----
+
+
+[source,shell]
+----
+[root@secret.source.example.com kc]$ keytool -list -v -keystore ./keycloak.jks  -storepass secret
+Keystore type: PKCS12
+Keystore provider: SUN
+
+Your keystore contains 2 entries
+
+Alias name: root
+Creation date: 17 Feb 2024
+Entry type: trustedCertEntry
+
+Owner: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Issuer: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Serial number: 4631ef2146a3d31a19edf9b11f034911adb25d24
+Valid from: Fri Nov 10 20:46:58 GMT 2023 until: Sat Nov 09 20:46:58 GMT 2024
+Certificate fingerprints:
+	 SHA1: AE:77:79:55:4F:56:D6:3A:00:36:EC:D1:D6:3E:C4:FB:5D:DA:E4:B8
+	 SHA256: E4:DF:88:C5:46:7A:9D:37:B6:34:5A:B0:77:DF:75:AE:D0:21:74:BF:92:B9:57:62:F8:A2:F4:B4:41:24:B0:98
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.35 Criticality=false
+AuthorityKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+#2: ObjectId: 2.5.29.19 Criticality=true
+BasicConstraints:[
+  CA:true
+  PathLen:2147483647
+]
+
+#3: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+
+
+*******************************************
+*******************************************
+
+
+Alias name: secret.source.example.com
+Creation date: 17 Feb 2024
+Entry type: PrivateKeyEntry
+Certificate chain length: 2
+Certificate[1]:
+Owner: CN=secret.source.example.com, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US
+Issuer: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Serial number: 1
+Valid from: Sat Feb 17 13:42:44 GMT 2024 until: Sun Feb 16 13:42:44 GMT 2025
+Certificate fingerprints:
+	 SHA1: 9B:38:17:8B:E6:BA:AA:15:93:B0:0D:31:8C:30:AA:1A:84:33:CF:7F
+	 SHA256: 48:EA:0F:20:DF:EF:16:80:14:2C:44:88:E7:D9:2D:21:1F:86:47:4D:43:66:15:A8:EC:04:7C:DE:BE:3E:E6:8E
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.35 Criticality=false
+AuthorityKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+#2: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: A3 57 A1 64 11 C0 B4 32   AE C4 AB 6E 1E 04 18 0B  .W.d...2...n....
+0010: CE F7 75 B7                                        ..u.
+]
+]
+
+Certificate[2]:
+Owner: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Issuer: CN=ca.source.example.com, OU=myou, O=myorg, ST=mystate, C=UK
+Serial number: 4631ef2146a3d31a19edf9b11f034911adb25d24
+Valid from: Fri Nov 10 20:46:58 GMT 2023 until: Sat Nov 09 20:46:58 GMT 2024
+Certificate fingerprints:
+	 SHA1: AE:77:79:55:4F:56:D6:3A:00:36:EC:D1:D6:3E:C4:FB:5D:DA:E4:B8
+	 SHA256: E4:DF:88:C5:46:7A:9D:37:B6:34:5A:B0:77:DF:75:AE:D0:21:74:BF:92:B9:57:62:F8:A2:F4:B4:41:24:B0:98
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.35 Criticality=false
+AuthorityKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+#2: ObjectId: 2.5.29.19 Criticality=true
+BasicConstraints:[
+  CA:true
+  PathLen:2147483647
+]
+
+#3: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: 15 E1 A8 52 32 93 5C 2B   68 45 7B F0 44 87 35 3B  ...R2.\+hE..D.5;
+0010: 3A EE E9 8A                                        :...
+]
+]
+
+
+
+*******************************************
+*******************************************
+
+
+[root@secret.source.example.com kc]$ 
+----
+
+
+
+=== configure keycloak
+
+This configures the https://undertow.io/[undertow web server].
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/standalone/configuration/
+cp /root/kc/keycloak.jks .
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin/
+vim sso_legacy.cli
+sh jboss-cli.sh --connect --file=sso_legacy.cli
+----
+
+
+[source,shell]
+----
+# Start batching commands
+
+batch
+
+/core-service=management/security-realm=UndertowRealm:add()
+/core-service=management/security-realm=UndertowRealm/server-identity=ssl:add(keystore-path=keycloak.jks, keystore-relative-to=jboss.server.config.dir, keystore-password=secret)
+/subsystem=undertow/server=default-server/https-listener=https:write-attribute(name=security-realm, value=UndertowRealm)
+
+# Run the batch commands
+
+run-batch
+----
+
+[source,shell]
+----
+sh jboss-cli.sh --connect --file=sso_legacy.cli
+----
+
+
+changes
+/opt/rh/rh-sso7/root/usr/share/keycloak/standalone/configuration/standalone.xml
+?
+
+== check 
+
+Good 
+
+[source,shell]
+----
+[root@secret.source.example.com bin]$ curl --head https://secret.source.example.com/
+HTTP/2 200 
+last-modified: Tue, 06 Feb 2024 15:55:26 GMT
+content-length: 1087
+content-type: text/html
+accept-ranges: bytes
+date: Sat, 17 Feb 2024 14:10:56 GMT
+
+[root@secret.source.example.com bin]$ 
+----
+
+This is the same as the reply from the plaintext server.
+
+[source,shell]
+----
+[root@secret.source.example.com bin]$ curl --head http://secret.source.example.com:8080
+HTTP/1.1 200 OK
+Connection: keep-alive
+Last-Modified: Tue, 06 Feb 2024 15:55:26 GMT
+Content-Length: 1087
+Content-Type: text/html
+Accept-Ranges: bytes
+Date: Sat, 17 Feb 2024 14:12:02 GMT
+
+[root@secret.source.example.com bin]$ 
+----
+
+Bad
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ curl https://secret.source.example.com
+curl: (60) SSL certificate problem: self-signed certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+[root@secret.source.example.com ~]$ 
+----

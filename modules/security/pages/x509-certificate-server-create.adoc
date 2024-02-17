@@ -212,7 +212,7 @@ openssl req -text -in ./capsule.source.example.com.csr | grep -i -A15 extensions
 Certificate Authority files are required. 
 These are on a different host. 
 
-* host: host.build.example.com
+* CA host: host.build.example.com
 * CA certificate, including CA public key:   /etc/pki/ca-trust/source/anchors/ca-certificate.pem 
 * CA private key:  /etc/pki/tls/private/ca-certificate.key 
 

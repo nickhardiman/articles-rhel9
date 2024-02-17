@@ -1,0 +1,95 @@
+= use IDM for user federation in keycloak 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 16-02-2024
+
+Integrating identity management with single sign-on for Red Hat solutions
+https://www.redhat.com/en/blog/integrating-identity-management-single-sign-red-hat-solutions
+
+== integrate IdM 
+
+# Federate the user database in SSO
+
+[source,shell]
+----
+dnf install ipa-client
+----
+
+[source,shell]
+----
+ipa-client-install  \
+  --domain build.example.com \
+  --server id.build.example.com \
+  --realm BUILD.EXAMPLE.COM
+----
+
+Log into keycloak.
+
+* URL: https://gatewaybuild.home/auth/
+* user: admin
+* pass: Password;1
+
+Create realm IdM.
+
+https://gatewaybuild.home/auth/admin/master/console/#/create/realm
+
+----
+Property                 Value
+
+Import                   -
+Name                     IdM
+Enabled                  ON
+----
+
+== create a provider
+
+Add an identity provider.
+user federation > providers > LDAP
+
+https://gatewaybuild.home/auth/admin/master/console/#/create/user-storage/IdM/providers/ldap
+
+Required Settings
+
+----
+Property                 Value
+
+Console Display Name     IDM
+Priority                 0
+Import Users             ON
+Edit Mode                READ_ONLY
+Sync Registrations       Off
+Vendor                   Red Hat Directory Server
+Username LDAP attribute  uid
+RDN LDAP attribute       uid
+UUID LDAP attribute      ipaUniqueID
+User Object Classes      inetOrgPerson, organizationalPerson
+Connection URL           ldap://id.build.example.com
+Users DN                 cn=users,cn=accounts,dc=build,dc=example,dc=com
+Custom User LDAP Filter  -
+Search Scope             One Level
+Bind Type                simple
+Bind DN                  uid=admin,cn=users,cn=accounts,dc=build,dc=example,dc=com
+Bind Credential          Password;1
+----
+
+No need to change these. 
+
+* Advanced Settings
+* Connection Pooling
+* Kerberos Integration
+* Sync Settings
+* Cache Settings
+
+Test connection.
+
+Test authentication.
+
+Save.
+
+== import users
+
+Button _Synchronize all users_.
+
+https://gatewaybuild.home/auth/admin/master/console/#/realms/IdM/users
+
+Manage > Users > View all users
