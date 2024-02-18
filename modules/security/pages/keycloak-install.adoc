@@ -1,0 +1,202 @@
+= set up keycloak 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 16-02-2024
+
+
+== links 
+
+downstream project 
+rh-sso7
+SSO for Red Hat solutions 
+https://access.redhat.com/products/red-hat-single-sign-on
+
+upstream project 
+Keycloak project 
+https://www.keycloak.org/
+
+SSO protocols (OpenID, SAML)
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6/html/server_administration_guide/sso_protocols
+W3C web authn
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6/html/server_administration_guide/configuring-authentication_server_administration_guide#webauthn_server_administration_guide
+
+https://www.google.com/search?q=red+hat+blog+install+saml+keycloak
+What MFAs are available in RH-SSO ?
+https://access.redhat.com/solutions/3344641
+
+
+
+
+== make JBoss EAP and SSO repos available
+
+Use the Red Hat customer portal.
+
+Use the Subscription Allocations page to edit the manifest.
+https://access.redhat.com/management/subscription_allocations >
+(manifest name) > Subscriptions
+
+This should be replaced by 
+https://console.redhat.com/subscriptions/manifests but I don't have edit privileges there.
+
+Add these two repositories to the Satellite manifest.
+
+* name: JBoss Enterprise Application Platform 7.4 (RHEL 9) (RPMs) 
+* name: Single Sign-On 7.6 for RHEL 9 x86_64 (RPMs)
+
+Log into Satellite. 
+https://satellite.build.example.com/
+
+Refresh the manifest.
+https://satellite.build.example.com/subscriptions > Manage manifest
+> Refresh
+
+Find the two RHEL 9 repositories for these products. 
+Content > Red Hat Repositories
+Search Available.  
+
+* product_name  ~ JBoss Enterprise Application Platform 7.4
+* product_name  ~ Single Sign-On 7.6
+
+Move the JBoss and SSO repositories from Available Repositories to Enabled Repositories.
+Click x86_64 +.
+
+
+== synchronize products
+
+Adding these creates two new products. 
+https://satellite.build.example.com/products
+
+* JBoss Enterprise Application Platform
+* Red Hat Single Sign-On
+
+Click on _Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_.
+Content shows no packages.
+----
+0 Packages
+0 Errata
+0 Package Groups
+0 Module Streams
+----
+
+Synchronize _Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_.
+
+Select Action > Sync Now
+
+_Single Sign-On 7.6 for RHEL 9 x86_64 RPMs_ content changes to show there are packages.
+----
+25 Packages
+10 Errata
+1 Package Groups
+0 Module Streams
+----
+
+Update the sync plan.
+Add the two new products to _Daily Sync_.
+
+
+== add repos to a content view
+
+Create cv-sso-rhel9
+
+Publish
+
+Edit ccv-rhel-sat-9
+
+Add cv-sso-rhel9
+
+Publish and promote to lce-build
+
+
+== enable the new repositories
+
+On secret
+refresh or reregister?
+
+Enable the new repositories.
+Use the repository labels. 
+
+[source,shell]
+----
+subscription-manager repos --enable=jb-eap-7.4-for-rhel-9-x86_64-rpms 
+subscription-manager repos --enable=rh-sso-7.6-for-rhel-9-x86_64-rpms
+----
+
+
+== install on a RHEL 9 host
+
+[source,shell]
+----
+# 156 packages!
+dnf group install rh-sso7
+----
+
+== configure the RHEL 9 host
+
+Open the required firewall ports.
+
+[source,shell]
+----
+firewall-cmd --permanent --add-port=8080/tcp
+firewall-cmd --permanent --add-port=9990/tcp
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
+----
+
+
+Change the listen port.
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/
+vim standalone/configuration/standalone.xml
+# from
+# <socket-binding name=”https” port=”${jboss.https.port:8443}”/> 
+# to 
+# <socket-binding name=”https” port=”${jboss.https.port:443}”/>
+----
+
+Set a password and start the single sign-on server
+
+[source,shell]
+----
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin
+bin/add-user-keycloak.sh --user admin --password 'Password;1'
+# changes /opt/rh/rh-sso7/root/usr/share/keycloak/standalone/configuration/keycloak-add-user.json
+# restart server
+----
+
+
+== start keycloak
+
+Start in the foreground. 
+
+[source,shell]
+----
+ssh nick@gatewaybuild.home
+sudo -i
+cd /opt/rh/rh-sso7/root/usr/share/keycloak/bin
+# run in foreground with logging
+./standalone.sh -b=0.0.0.0
+----
+
+This displays many log messages and takes a few seconds to be ready. 
+
+[source,shell]
+----
+6:59:21,733 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0025: Red Hat Single Sign-On 7.6.7.GA (WildFly Core 15.0.33.Final-redhat-00001) started in 12892ms - Started 595 of 873 services (584 services are lazy, passive or on-demand)
+16:59:21,735 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0060: Http management interface listening on http://127.0.0.1:9990/management
+16:59:21,735 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0051: Admin console listening on http://127.0.0.1:9990
+----
+
+Check.
+
+https://secret.source.example.com/ > (accept self-signed certificate warning) > Administration Console > Sign in to your account
+
+
+stop 
+
+[source,shell]
+----
+^c
+----
+

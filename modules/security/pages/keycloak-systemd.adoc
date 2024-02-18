@@ -1,0 +1,108 @@
+= create a systemd unit file for keycloak 
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 16-02-2024
+
+
+=== supplied unit files do not work
+
+Keycloak installation provides two systemd unit files.
+These are disabled.
+
+* /usr/lib/systemd/system/rh-sso7.service
+ for a standalone server
+* /usr/lib/systemd/system/rh-sso7-domain.service
+ for a domain server
+
+Unit files use a version of Java that is not installed. 
+Running dnf install java-1.8.0-openjdk.x86_64
+does not fix the unit files. 
+
+Unit files use a non-privileged user, _jboss_.
+jboss must be able to read files in  
+/var/opt/rh/rh-sso7/log/keycloak/standalone/.
+
+Unit files use scl (Software Collections).
+This does not work.
+
+[source,shell]
+----
+/usr/bin/scl enable $RH_SSO7_SCLS_ENABLED -- /opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh $JAVA_HOME $JAVAPTH $WILDFLY_MODULEPATH $WILDFLY_SH $WILDFLY_SERVER_CONFIG $WILDFLY_BIND $WILDFLY_CONSOLE_LOG
+----
+
+The WildFly Application Server (standalone mode)
+
+[source,shell]
+----
+[root@gateway ~]# systemctl status rh-sso7
+○ rh-sso7.service - The WildFly Application Server (standalone mode)
+     Loaded: loaded (/usr/lib/systemd/system/rh-sso7.service; disabled; preset: disabled)
+     Active: inactive (dead)
+[root@gateway ~]# 
+----
+
+The WildFly Application Server (domain mode)
+
+[source,shell]
+----
+[root@gateway ~]# systemctl status rh-sso7-domain
+○ rh-sso7-domain.service - The WildFly Application Server (domain mode)
+     Loaded: loaded (/usr/lib/systemd/system/rh-sso7-domain.service; disabled; preset: disabled)
+     Active: inactive (dead)
+[root@gateway ~]# 
+----
+
+== CLI command
+
+The launch.sh script takes seven arguments.
+
+[source,shell]
+----
+/opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh \
+  /usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64 \
+  java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin \
+  /opt/rh/rh-sso7/root/usr/share/keycloak/modules \
+  /opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh \
+  standalone.xml \
+  0.0.0.0 \
+  /var/opt/rh/rh-sso7/log/keycloak/standalone/console.log
+----
+
+== create a new unit file
+
+[source,shell]
+----
+vim /etc/systemd/system/rhsso.service
+----
+
+
+[source,shell]
+----
+[Unit]
+Description=Keycloak Identity and Access Management 
+Documentation=https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6
+
+[Service]
+# Set environment variables.
+# https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#Environment
+Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
+Environment="JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64"
+Environment="JAVAPTH=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin"
+Environment="WILDFLY_SH=/opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh"
+Environment="WILDFLY_SERVER_CONFIG=standalone.xml"
+Environment="WILDFLY_CONSOLE_LOG=/var/opt/rh/rh-sso7/log/keycloak/standalone/console.log"
+Environment="WILDFLY_MODULEPATH=/opt/rh/rh-sso7/root/usr/share/keycloak/modules"
+Environment="WILDFLY_BIND=0.0.0.0"
+EnvironmentFile=-/etc/opt/rh/rh-sso7/keycloak/rh-sso7.conf
+EnvironmentFile=-/opt/rh/rh-sso7/service-environment
+Type=simple
+User=rhsso
+Group=rhsso
+TimeoutStartSec=0
+Restart=on-failure
+RestartSec=30s
+#ExecStartPre= 
+ExecStart=/opt/rh-sso-7.6/bin/standalone.sh -b 0.0.0.0 SyslogIdentifier=RHSSO
+#ExecStop=
+[Install] WantedBy=multi-user.target
+----
