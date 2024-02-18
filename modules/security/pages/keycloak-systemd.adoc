@@ -56,16 +56,34 @@ The WildFly Application Server (domain mode)
 
 The launch.sh script takes seven arguments.
 
+Most software goes in the /opt/rh/rh-sso7/ directory.
+The /opt/ directory is where some software vendors used to place their expensive add-on software.
+To make things more complicated, there are also files in /var/opt/rh/rh-sso7/ and /etc/opt/rh/rh-sso7/.
+
 [source,shell]
 ----
+/opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh -b 0.0.0.0
+----
+
+
+[source,shell]
+----
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64
+export JAVAPTH=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin
+export WILDFLY_MODULEPATH=/opt/rh/rh-sso7/root/usr/share/keycloak/modules
+export WILDFLY_SH=/opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh
+export WILDFLY_SERVER_CONFIG=standalone.xml
+export WILDFLY_BIND=0.0.0.0
+export WILDFLY_CONSOLE_LOG=/var/opt/rh/rh-sso7/log/keycloak/standalone/console.log
+#
 /opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh \
-  /usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64 \
-  java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin \
-  /opt/rh/rh-sso7/root/usr/share/keycloak/modules \
-  /opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh \
-  standalone.xml \
-  0.0.0.0 \
-  /var/opt/rh/rh-sso7/log/keycloak/standalone/console.log
+  $JAVA_HOME \
+  $JAVAPTH \
+  $WILDFLY_MODULEPATH \
+  $WILDFLY_SH \
+  $WILDFLY_SERVER_CONFIG \
+  $WILDFLY_BIND \
+  $WILDFLY_CONSOLE_LOG 
 ----
 
 == create a new unit file
@@ -76,8 +94,10 @@ vim /etc/systemd/system/rhsso.service
 ----
 
 
-[source,shell]
+[source,INI]
 ----
+# Many options described here.
+# https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
 [Unit]
 Description=Keycloak Identity and Access Management 
 Documentation=https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.6
@@ -85,24 +105,106 @@ Documentation=https://access.redhat.com/documentation/en-us/red_hat_single_sign-
 [Service]
 # Set environment variables.
 # https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#Environment
-Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
 Environment="JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64"
 Environment="JAVAPTH=/usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin"
+Environment="WILDFLY_MODULEPATH=/opt/rh/rh-sso7/root/usr/share/keycloak/modules"
 Environment="WILDFLY_SH=/opt/rh/rh-sso7/root/usr/share/keycloak/bin/standalone.sh"
 Environment="WILDFLY_SERVER_CONFIG=standalone.xml"
-Environment="WILDFLY_CONSOLE_LOG=/var/opt/rh/rh-sso7/log/keycloak/standalone/console.log"
-Environment="WILDFLY_MODULEPATH=/opt/rh/rh-sso7/root/usr/share/keycloak/modules"
 Environment="WILDFLY_BIND=0.0.0.0"
+Environment="WILDFLY_CONSOLE_LOG=/var/opt/rh/rh-sso7/log/keycloak/standalone/console.log"
 EnvironmentFile=-/etc/opt/rh/rh-sso7/keycloak/rh-sso7.conf
 EnvironmentFile=-/opt/rh/rh-sso7/service-environment
 Type=simple
-User=rhsso
-Group=rhsso
 TimeoutStartSec=0
 Restart=on-failure
 RestartSec=30s
-#ExecStartPre= 
-ExecStart=/opt/rh-sso-7.6/bin/standalone.sh -b 0.0.0.0 SyslogIdentifier=RHSSO
-#ExecStop=
-[Install] WantedBy=multi-user.target
+ExecStart=/opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh $JAVA_HOME $JAVAPTH $WILDFLY_MODULEPATH $WILDFLY_SH $WILDFLY_SERVER_CONFIG $WILDFLY_BIND $WILDFLY_CONSOLE_LOG 
+
+[Install] 
+# https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#Mapping%20of%20unit%20properties%20to%20their%20inverses
+WantedBy=multi-user.target
 ----
+
+Start the service.
+Enable the service to start when the server boots.
+
+[source,shell]
+----
+systemctl daemon-reload
+systemctl start rhsso.service 
+systemctl enable rhsso.service
+----
+
+Check. 
+
+[source,shell]
+----
+systemctl status rhsso.service 
+----
+
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ systemctl status rhsso
+● rhsso.service - Keycloak Identity and Access Management
+     Loaded: loaded (/etc/systemd/system/rhsso.service; disabled; preset: disab>
+     Active: active (running) since Sun 2024-02-18 13:50:05 GMT; 3min 56s ago
+       Docs: https://access.redhat.com/documentation/en-us/red_hat_single_sign->
+   Main PID: 19422 (launch.sh)
+      Tasks: 65 (limit: 22968)
+     Memory: 873.8M
+        CPU: 26.308s
+     CGroup: /system.slice/rhsso.service
+             ├─19422 /bin/sh /opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch>
+             ├─19423 /bin/sh /opt/rh/rh-sso7/root/usr/share/keycloak/bin/standa>
+             └─19568 /usr/lib/jvm/java-11-openjdk-11.0.22.0.7-2.el9.x86_64/bin/>
+
+Feb 18 13:50:05 secret.source.example.com systemd[1]: Started Keycloak Identity>
+lines 1-14/14 (END)
+----
+
+Log
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ tail  /var/opt/rh/rh-sso7/log/keycloak/standalone/console.log
+13:50:15,196 INFO  [org.jboss.resteasy.resteasy_jaxrs.i18n] (ServerService Thread Pool -- 54) RESTEASY002220: Adding singleton resource org.keycloak.services.resources.admin.AdminRoot from Application class org.keycloak.services.resources.KeycloakApplication
+...
+13:50:15,409 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0060: Http management interface listening on http://127.0.0.1:9990/management
+13:50:15,409 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0051: Admin console listening on http://127.0.0.1:9990
+[root@secret.source.example.com ~]$ 
+----
+
+Process
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ ps -fC launch.sh
+UID          PID    PPID  C STIME TTY          TIME CMD
+root       19422       1  0 13:50 ?        00:00:00 /bin/sh /opt/rh/rh-sso7/root/usr/share/keycloak/bin/launch.sh /usr/lib/jvm/java-11-openjdk-11.0.22.0.7
+[root@secret.source.example.com ~]$ 
+[root@secret.source.example.com ~]$ pstree 19422
+launch.sh───standalone.sh───java───62*[{java}]
+[root@secret.source.example.com ~]$ 
+----
+
+Ports
+
+[source,shell]
+----
+[root@secret.source.example.com ~]$ ss --listening --numeric --processes --tcp
+State     Recv-Q    Send-Q       Local Address:Port        Peer Address:Port    Process                                                                         
+LISTEN    0         50               127.0.0.1:9990             0.0.0.0:*        users:(("java",pid=19568,fd=459))                                              
+LISTEN    0         128                0.0.0.0:22               0.0.0.0:*        users:(("sshd",pid=827,fd=3))                                                  
+LISTEN    0         4096               0.0.0.0:111              0.0.0.0:*        users:(("rpcbind",pid=750,fd=4),("systemd",pid=1,fd=104))                      
+LISTEN    0         4096               0.0.0.0:443              0.0.0.0:*        users:(("java",pid=19568,fd=388))                                              
+LISTEN    0         50                 0.0.0.0:33749            0.0.0.0:*        users:(("java",pid=19568,fd=481))                                              
+LISTEN    0         4096               0.0.0.0:8080             0.0.0.0:*        users:(("java",pid=19568,fd=451))                                              
+LISTEN    0         100              127.0.0.1:25               0.0.0.0:*        users:(("master",pid=1136,fd=14))                                              
+LISTEN    0         128                   [::]:22                  [::]:*        users:(("sshd",pid=827,fd=4))                                                  
+LISTEN    0         4096                  [::]:111                 [::]:*        users:(("rpcbind",pid=750,fd=6),("systemd",pid=1,fd=119))                      
+LISTEN    0         4096                     *:9090                   *:*        users:(("systemd",pid=1,fd=61))                                                
+LISTEN    0         100                  [::1]:25                  [::]:*        users:(("master",pid=1136,fd=15))                                              
+[root@secret.source.example.com ~]$ 
+----
+

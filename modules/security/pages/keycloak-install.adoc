@@ -3,6 +3,16 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 16-02-2024
 
+https://www.keycloak.org/[Keycloak] is an IAM (Identity and Access Management) application. 
+Keycloak is the open source upstream project. 
+Red Hat SSO (Single Sign-On) is Red Hat's downstream project. 
+
+Keycloak is built on Wildfly.
+https://www.wildfly.org/[Wildfly] is an application server. 
+Wildfly is the open source upstream project. 
+JBoss EAP (Enterprise Application Platform) is Red Hat's downstream project. 
+
+Wildfly runs in a Java Virtual Machine. 
 
 == links 
 
@@ -123,6 +133,13 @@ subscription-manager repos --enable=rh-sso-7.6-for-rhel-9-x86_64-rpms
 
 
 == install on a RHEL 9 host
+
+Installs copies files, and creates the _jboss_ user. 
+
+Software goes in the /opt/ directory, an old alternative to /usr/local/.
+To make things more complicated, files are also placed in /var/opt/. 
+Directory /opt/rh/rh-sso7/ is not a symlink to /var/opt/rh/rh-sso7/.
+
 
 [source,shell]
 ----
