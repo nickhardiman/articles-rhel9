@@ -4,20 +4,24 @@ Nick Hardiman
 :toc: 
 :revdate: 25-02-2021
 
-Install the HAProxy https://en.wikipedia.org/wiki/Proxy_server[proxy server] on _guest1_. 
-HAProxy is an intermediary between a web client and the web servers on _guest2_ and _guest4_.  
+https://www.haproxy.org/[HAProxy] is a 
+https://en.wikipedia.org/wiki/Proxy_server[proxy server]
+placed between a web client on the workstation and  web servers in the home lab.  
 HAProxy is also a https://en.wikipedia.org/wiki/Load_balancing_(computing)[load balancer], distributing requests evenly between _guest2_ and _guest4_. 
+It can manage HTTP traffic and TCP traffic.
+
+Install the HAProxy  on _gateway.build.example.com_. 
 
 == a transparent reverse proxy 
 
 HAProxy is a reverse proxy. 
 ----
 +------------------------------------------+
-|  home network                            |
+|  organization                            |
 | +--------------+       +---------------+ |              +--------------+
-| |              |       | reverse proxy | |              |              |
-| | server       +-------+ back    front +---(Internet)---+ client       |
+| | host         |       | reverse proxy | |              | customer     |
 | |              |       |               | |              |              |
+| |      server  +-------+ back    front +---(Internet)---+ client       |
 | +--------------+       +---------------+ |              +--------------+
 |                                          |
 +------------------------------------------+
@@ -68,7 +72,15 @@ HAProxy even distributes these requests between the two nginx web servers.
                                                     +-----------------+
 ----
 
+
 == install 
+
+Install adds many files, including these. 
+
+* /etc/haproxy/ config files 
+* /usr/sbin/haproxy executable
+* /usr/share/doc/haproxy/ documents
+
 
 [source,shell]
 ....
@@ -76,81 +88,14 @@ yum install -y haproxy
 ....
 
 
-
-== systemd 
-
-[source,shell]
-....
-[root@guest1 ~]# systemctl status haproxy
-● haproxy.service - HAProxy Load Balancer
-   Loaded: loaded (/usr/lib/systemd/system/haproxy.service; disabled; vendor preset: disabled)
-   Active: inactive (dead)
-[root@guest1 ~]# 
-....
-
-[source,shell]
-....
-[root@guest1 ~]# systemctl enable haproxy
-Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service → /usr/lib/systemd/system/haproxy.service.
-[root@guest1 ~]# 
-....
-
-[source,shell]
-....
-[root@guest1 ~]# systemctl start haproxy
-[root@guest1 ~]# 
-....
-
-[source,shell]
-....
-[root@guest1 ~]# systemctl status haproxy
-● haproxy.service - HAProxy Load Balancer
-   Loaded: loaded (/usr/lib/systemd/system/haproxy.service; enabled; vendor preset: disabled)
-   Active: active (running) since Wed 2021-01-13 16:39:02 GMT; 3s ago
-  Process: 1911 ExecStartPre=/usr/sbin/haproxy -f $CONFIG -c -q $OPTIONS (code=exited, status=0/SUCCESS)
- Main PID: 1912 (haproxy)
-    Tasks: 2 (limit: 23295)
-   Memory: 2.8M
-   CGroup: /system.slice/haproxy.service
-           ├─1912 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
-           └─1914 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
-
-Jan 13 16:39:02 guest1.lab.example.com systemd[1]: Starting HAProxy Load Balancer...
-Jan 13 16:39:02 guest1.lab.example.com systemd[1]: Started HAProxy Load Balancer.
-[root@guest1 ~]# 
-....
-
-
-
-== open the firewall
-
-Tell firewalld to allow web server traffic.
-
-
-[source,shell]
-....
-firewall-cmd --add-service http 
-firewall-cmd --add-service http --permanent
-firewall-cmd --add-service https 
-firewall-cmd --add-service https --permanent
-....
-
-Let the network view the new stats page on port 9000.
-The stats page is created next. 
-
-[source,shell]
-....
-firewall-cmd --add-service https --permanent
-firewall-cmd --add-port 9000/tcp
-....
-
-
-== add a stats page 
+== view the configuration file
 
 image::haproxy-stats.png[stats,width=587,height=900,title="HAProxy stats"]
 
-The config file /etc/haproxy/haproxy.cfg is about 90 lines and load balances a cluster of applications running on the local machine _guest1_. 
-There are no matching applications on the local machine, so haproxy isn't really doing anything useful.
+The config file /etc/haproxy/haproxy.cfg is about 90 lines long.
+It doesn't do anything useful out of the box.
+Haproxy is set up to load balance an application _app_ on four servers, _app1_ to _app4_. 
+These don't exist. 
 
 [source,shell]
 ....
@@ -161,6 +106,9 @@ There are no matching applications on the local machine, so haproxy isn't really
 #
 #   https://www.haproxy.org/download/1.8/doc/configuration.txt
 ...
+backend app
+    balance     roundrobin
+    server  app1 127.0.0.1:5001 check
     server  app2 127.0.0.1:5002 check
     server  app3 127.0.0.1:5003 check
     server  app4 127.0.0.1:5004 check
@@ -168,7 +116,132 @@ There are no matching applications on the local machine, so haproxy isn't really
 ....
 
 
-=== configure 
+== systemd 
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# systemctl status haproxy --no-pager
+○ haproxy.service - HAProxy Load Balancer
+     Loaded: loaded (/usr/lib/systemd/system/haproxy.service; disabled; preset: disabled)
+     Active: inactive (dead)
+[root@gateway.build.example.com ~]# 
+....
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# systemctl enable haproxy
+Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service → /usr/lib/systemd/system/haproxy.service.
+[root@gateway.build.example.com ~]# 
+....
+
+Warnings appear in the log, complaining that servers _app1_ to _app4_ are not available. 
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# systemctl start haproxy
+[root@gateway.build.example.com ~]# 
+[root@gateway.build.example.com ~]# systemctl status haproxy --no-pager
+● haproxy.service - HAProxy Load Balancer
+     Loaded: loaded (/usr/lib/systemd/system/haproxy.service; enabled; preset: disabled)
+     Active: active (running) since Sun 2024-02-18 14:39:44 GMT; 8s ago
+    Process: 5496 ExecStartPre=/usr/sbin/haproxy -f $CONFIG -f $CFGDIR -c -q $OPTIONS (code=exited, status=0/SUCCESS)
+   Main PID: 5498 (haproxy)
+      Tasks: 3 (limit: 22967)
+     Memory: 4.1M
+        CPU: 23ms
+     CGroup: /system.slice/haproxy.service
+             ├─5498 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -f /etc/h…
+             └─5500 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -f /etc/h…
+
+Feb 18 14:39:44 gateway.build.example.com systemd[1]: Started HAProxy Load Ba…r.
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [WARNING]  (5500) : …e.
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [NOTICE]   (5500) : …18
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [NOTICE]   (5500) : …xy
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [ALERT]    (5500) : …e!
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [WARNING]  (5500) : …e.
+Feb 18 14:39:44 gateway.build.example.com haproxy[5500]: [WARNING]  (5500) : …e.
+Feb 18 14:39:45 gateway.build.example.com haproxy[5500]: [WARNING]  (5500) : …e.
+Feb 18 14:39:45 gateway.build.example.com haproxy[5500]: [WARNING]  (5500) : …e.
+Feb 18 14:39:45 gateway.build.example.com haproxy[5500]: [ALERT]    (5500) : …e!
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@gateway.build.example.com ~]# 
+....
+
+
+
+== open the firewall
+
+Tell firewalld to allow web server traffic.
+
+Check before making any changes.
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp1s0 enp2s0
+  sources: 
+  services: cockpit dhcpv6-client dns ntp smtp squid ssh
+  ports: 8080/tcp 9990/tcp 8200/tcp 8201/tcp
+  protocols: 
+  forward: yes
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+[root@gateway.build.example.com ~]# 
+----
+
+[source,shell]
+....
+firewall-cmd --add-service http --permanent
+firewall-cmd --add-service https --permanent
+....
+
+Let the network view the new stats page on port 9000.
+The stats page is created next. 
+
+[source,shell]
+....
+firewall-cmd --add-port 9000/tcp --permanent
+....
+
+Change the running configuration to match the stored permanent configuration.
+
+[source,shell]
+....
+firewall-cmd --reload
+....
+
+
+Check after.
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp1s0 enp2s0
+  sources: 
+  services: cockpit dhcpv6-client dns http https ntp smtp squid ssh
+  ports: 8080/tcp 9990/tcp 8200/tcp 8201/tcp 9000/tcp
+  protocols: 
+  forward: yes
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+[root@gateway.build.example.com ~]# 
+----
+
+
+
+=== add a stats page 
 
 Create a stats web page. 
 Edit the config file. 
@@ -182,6 +255,9 @@ Add these lines to the bottom of the config file.
 
 [source,shell]
 ....
+#---------------------------------------------------------------------
+# Statistics page
+#---------------------------------------------------------------------
 listen stats
     bind :9000
     stats enable
@@ -198,8 +274,23 @@ Restart HAProxy.
 
 === view the stats page  
 
-Find the home network address of _guest1_.
-In this example it's _192.168.1.217_. 
+Check with curl. 
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# curl --head http://127.0.0.1:9000/
+HTTP/1.1 200 OK
+cache-control: no-cache
+content-type: text/html
+
+[root@gateway.build.example.com ~]# 
+----
+
+Check with a web browser. 
+
+Find the home network address of _gateway_.
+This was assigned by the DHCP router on the home network. 
+In this example it's _192.168.1.216_. 
 
 [source,shell]
 ....
@@ -215,23 +306,98 @@ The default app does not exist, so checks are failing.
 Many lines are colored red. 
 
 
+== remove default config 
 
-== load balance guest2 and guest4 
+[source,shell]
+----
+#---------------------------------------------------------------------
+# main frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend main
+    bind *:5000
+    acl url_static       path_beg       -i /static /images /javascript /stylesheets
+    acl url_static       path_end       -i .jpg .gif .png .css .js
+
+    use_backend static          if url_static
+    default_backend             app
+
+#---------------------------------------------------------------------
+# static backend for serving up images, stylesheets and such
+#---------------------------------------------------------------------
+backend static
+    balance     roundrobin
+    server      static 127.0.0.1:4331 check
+
+#---------------------------------------------------------------------
+# round robin balancing between the various backends
+#---------------------------------------------------------------------
+backend app
+    balance     roundrobin
+    server  app1 127.0.0.1:5001 check
+    server  app2 127.0.0.1:5002 check
+    server  app3 127.0.0.1:5003 check
+    server  app4 127.0.0.1:5004 check
+----
+
+
+== add config for SSL pass-through the Ansible Controller 
 
 Allow HTTP traffic. 
 Add these lines to the bottom of the config file. 
 
 [source,shell]
 ....
-frontend http-requests
-    bind *:80
-    default_backend http-requests
-    option http
+frontend www_https
+   bind *:443
+   mode tcp
+   option tcplog
+   default_backend backend_servers
 
-backend http-requests
-    balance round-robin
-    server guest2 192.168.152.100:80 check
-    server guest4 192.168.152.101:80 check
+backend backend_servers
+   mode tcp
+   balance roundrobin
+   option ssl-hello-chk
+   server server1 192.168.13.7:443 check
 ....
 
+Restart. 
 
+[source,shell]
+----
+[root@gateway.build.example.com ~]# systemctl start haproxy
+[root@gateway.build.example.com ~]#
+----
+
+Check. 
+
+HAProxy is now listening to two ports.
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# ss -tlnp | grep haproxy
+LISTEN 0      3000         0.0.0.0:443       0.0.0.0:*    users:(("haproxy",pid=5614,fd=6))                       
+LISTEN 0      3000         0.0.0.0:9000      0.0.0.0:*    users:(("haproxy",pid=5614,fd=7))                       
+[root@gateway.build.example.com ~]# 
+----
+
+Use openssl to check the encrypted connection.
+Certificate is from the Ansible Controller, so that's a good sign.
+The /dev/null part is to immediately close the connection.
+Usually it stays open for a few seconds, waiting for a request. 
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# openssl s_client -connect 127.0.0.1:443 < /dev/null
+CONNECTED(00000003)
+Can't use SSL_get_servername
+depth=1 C = UK, ST = mystate, O = myorg, OU = myou, CN = ca.build.example.com
+verify return:1
+depth=0 CN = aapcontrol.build.example.com
+...
+    Timeout   : 7200 (sec)
+    Verify return code: 0 (ok)
+    Extended master secret: yes
+---
+DONE
+[root@gateway.build.example.com ~]#
+----
