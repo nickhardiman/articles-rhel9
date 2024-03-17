@@ -4,7 +4,7 @@ Nick Hardiman
 :revdate: 16-02-2024
 
 
-=== supplied unit files do not work
+== supplied unit files do not work
 
 Keycloak installation provides two systemd unit files.
 These are disabled.
