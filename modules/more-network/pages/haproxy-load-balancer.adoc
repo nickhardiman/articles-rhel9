@@ -8,18 +8,24 @@ Nick Hardiman
 
 https://www.haproxy.org/
 
+starter guide
+https://docs.haproxy.org/2.4/intro.html
+configuration manual
+https://docs.haproxy.org/2.4/configuration.html
+
 https://www.haproxy.com/
 
+https://www.haproxy.com/blog/haproxy-ssl-termination
 
-== install certbot
+Load balance network traffic with HAProxy
+https://opensource.com/article/20/11/load-balancing-haproxy
 
-What's EPEL, and how do I use it?
-https://www.redhat.com/en/blog/whats-epel-and-how-do-i-use-it
+https://en.wikipedia.org/wiki/HAProxy
 
-https://tecadmin.net/how-to-install-certbot-on-centos-9/
+https://github.com/haproxy/haproxy
 
 
-== load balancer 
+== update 
 
 Install on gateway.
 
@@ -46,10 +52,6 @@ Dependencies resolved.
 Installing:
  kernel            x86_64 5.14.0-362.24.1.el9_3
                                             rhel-9-for-x86_64-baseos-rpms 4.8 M
-Upgrading:
- NetworkManager    x86_64 1:1.44.0-5.el9_3  rhel-9-for-x86_64-baseos-rpms 2.3 M
- NetworkManager-libnm
-                   x86_64 1:1.44.0-5.el9_3  rhel-9-for-x86_64-baseos-rpms 1.8 M
 ...
 Complete!
 [root@gateway.build.example.com ~]# 
@@ -66,67 +68,311 @@ Last login: Sat Mar 16 14:33:00 2024 from 192.168.1.199
 ....
 
 
-[source,shell]
-....
-dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-dnf config-manager --disable epel epel-cisco-openh264
-dnf repolist
-....
-
-
-
-
-== examine epel
+== install
 
 [source,shell]
 ....
-[root@gateway.build.example.com ~]# ls -1 /etc/yum.repos.d/epel*
-/etc/yum.repos.d/epel-cisco-openh264.repo
-/etc/yum.repos.d/epel.repo
-/etc/yum.repos.d/epel-testing.repo
+....
+
+Check.
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# haproxy -v
+HAProxy version 2.4.22-f8e3218 2023/02/14 - https://haproxy.org/
+Status: long-term supported branch - will stop receiving fixes around Q2 2026.
+Known bugs: http://www.haproxy.org/bugs/bugs-2.4.22.html
+Running on: Linux 5.14.0-362.24.1.el9_3.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Feb 15 07:18:13 EST 2024 x86_64
 [root@gateway.build.example.com ~]# 
-[root@gateway.build.example.com ~]# cat /etc/yum.repos.d/epel.repo 
-[epel]
-name=Extra Packages for Enterprise Linux $releasever - $basearch
-# It is much more secure to use the metalink, but if you wish to use a local mirror
+....
+
+
+
+== systemd
+
+[source,shell]
+....
+[root@guest1 ~]# systemctl status haproxy
+● haproxy.service - HAProxy Load Balancer
+   Loaded: loaded (/usr/lib/systemd/system/haproxy.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl enable haproxy
+Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service → /usr/lib/systemd/system/haproxy.service.
+[root@guest1 ~]# 
+[root@guest1 ~]# systemctl start haproxy
+[root@guest1 ~]# 
+....
+
+
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# systemctl status haproxy --no-pager --full
+● haproxy.service - HAProxy Load Balancer
+     Loaded: loaded (/usr/lib/systemd/system/haproxy.service; enabled; preset: disabled)
+     Active: active (running) since Mon 2024-03-25 07:34:50 GMT; 12h ago
+   Main PID: 1085 (haproxy)
+      Tasks: 3 (limit: 23044)
+     Memory: 7.2M
+        CPU: 9.442s
+     CGroup: /system.slice/haproxy.service
+             ├─1085 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/conf.d -p /run/haproxy.pid
+             └─1094 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/conf.d -p /run/haproxy.pid
+
+Mar 25 07:34:50 gateway.build.example.com systemd[1]: Starting HAProxy Load Balancer...
+Mar 25 07:34:50 gateway.build.example.com haproxy[1085]: [WARNING]  (1085) : config : 'option forwardfor' ignored for frontend 'www_https' as it requires HTTP mode.
+Mar 25 07:34:50 gateway.build.example.com haproxy[1085]: [WARNING]  (1085) : config : 'option forwardfor' ignored for backend 'backend_servers' as it requires HTTP mode.
+Mar 25 07:34:50 gateway.build.example.com haproxy[1085]: [NOTICE]   (1085) : New worker #1 (1094) forked
+Mar 25 07:34:50 gateway.build.example.com systemd[1]: Started HAProxy Load Balancer.
+[root@gateway.build.example.com ~]# 
+....
+
+
+== processes
+
+[source,shell]
+----
+[root@guest1 ~]# ps faux 
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 ...
-enabled=0
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-$releasever
-gpgcheck=1
-[root@gateway.build.example.com ~]# 
-....
+root        1912  0.0  0.2  82420  9176 ?        Ss   16:39   0:00 /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg
+haproxy     1914  0.0  0.0  82924  3128 ?        Ss   16:39   0:00  \_ /usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy
+[root@guest1 ~]# 
+----
 
-Count packages
 
-[source,shell]
-....
-[root@gateway.build.example.com ~]# dnf --disablerepo="*" --enablerepo="epel" list available | wc -l
-20443
-[root@gateway.build.example.com ~]# 
-....
+
+
+
+== listen sockets
 
 
 [source,shell]
+----
+[root@gateway.build.example.com ~]# ss -tlnp | grep haproxy
+LISTEN 0      3000         0.0.0.0:9000      0.0.0.0:*    users:(("haproxy",pid=1094,fd=7))                        
+LISTEN 0      3000         0.0.0.0:443       0.0.0.0:*    users:(("haproxy",pid=1094,fd=6))                        
+[root@gateway.build.example.com ~]# 
+----
+
+
+== firewall
+
+[source,shell]
+----
+firewall-cmd --add-service http --permanent
+firewall-cmd --add-service https --permanent
+firewall-cmd --add-port 9000/tcp --permanent
+firewall-cmd --reload
+firewall-cmd --list-all
+----
+
+
+
+== SELinux
+
+SEBool allow haproxy to connect to any port
+
+[source,shell]
 ....
-[root@gateway.build.example.com ~]# certbot --help
+[root@guest1 ~]#  getsebool haproxy_connect_any
+haproxy_connect_any --> off
+[root@guest1 ~]# 
+[root@guest1 ~]# setsebool -P haproxy_connect_any on
+[root@guest1 ~]# 
+....
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  certbot [SUBCOMMAND] [options] [-d DOMAIN] [-d DOMAIN] ...
+== configure
+
+Five sections
+
+* global
+* defaults
+* frontend 
+* backend
+* listen
+
+Many keywords
+
+Some directives.
+Conditional blocks using directives .if, .elif, .else and .endif.
+Status directives with .diag, .notice, .warning and .alert.
+
+
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# cat /etc/haproxy/haproxy.cfg
+#---------------------------------------------------------------------
+# Example configuration for a possible web application.  See the
+# full configuration options online.
 ...
-  -h all                print a detailed help page including all topics
-  --version             print the version number
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+listen stats
+    bind :9000
+    stats enable
+    stats uri /
+
 [root@gateway.build.example.com ~]# 
-....
+----
+
+
+
+
+== log
+
+[source,shell]
+----
+[root@gateway.build.example.com ~]# grep haproxy /var/log/messages
+Mar 25 07:34:50 gateway haproxy[1085]: [WARNING]  (1085) : config : 'option forwardfor' ignored for frontend 'www_https' as it requires HTTP mode.
+Mar 25 07:34:50 gateway haproxy[1085]: [WARNING]  (1085) : config : 'option forwardfor' ignored for backend 'backend_servers' as it requires HTTP mode.
+Mar 25 07:34:50 gateway haproxy[1085]: [NOTICE]   (1085) : New worker #1 (1094) forked
+[root@gateway.build.example.com ~]# 
+----
+
+
+== statistics report
+
+http://gatewaybuild.home:9000/
+
+== redirect from HTTP to HTTPS
+
+from port 80 to port 443
+
+[source,shell]
+----
+frontend www_http
+  bind *:80
+  http-request redirect scheme https unless { ssl_fc }
+----
+
+== check an HTTPS server with a CA certificate
+
+[source,shell]
+----
+backend web
+   mode http
+   server customer.supply.example.com 192.168.15.9:443 ssl verify required ca-file /etc/pki/ca-trust/source/anchors/ca.supply.example.com-cert.pem
+----
+
+== rewrite and forward
+
+https://discourse.haproxy.org/t/haproxy-url-rewrite-question-issue/8204/3
+
+https://hardiman.consulting/
+
+[source,shell]
+----
+backend antora
+  mode http
+  server customer.supply.example.com 192.168.15.9:443 ssl verify required ca-file /etc/pki/ca-trust/source/anchors/ca.supply.example.com-cert.pem
+  http-request set-header host customer.supply.example.com
+  # Removes /antora before sending it to backend.
+  http-request replace-path /antora(.*) \1
+  # Adds /antora to location on response from backend.
+   http-response replace-header Location (.*) /antora/\1
+----
+
+[source,shell]
+----
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    log         127.0.0.1 local2
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+
+    # utilize system-wide crypto-policies
+    ssl-default-bind-ciphers PROFILE=SYSTEM
+    ssl-default-server-ciphers PROFILE=SYSTEM
+    #ssl-default-bind-options ssl-min-ver TLSv1.2
+
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+#---------------------------------------------------------------------
+# round robin balancing between the various backends
+#---------------------------------------------------------------------
+frontend www_http
+  bind *:80
+  http-request redirect scheme https unless { ssl_fc }
+
+frontend www_https
+  bind *:443 ssl crt /etc/letsencrypt/live/hardiman.consulting/combined.pem
+  default_backend web
+  use_backend antora if { path_beg -i /antora/ }
+  use_backend aapcontrol if { path_beg -i /aapcontrol/ }
+
+backend web
+   mode http
+   server customer.supply.example.com 192.168.15.9:443 ssl verify required ca-file /etc/pki/ca-trust/source/anchors/ca.supply.example.com-cert.pem
+
+backend antora
+  mode http
+  server customer.supply.example.com 192.168.15.9:443 ssl verify required ca-file /etc/pki/ca-trust/source/anchors/ca.supply.example.com-cert.pem
+  http-request set-header host customer.supply.example.com
+  # Removes /antora before sending it to backend.
+  http-request replace-path /antora(.*) \1
+  # Adds /antora to location on response from backend.
+   http-response replace-header Location (.*) /antora/\1
+
+backend aapcontrol
+  mode http
+  server aapcontrol.build.example.com 192.168.13.7:443 ssl verify required ca-file /etc/pki/ca-trust/source/anchors/ca.build.example.com-cert.pem
+  http-request set-header host aapcontrol.build.example.com
+  # Remove path before sending it to backend.
+  http-request replace-path /aapcontrol(.*) \1
+  # Add path to location on response from backend.
+   http-response replace-header Location (.*) /aapcontrol/\1
+
+
+listen stats
+    bind :9000
+    stats enable
+    stats uri /
+----
 
 
 [source,shell]
-....
-....
+----
+----
 
 
 [source,shell]
-....
-....
+----
+----
+
+
+[source,shell]
+----
+----
 

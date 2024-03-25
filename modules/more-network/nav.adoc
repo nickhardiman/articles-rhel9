@@ -3,4 +3,5 @@
 ** xref:ip-forwarding.adoc[]
 ** xref:netfilter.adoc[]
 ** xref:haproxy-load-balancer.adoc[]
+** xref:certbot.adoc[]
 

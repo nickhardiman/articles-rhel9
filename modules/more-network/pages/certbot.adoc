@@ -1,0 +1,131 @@
+= install certbot from EPEL 
+Nick Hardiman
+:source-highlighter: highlight.js
+:revdate: 24-02-2021
+
+Install on gateway.
+
+== links 
+
+What's EPEL, and how do I use it?
+https://www.redhat.com/en/blog/whats-epel-and-how-do-i-use-it
+
+https://tecadmin.net/how-to-install-certbot-on-centos-9/
+
+
+== update 
+
+Use the root account. 
+
+[source,shell]
+....
+[nick@gateway.build.example.com ~]$ sudo -i
+[sudo] password for nick: 
+[root@gateway.build.example.com ~]# 
+....
+
+Update.
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# dnf update
+Updating Subscription Management repositories.
+Last metadata expiration check: 3:33:02 ago on Sat 16 Mar 2024 11:50:52 GMT.
+Dependencies resolved.
+================================================================================
+ Package           Arch   Version           Repository                     Size
+================================================================================
+Installing:
+ kernel            x86_64 5.14.0-362.24.1.el9_3
+                                            rhel-9-for-x86_64-baseos-rpms 4.8 M
+...
+Complete!
+[root@gateway.build.example.com ~]# 
+[root@gateway.build.example.com ~]# reboot
+[root@gateway.build.example.com ~]# Connection to gatewaybuild.home closed by remote host.
+Connection to gatewaybuild.home closed.
+nick@workstation ~ % ssh nick@gatewaybuild.home
+Web console: https://gateway.build.example.com:9090/ or https://192.168.1.216:9090/
+
+Last login: Sat Mar 16 14:33:00 2024 from 192.168.1.199
+[nick@gateway.build.example.com ~]$ sudo -i
+[sudo] password for nick: 
+[root@gateway.build.example.com ~]# 
+....
+
+
+== install EPEL repo config
+
+[source,shell]
+....
+dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+....
+
+== disable EPEL repositories
+
+[source,shell]
+....
+dnf config-manager --disable epel epel-cisco-openh264
+dnf repolist
+....
+
+
+== examine epel
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# ls -1 /etc/yum.repos.d/epel*
+/etc/yum.repos.d/epel-cisco-openh264.repo
+/etc/yum.repos.d/epel.repo
+/etc/yum.repos.d/epel-testing.repo
+[root@gateway.build.example.com ~]# 
+[root@gateway.build.example.com ~]# cat /etc/yum.repos.d/epel.repo 
+[epel]
+name=Extra Packages for Enterprise Linux $releasever - $basearch
+# It is much more secure to use the metalink, but if you wish to use a local mirror
+...
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-$releasever
+gpgcheck=1
+[root@gateway.build.example.com ~]# 
+....
+
+Count packages
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# dnf --disablerepo="*" --enablerepo="epel" list available | wc -l
+20443
+[root@gateway.build.example.com ~]# 
+....
+
+
+== install certbot
+
+[source,shell]
+....
+....
+
+
+== examine certbot
+
+[source,shell]
+....
+[root@gateway.build.example.com ~]# certbot --help
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  certbot [SUBCOMMAND] [options] [-d DOMAIN] [-d DOMAIN] ...
+...
+  -h all                print a detailed help page including all topics
+  --version             print the version number
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[root@gateway.build.example.com ~]# 
+....
+
+
+[source,shell]
+....
+....
+
+
