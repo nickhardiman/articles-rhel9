@@ -70,8 +70,11 @@ Last login: Sat Mar 16 14:33:00 2024 from 192.168.1.199
 
 == install
 
+The haproxy RPM package is in the appstream repository.
+
 [source,shell]
 ....
+dnf install haproxy
 ....
 
 Check.
@@ -222,6 +225,9 @@ listen stats
 
 == log
 
+* grep haproxy /var/log/messages
+* journalctl -u haproxy.service
+
 [source,shell]
 ----
 [root@gateway.build.example.com ~]# grep haproxy /var/log/messages
@@ -229,6 +235,15 @@ Mar 25 07:34:50 gateway haproxy[1085]: [WARNING]  (1085) : config : 'option forw
 Mar 25 07:34:50 gateway haproxy[1085]: [WARNING]  (1085) : config : 'option forwardfor' ignored for backend 'backend_servers' as it requires HTTP mode.
 Mar 25 07:34:50 gateway haproxy[1085]: [NOTICE]   (1085) : New worker #1 (1094) forked
 [root@gateway.build.example.com ~]# 
+----
+
+[source,shell]
+----
+[root@gateway.build.example.com haproxy]# journalctl -u haproxy.service
+Mar 27 07:37:13 gateway.build.example.com systemd[1]: Starting HAProxy Load Bal>
+Mar 27 07:37:13 gateway.build.example.com haproxy[1048]: [NOTICE]   (1048) : Ne>
+Mar 27 07:37:13 gateway.build.example.com systemd[1]: Started HAProxy Load Bala>
+...
 ----
 
 
@@ -246,6 +261,44 @@ frontend www_http
   bind *:80
   http-request redirect scheme https unless { ssl_fc }
 ----
+
+== letsencrypt and terminating HTTPS
+
+haproxy talks TLS with each web client.
+It does not pass the encrypted TCP conversation straight through to the backend servers.
+
+First create a file that contains both X509 certificate and private key 
+(an X509 certificate contains a public key).
+
+[source,shell]
+----
+cd /etc/letsencrypt/live/hardiman.consulting/
+cat fullchain.pem  privkey.pem > combined.pem
+----
+
+Some servers require certificates and key in one file
+eg. haproxy, courier-imapd-ssl, and pure-ftpd.
+This file must be updated every time the certificate is renewed by certbot. 
+Make this change permanent with a script and deploy hook.
+
+https://github.com/certbot/certbot/issues/1201
+
+[source,shell]
+----
+certbot renew --quiet --deploy-hook /path/to//script.sh
+----
+
+== terminate HTTPS
+
+Add haproxy config. 
+
+[source,shell]
+----
+frontend www_https
+  bind *:443 ssl crt /etc/letsencrypt/live/hardiman.consulting/combined.pem
+  default_backend web
+----
+
 
 == check an HTTPS server with a CA certificate
 
@@ -362,15 +415,30 @@ listen stats
 ----
 
 
+== routing from build to source and supply
+
+haproxy on build gateway can't contact servers on the source and supply machines until  routing is added.
+
 [source,shell]
 ----
+# modify the stored configuration
+# source
+nmcli connection modify enp2s0 +ipv4.routes "192.168.11.0/24 192.168.13.1"
+# supply
+nmcli connection modify enp2s0 +ipv4.routes "192.168.15.0/24 192.168.13.1"
+# copy from stored config to the running state
+nmcli connection up enp2s0
 ----
 
+This also works, but nmcli is the recommended way.
 
 [source,shell]
 ----
+# source
+ip route add 192.168.11.0/24 via 192.168.13.1
+# supply
+ip route add 192.168.15.0/24 via 192.168.13.1
 ----
-
 
 [source,shell]
 ----
