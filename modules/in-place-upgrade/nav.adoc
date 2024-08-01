@@ -1,2 +1,6 @@
 * xref:index.adoc[]
+** xref:leapp.adoc[]
+** xref:ipu-with-satellite.adoc[]
+** xref:ipu-with-infra.leapp.adoc[]
+** xref:prep-with-infra.lvm_snapshots.adoc[]
 
