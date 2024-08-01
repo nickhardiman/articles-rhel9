@@ -3,7 +3,31 @@ Nick Hardiman
 :source-highlighter: highlight.js
 :revdate: 01-08-2024
 
-== experiments
+== experiment - unconfined user
 
+try
 
+[source,shell]
+----
+touch $HOME/test.file
+# test.file has user_home_t type
+ls -Z $HOME/test.file
+# unconfined_u:object_r:user_home_t:s0 /home/qlixed/test.file
+sudo chcon -t root_t $HOME/test.file
+# test.file now has the wrong file type "root_t" 
+ls -Z $HOME/test.file
+# unconfined_u:object_r:root_t:s0 /home/qlixed/test.file
+echo '123' > $HOME/test.file
+# test.file was changed, no access denied error
+----
 
+try
+
+[source,shell]
+----
+sesearch -A -s unconfined_t
+seinfo -aunconfined_domain_type -x
+semanage login -l
+seinfo -u
+semanage boolean -l  | grep exec_content
+----
