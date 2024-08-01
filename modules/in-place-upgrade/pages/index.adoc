@@ -1,0 +1,8 @@
+= in-place upgrade to RHEL 9
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-08-2024
+
+
+How do I upgrade RHEL 8 to RHEL 9 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/upgrading_from_rhel_8_to_rhel_9/index

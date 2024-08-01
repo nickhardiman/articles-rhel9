@@ -14,3 +14,4 @@
 ** xref:keycloak-certificate.adoc[]
 ** xref:keycloak-systemd.adoc[]
 ** xref:keycloak-idm.adoc[]
+** xref:selinux.adoc[]

@@ -159,6 +159,8 @@ The file is much bigger now, but still a fraction of its defined size.
 This image has no root password and no other accounts, so we can't log in.
 Change this and a few other things with the ``virt-customize`` command.
 
+The ``virt-customize`` command is provided by the _guestfs-tools_ RPM package.
+
 Create your own root password and store it in a password manager. 
 
 Customize the image. 

@@ -1,0 +1,39 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with ASCIItoSVG -->
+<svg width="297px" height="176px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <filter id="dsFilter" width="150%" height="150%">
+      <feOffset result="offOut" in="SourceGraphic" dx="2" dy="2"/>
+      <feColorMatrix result="matrixOut" in="offOut" type="matrix" values="0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0"/>
+      <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation="3"/>
+      <feBlend in="SourceGraphic" in2="blurOut" mode="normal"/>
+    </filter>
+    <marker id="iPointer"
+      viewBox="0 0 10 10" refX="5" refY="5"
+      markerUnits="strokeWidth"
+      markerWidth="8" markerHeight="15"
+      orient="auto">
+      <path d="M 10 0 L 10 10 L 0 5 z" />
+    </marker>
+    <marker id="Pointer"
+      viewBox="0 0 10 10" refX="5" refY="5"
+      markerUnits="strokeWidth"
+      markerWidth="8" markerHeight="15"
+      orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+  <g id="closed" filter="url(#dsFilter)" stroke="#000" stroke-width="2" fill="none">
+    <path id="closed2" fill="#fff" filter="url(#dsFilter)" d="M 4.5 18 Q 4.5 8 14.5 8 L 13.5 8 L 22.5 8 L 31.5 8 L 40.5 8 L 49.5 8 L 58.5 8 L 67.5 8 L 76.5 8 L 85.5 8 L 94.5 8 L 103.5 8 L 112.5 8 L 121.5 8 L 130.5 8 L 139.5 8 L 148.5 8 L 157.5 8 L 166.5 8 L 165.5 8 Q 175.5 8 175.5 18 L 175.5 24 L 175.5 40 L 175.5 56 L 175.5 72 L 175.5 88 L 175.5 104 L 175.5 120 L 175.5 136 L 175.5 142 Q 175.5 152 165.5 152 L 166.5 152 L 157.5 152 L 148.5 152 L 139.5 152 L 130.5 152 L 121.5 152 L 112.5 152 L 103.5 152 L 94.5 152 L 85.5 152 L 76.5 152 L 67.5 152 L 58.5 152 L 49.5 152 L 40.5 152 L 31.5 152 L 22.5 152 L 13.5 152 L 14.5 152 Q 4.5 152 4.5 142 L 4.5 136 L 4.5 120 L 4.5 104 L 4.5 88 L 4.5 72 L 4.5 56 L 4.5 40 L 4.5 24 Z" />
+    <path id="closed3" fill="#fff" filter="url(#dsFilter)" d="M 40.5 72 L 49.5 72 L 58.5 72 L 67.5 72 L 76.5 72 L 85.5 72 L 94.5 72 L 103.5 72 L 112.5 72 L 121.5 72 L 130.5 72 L 139.5 72 L 139.5 88 L 139.5 104 L 139.5 120 L 139.5 136 L 130.5 136 L 121.5 136 L 112.5 136 L 103.5 136 L 94.5 136 L 85.5 136 L 76.5 136 L 67.5 136 L 58.5 136 L 49.5 136 L 40.5 136 L 40.5 120 L 40.5 104 L 40.5 88 Z" />
+  </g>
+  <g id="lines" stroke="#000" stroke-width="2" fill="none">
+    <path id="open0" d="M 4.5 18 Q 4.5 8 14.5 8 L 13.5 8 L 22.5 8 L 31.5 8 L 40.5 8 L 49.5 8 L 58.5 8 L 67.5 8 L 76.5 8 L 85.5 8 L 94.5 8 L 103.5 8 L 112.5 8 L 121.5 8 L 130.5 8 L 139.5 8 L 148.5 8 L 157.5 8 L 166.5 8 L 165.5 8 Q 175.5 8 175.5 18 L 175.5 24 L 175.5 40 L 175.5 56 L 175.5 72 L 175.5 88 L 175.5 104 L 166.5 104 L 157.5 104 L 148.5 104 " />
+    <path id="open1" marker-end="url(#Pointer)" d="M 4.5 18 Q 4.5 8 14.5 8 L 13.5 8 L 22.5 8 L 31.5 8 L 40.5 8 L 49.5 8 L 58.5 8 L 67.5 8 L 76.5 8 L 85.5 8 L 94.5 8 L 103.5 8 L 112.5 8 L 121.5 8 L 130.5 8 L 139.5 8 L 148.5 8 L 157.5 8 L 166.5 8 L 165.5 8 Q 175.5 8 175.5 18 L 175.5 24 L 175.5 40 L 175.5 56 L 175.5 72 L 175.5 88 L 175.5 104 L 184.5 104 L 193.5 104 L 202.5 104 " />
+  </g>
+  <g id="text" stroke="none" style="font-family:Consolas,Monaco,Anonymous Pro,Anonymous,Bitstream Sans Mono,monospace;font-size:15.2px" >
+    <text id="obj4" x="31.5" y="40" fill="#000">host</text>
+    <text id="obj5" x="67.5" y="104" fill="#000">guest1</text>
+    <text id="obj6" x="220.5" y="104" fill="#000">Internet</text>
+  </g>
+</svg>
