@@ -1,0 +1,17 @@
+= rollback
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 01-08-2024
+
+https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/upgrading_from_rhel_7_to_rhel_8/index#overview-of-the-upgrade-process_upgrading-from-rhel-7-to-rhel-8
+Perform the upgrade to RHEL 8 and verify that the upgrade has been completed correctly. If the upgrade encounters issues that cannot be resolved, perform a rollback to your RHEL 7 backup.
+
+`dnf history undo` an option?
+
+https://access.redhat.com/solutions/29617
+How to use yum/dnf to downgrade or rollback some package updates?
+
+https://access.redhat.com/solutions/64069
+How to use yum history to roll back an update in Red Hat Enterprise Linux 6 and later?
+
+

@@ -1,8 +1,6 @@
-= IPU with Red Hat Satellite
+= IPU with Ansible content collection infra.leapp
 Nick Hardiman 
 :source-highlighter: highlight.js
 :revdate: 01-08-2024
 
 
-7 to 8 upgrade, Satellite runs Leapp jobs
-https://www.youtube.com/watch?v=9ZA3JyJHL8s&t=1130s
