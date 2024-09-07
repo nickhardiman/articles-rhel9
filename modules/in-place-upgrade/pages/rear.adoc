@@ -12,9 +12,13 @@ https://relax-and-recover.org/rear-user-guide/basics/configuration.html
 https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/system_administrators_guide/ch-relax-and-recover_rear#sec-Config_ReaR
 
 
+== install
+
 [source,shell]
 ----
+# puts hundreds of EFI modules in /usr/lib/grub/x86_64-efi/
 yum install grub2-efi-x64-modules 
+# provides pstree
 yum install psmisc
 ----
 
@@ -24,30 +28,150 @@ Install.
 yum install rear
 ----
 
-Configure.
+
+== configure
+
+There is no default config.
+
+[source,shell]
+----
+[root@myrhel7 ~]#  cat  /etc/rear/local.conf 
+# Default is to create Relax-and-Recover rescue media as ISO image
+# set OUTPUT to change that
+# set BACKUP to activate an automated (backup and) restore of your data
+# Possible configuration values can be found in /usr/share/rear/conf/default.conf
+#
+# This file (local.conf) is intended for manual configuration. For configuration
+# through packages and other automated means we recommend creating a new
+# file named site.conf next to this file and to leave the local.conf as it is. 
+# Our packages will never ship with a site.conf.
+[root@myrhel7 ~]# 
+----
+
+There is a huge comment example at /usr/share/rear/conf/default.conf.
+
+[source,shell]
+----
+[root@myrhel7 ~]#  wc -l /usr/share/rear/conf/default.conf
+2564 /usr/share/rear/conf/default.conf
+[root@myrhel7 ~]#  head /usr/share/rear/conf/default.conf
+# conf/default.conf
+# Relax-and-Recover default configuration.
+
+# This file is part of Relax-and-Recover, licensed under the GNU General
+# Public License. Refer to the included COPYING for full text of license.
+#
+#
+# Here we define and describe all configuration variables and set them to a default.
+#
+# Do not change them here. Set them in your site.conf or local.conf file as needed.
+[root@myrhel7 ~]# 
+----
+
+
+== run
+
+Use without setting any config. 
+Running `rear mkbackup` creates a recovery ISO but does not back up any files to recover.
+Add `-v` - otherwise rear displays no messages at all. 
+It always record a lot of activity in its log file, `/var/log/rear/rear-myrhel7.log`.
 
 ----
-OUTPUT=ISO
-OUTPUT_URL=file:///mnt/rescue_system/
-----
-
-
-Use. 
-
-----
-# rear -v mkrescue
-Relax-and-Recover 1.17.2 / Git
-Using log file: /var/log/rear/rear-rhel7.log
-mkdir: created directory '/var/lib/rear/output'
+[root@myrhel7 ~]# rear -v mkbackup
+Relax-and-Recover 2.4 / Git
+Using log file: /var/log/rear/rear-myrhel7.log
 Creating disk layout
+Using guessed bootloader 'GRUB' (found in first bytes on /dev/nvme0n1)
 Creating root filesystem layout
-TIP: To login as root via ssh you need to set up /root/.ssh/authorized_keys or SSH_ROOT_PASSWORD in your configuration file
+Adding net.ifnames=0 to KERNEL_CMDLINE
+Copying logfile /var/log/rear/rear-myrhel7.log into initramfs as '/tmp/rear-myrhel7-partial-2024-09-07T17:28:50+0000.log'
 Copying files and directories
 Copying binaries and libraries
 Copying kernel modules
-Creating initramfs
+Copying all files in /lib*/firmware/
+Creating recovery/rescue system initramfs/initrd initrd.cgz with gzip default compression
+Created initrd.cgz with gzip default compression (223296875 bytes) in 35 seconds
 Making ISO image
-Wrote ISO image: /var/lib/rear/output/rear-rhel7.iso (124M)
-Copying resulting files to file location
+Wrote ISO image: /var/lib/rear/output/rear-myrhel7.iso (222M)
+Exiting rear mkbackup (PID 2120) and its descendant processes
+Running exit tasks
+[root@myrhel7 ~]# 
 ----
 
+Lots of files in `/var/lib/rear/`, including a bootable ISO at /var/lib/rear/output/rear-myrhel7.iso.
+
+[source,shell]
+----
+[root@myrhel7 ~]# tree /var/lib/rear
+/var/lib/rear
+├── layout
+│   ├── config
+│   │   ├── df.txt
+│   │   └── files.md5sum
+│   ├── diskdeps.conf
+│   ├── disklayout.conf
+│   ├── disktodo.conf
+│   └── lvm
+│       └── VolGroup00.cfg
+├── output
+│   └── rear-myrhel7.iso
+├── recovery
+│   ├── bootdisk
+│   ├── bootloader
+│   ├── directories_permissions_owner_group
+│   ├── diskbyid_mappings
+│   ├── if_inet6
+│   ├── initrd_modules
+│   ├── mountpoint_device
+│   └── storage_drivers
+└── sysreqs
+    └── Minimal_System_Requirements.txt
+
+6 directories, 16 files
+[root@myrhel7 ~]# 
+----
+
+
+== backup
+
+----
+[root@myrhel7 rear]# mkdir /var/tmp/rear
+[root@myrhel7 rear]# 
+[root@myrhel7 rear]# cat /etc/rear/site.conf 
+BACKUP=NETFS
+BACKUP_URL=file:///var/tmp/rear
+[root@myrhel7 rear]# 
+----
+
+Tidy up the disk.
+----
+yum clean all
+----
+
+Run. 
+----
+[root@myrhel7 rear]# rear mkbackup
+[root@myrhel7 rear]# echo $?
+0
+[root@myrhel7 rear]# 
+----
+
+
+----
+[root@myrhel7 rear]# tree /var/tmp/rear/
+/var/tmp/rear/
+└── myrhel7
+    ├── backup.log
+    ├── backup.tar.gz
+    ├── README
+    ├── rear-myrhel7.iso
+    ├── rear-myrhel7.log
+    ├── selinux.autorelabel
+    └── VERSION
+
+1 directory, 7 files
+[root@myrhel7 rear]# 
+----
+
+
+== restore
