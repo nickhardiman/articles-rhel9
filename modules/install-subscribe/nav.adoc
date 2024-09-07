@@ -10,3 +10,4 @@
 ** xref:dnf-update.adoc[]
 ** xref:dnf-group-examine.adoc[]
 ** xref:rhc.adoc[]
+** xref:iso-install-customize.adoc[]

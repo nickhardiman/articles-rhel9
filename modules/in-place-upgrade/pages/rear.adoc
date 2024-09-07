@@ -1,0 +1,53 @@
+= backup and recover with ReaR
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-09-2024
+
+incomplete
+
+== links 
+
+https://relax-and-recover.org/rear-user-guide/basics/configuration.html
+
+https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/system_administrators_guide/ch-relax-and-recover_rear#sec-Config_ReaR
+
+
+[source,shell]
+----
+yum install grub2-efi-x64-modules 
+yum install psmisc
+----
+
+Install.
+
+----
+yum install rear
+----
+
+Configure.
+
+----
+OUTPUT=ISO
+OUTPUT_URL=file:///mnt/rescue_system/
+----
+
+
+Use. 
+
+----
+# rear -v mkrescue
+Relax-and-Recover 1.17.2 / Git
+Using log file: /var/log/rear/rear-rhel7.log
+mkdir: created directory '/var/lib/rear/output'
+Creating disk layout
+Creating root filesystem layout
+TIP: To login as root via ssh you need to set up /root/.ssh/authorized_keys or SSH_ROOT_PASSWORD in your configuration file
+Copying files and directories
+Copying binaries and libraries
+Copying kernel modules
+Creating initramfs
+Making ISO image
+Wrote ISO image: /var/lib/rear/output/rear-rhel7.iso (124M)
+Copying resulting files to file location
+----
+

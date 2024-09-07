@@ -4,4 +4,5 @@
 ** xref:ipu-with-satellite.adoc[]
 ** xref:ipu-with-infra.leapp.adoc[]
 ** xref:rollback.adoc[]
-
+** xref:lvm-snapshot.adoc[]
+** xref:rear.adoc[]

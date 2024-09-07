@@ -1,0 +1,143 @@
+= customize the installer ISO
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-09-2024
+
+
+If you want different kernel options, customize the installer ISO. 
+Remove the option quiet to see startup messages on the console, or add the option inst.ks to automate install with a kickstart file.
+
+This example is for RHEL 7 and UEFI boot.
+https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html-single/anaconda_customization_guide/index#sect-images-repack
+
+Download an installer ISO like `rhel-server-7.9-x86_64-dvd.iso`, create a new ISO named `NEWISO.iso`, and use it to boot a host. 
+
+When editing config, labels have to match up. 
+If not, install fails to find the ISO and continue.
+https://access.redhat.com/solutions/3438961
+Custom RHEL 7 Installation ISO/DVD fails with "Warning: dracut-initqueue timeout - starting timeout scripts"
+
+
+== start with the standard install ISO
+
+Download install ISO from https://access.redhat.com/downloads/, or use a copy.
+----
+cd /var/tmp
+curl -O --user my_user:my_password https://my.web.store/rhel-server-7.9-x86_64-dvd.iso
+----
+
+Copy content.
+----
+mkdir /mnt/iso
+mount -t iso9660 -o loop /var/tmp/rhel-server-7.9-x86_64-dvd.iso /mnt/iso
+cp -pRf /mnt/iso /tmp/ISO
+umount /mnt/iso
+----
+
+== change
+
+Edit config.
+----
+cd /tmp/ISO/iso/EFI/BOOT/
+chmod 666 grub.cfg
+vim grub.cfg
+chmod 444 grub.cfg
+----
+
+.original grub.cfg
+----
+set default="1"
+
+function load_video {
+  insmod efi_gop
+  insmod efi_uga
+  insmod video_bochs
+  insmod video_cirrus
+  insmod all_video
+}
+
+load_video
+set gfxpayload=keep
+insmod gzio
+insmod part_gpt
+insmod ext2
+
+set timeout=60
+### END /etc/grub.d/00_header ###
+
+search --no-floppy --set=root -l 'RHEL-7.9 Server.x86_64'
+
+### BEGIN /etc/grub.d/10_linux ###
+menuentry 'Install Red Hat Enterprise Linux 7.9' --class fedora --class gnu-linux --class gnu --class os {
+	linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 quiet
+	initrdefi /images/pxeboot/initrd.img
+}
+menuentry 'Test this media & install Red Hat Enterprise Linux 7.9' --class fedora --class gnu-linux --class gnu --class os {
+	linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 rd.live.check quiet
+	initrdefi /images/pxeboot/initrd.img
+}
+submenu 'Troubleshooting -->' {
+	menuentry 'Install Red Hat Enterprise Linux 7.9 in basic graphics mode' --class fedora --class gnu-linux --class gnu --class os {
+		linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 xdriver=vesa nomodeset quiet
+		initrdefi /images/pxeboot/initrd.img
+	}
+	menuentry 'Rescue a Red Hat Enterprise Linux system' --class fedora --class gnu-linux --class gnu --class os {
+		linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 rescue quiet
+		initrdefi /images/pxeboot/initrd.img
+	}
+}
+----
+
+Change 
+----
+	linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 quiet
+----
+to
+----
+	linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=RHEL-7.9\x20Server.x86_64 inst.zram=0 inst.ks=https://my_user:my_password@my.web.store/my_kickstart_file.ks 
+----
+
+
+== create a new ISO
+
+The boot loader configuration file grub.cfg uses the LABEL= directive,
+for options which require a location to load a file on the same disk. 
+All spaces in the disk label are replaced with \x20.
+
+Use the `genisoimage` command. 
+Make sure that values for the -V, -volset, and -A options match the image's boot loader configuration.
+Don't replace spaces with \x20.
+
+Takes about 1 minute.
+----
+yum install genisoimage isomd5sum
+cd /tmp/ISO/iso/
+LABEL="RHEL-7.9 Server.x86_64"
+genisoimage \
+    -U \
+    -r \
+    -v \
+    -T \
+    -J \
+    -joliet-long \
+    -V "$LABEL" \
+    -volset "$LABEL" \
+    -A "$LABEL" \
+    -b isolinux/isolinux.bin \
+    -c isolinux/boot.cat \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -eltorito-alt-boot \
+    -e images/efiboot.img \
+    -no-emul-boot \
+    -o ../NEWISO.iso  \
+    .
+implantisomd5 ../NEWISO.iso
+----
+
+Copy to storage.
+----
+cd /tmp/ISO/
+scp NEWISO.iso  my_user@my.web.store:
+----

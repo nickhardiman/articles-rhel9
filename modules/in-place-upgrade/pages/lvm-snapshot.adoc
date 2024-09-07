@@ -1,0 +1,82 @@
+= backup and recover with an LVM snapshot
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 07-09-2024
+
+https://access.redhat.com/solutions/65991
+How can I deploy a system and use LVM snapshot/merge to be able to restore an earlier state of the root filesystem? - Red Hat Customer Portal
+
+Use an LVM snapshot to revert changes to an LVM volume like the root file system. 
+Create a snapshot named `rootsnap`.
+Associate it with the root volume. 
+Names are something like `/dev/rhel/root` or `/dev/mapper/VolGroup00-rootVol`.
+
+When a file is updated, the volume stores the new content (as usual), and the LVM snapshot stores the original content. 
+The snapshot acts like a backup.
+
+Merging the snapshot puts the original content back. The new content disappears.
+Deleting the snapshot removes the backup containing the original content disappear. The new content stays. 
+
+Merging a snapshot back to the root volume requires a reboot.
+
+The volume group needs enough space to store the snapshot. 
+If there is not enough space in the volume group but the disk has spare space, create a new partition and use that space.
+
+inspect
+----
+lvs
+vgs
+ls /dev/rhel/
+ls /dev/mapper/
+----
+
+create a partition
+
+----
+parted 
+fdisk /dev/sda
+sync
+----
+
+add partition to volume group
+
+----
+pvcreate /dev/sda4
+pvs
+vgextend rhel /dev/sda4
+vgs
+----
+
+create snapshot
+
+----
+lvcreate -L10G -s -n rootsnap /dev/rhel/root
+lvs
+ls /dev/rhel/
+----
+
+remove snapshot and keep changes
+
+----
+lvremove /dev/rhel/rootsnap
+ls /dev/rhel
+lvs
+----
+
+Create a test file.
+Look at its effect on percentage space.
+----
+lvs
+touch /tmp/my-empty-test-file
+head -c 1G </dev/urandom >/tmp/my-1g-test-file
+lvs
+----
+
+rollback
+
+----
+lvconvert --merge /dev/rhel/rootsnap
+reboot
+lvs
+----
+

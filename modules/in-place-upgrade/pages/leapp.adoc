@@ -4,8 +4,49 @@ Nick Hardiman
 :revdate: 01-08-2024
 
 
+7 > 8
+
+----
+----
+
+prep for new systems
 
 [source,shell]
 ----
+subscription-manager register   --username=nhardima1 --password='xxxxx'
+subscription-manager repos --enable rhel-7-server-rpms
+subscription-manager repos --enable rhel-7-server-extras-rpms
 ----
 
+[source,shell]
+----
+subscription-manager release --unset
+yum versionlock clear
+----
+
+install
+----
+yum install leapp-upgrade
+# and maybe
+dnf install cockpit-leapp
+----
+
+----
+yum update
+reboot
+----
+
+pre upgrade report
+----
+leapp preupgrade --target 8.10
+----
+
+fix
+----
+leapp answer --section remove_pam_pkcs11_module_check.confirm=True
+----
+
+upgrade
+----
+leapp upgrade --target 8.10
+----
