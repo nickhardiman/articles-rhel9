@@ -1,0 +1,128 @@
+= tmp
+Nick Hardiman 
+:source-highlighter: highlight.js
+:revdate: 12-09-2024
+
+
+Directory /tmp is just part of the root filesystem by default. 
+https://refspecs.linuxbase.org/FHS_3.0/fhs/ch03s18.html
+
+The default should be good for most usages. 
+
+Some software assumes that /tmp will be wiped between boots.
+
+== change where /tmp is
+
+The /tmp directory is an area where applications can place temporary files. 
+Files may disappear after a reboot. 
+
+If a user wants to change where /tmp is eg. wants it to be a tmpfs, they have to enable the "tmp.mount" systemd unit. 
+
+[source,shell]
+----
+[root@host.site1.example.com ~]$ systemctl status tmp.mount
+○ tmp.mount - Temporary Directory /tmp
+     Loaded: loaded (/usr/lib/systemd/system/tmp.mount; disabled; preset: disab>
+     Active: inactive (dead)
+      Where: /tmp
+       What: tmpfs
+       Docs: https://systemd.io/TEMPORARY_DIRECTORIES
+             man:file-hierarchy(7)
+             https://www.freedesktop.org/wiki/Software/systemd/APIFileSystems
+[root@host.site1.example.com ~]$ 
+----
+
+
+== system deletes files 
+
+
+The default is to delete after 10 days.
+
+[source,shell]
+----
+[root@host.site1.example.com ~]$ systemctl status systemd-tmpfiles-clean
+○ systemd-tmpfiles-clean.service - Cleanup of Temporary Directories
+     Loaded: loaded (/usr/lib/systemd/system/systemd-tmpfiles-clean.service; st>
+     Active: inactive (dead) since Mon 2024-09-23 08:35:38 BST; 8min ago
+TriggeredBy: ● systemd-tmpfiles-clean.timer
+       Docs: man:tmpfiles.d(5)
+             man:systemd-tmpfiles(8)
+    Process: 3276 ExecStart=systemd-tmpfiles --clean (code=exited, status=0/SUC>
+   Main PID: 3276 (code=exited, status=0/SUCCESS)
+        CPU: 21ms
+
+Sep 23 08:35:38 host.site1.example.com systemd[1]: Starting Cleanup of Temporar>
+Sep 23 08:35:38 host.site1.example.com systemd[1]: systemd-tmpfiles-clean.servi>
+Sep 23 08:35:38 host.site1.example.com systemd[1]: Finished Cleanup of Temporar>
+[root@host.site1.example.com ~]$ 
+----
+
+Configuration file
+
+* q means /subvolume-or-directory/to/create. See man tmpfiles.d
+* 10 means delete 10 day old files. 0 tells systemd-tmpfiles-clean.service to delete now.
+
+[source,shell]
+----
+[root@host.site1.example.com ~]$ cat /usr/lib/tmpfiles.d/tmp.conf
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+
+# See tmpfiles.d(5) for details
+
+# Clear tmp directories separately, to make them easier to override
+q /tmp 1777 root root 10d
+q /var/tmp 1777 root root 30d
+[root@host.site1.example.com ~]$ 
+----
+
+Applications can't rely on files in /tmp/ still being there after a computer is rebooted. 
+https://www.freedesktop.org/software/systemd/man/latest/systemd-tmpfiles.html
+
+
+The system can also keep files.
+
+----
+[root@host.site1.example.com ~]$ cat /etc/tmpfiles.d/sos.conf 
+# Ignore the contents of extracted sosreport directories.
+#
+# Type Path Mode User Group Age Argument
+x /var/tmp/sos*
+[root@host.site1.example.com ~]$ 
+----
+
+
+== the tmpfs file system
+
+https://docs.kernel.org/filesystems/tmpfs.html
+Tmpfs is a file system which keeps all of its files in virtual memory.
+
+Use RAM to store temporary files. 
+The idea is this increases SSD lifetime, saves a bit of power and makes things a bit faster.
+
+Fedora 18 changed /tmp so it was  a separate tmpfs partition. 
+https://fedoraproject.org/wiki/Features/tmp-on-tmpfs
+Solaris did this by default since 1994. 
+https://0pointer.de/blog/projects/tmp.html
+
+Using tmpfs can eat memory very quickly eg. use /tmp backed by tmpfs to build ISO's and RPMs.
+
+
+== tmpfs and applications both need RAM
+
+Linux file systems already store files in RAM when they may be needed soon.  
+
+The tmpfs file system causes files that won't be needed soon to stay in RAM or swap, 
+even if they are not needed.
+This takes RAM away from actual workloads that need to stay in RAM.
+https://rwmj.wordpress.com/2012/09/12/tmpfs-considered-harmful/
+
+
+== difference between /tmp/ and /var/tmp/
+
+https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch05s15.html
+The /var/tmp directory is made available for programs that require temporary files or directories that are preserved between system reboots. Therefore, data stored in /var/tmp is more persistent than data in /tmp.

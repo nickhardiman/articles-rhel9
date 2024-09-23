@@ -2,6 +2,7 @@
 ** xref:luks.adoc[]
 ** xref:vdo.adoc[]
 ** xref:swap.adoc[]
+** xref:tmp.adoc[]
 ** xref:lvm.adoc[]
 ** xref:guest1-nfs-install.adoc[]
 ** xref:guest1-nfs-firewall.adoc[]
