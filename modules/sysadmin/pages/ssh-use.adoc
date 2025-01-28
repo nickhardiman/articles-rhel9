@@ -127,3 +127,23 @@ host2 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKCNA/GEj3h0IkkxKuYB/CtgijQU/JWpbVGnGf
 [nick@workstation ~]# 
 ----
 
+== check login
+
+user authentication audit messages on the server
+
+----
+[nick@rhel9 ~]$ sudo -i
+[root@rhel9 ~]# 
+[root@rhel9 ~]# ausearch -m USER_AUTH | head
+----
+time->Tue Oct  8 07:06:13 2024
+type=USER_AUTH msg=audit(1728367573.905:55): pid=943 uid=0 auid=4294967295 ses=4294967295 subj=system_u:system_r:local_login_t:s0-s0:c0.c1023 msg='op=PAM:authentication grantors=pam_unix acct="root" exe="/usr/bin/login" hostname=localhost.localdomain addr=? terminal=/dev/tty1 res=success'
+----
+time->Tue Oct  8 07:12:30 2024
+type=USER_AUTH msg=audit(1728367950.230:88): pid=5044 uid=0 auid=4294967295 ses=4294967295 subj=system_u:system_r:sshd_t:s0-s0:c0.c1023 msg='op=pubkey acct="nick" exe="/usr/sbin/sshd" hostname=? addr=192.168.19.1 terminal=ssh res=failed'
+----
+time->Tue Oct  8 07:12:30 2024
+type=USER_AUTH msg=audit(1728367950.234:89): pid=5044 uid=0 auid=4294967295 ses=4294967295 subj=system_u:system_r:sshd_t:s0-s0:c0.c1023 msg='op=pubkey acct="nick" exe="/usr/sbin/sshd" hostname=? addr=192.168.19.1 terminal=ssh res=failed'
+----
+[root@rhel9 ~]# 
+----
