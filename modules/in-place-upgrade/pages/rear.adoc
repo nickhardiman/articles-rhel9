@@ -144,11 +144,13 @@ BACKUP_URL=file:///var/tmp/rear
 ----
 
 Tidy up the disk.
+
 ----
 yum clean all
 ----
 
 Run. 
+
 ----
 [root@myrhel7 rear]# rear mkbackup
 [root@myrhel7 rear]# echo $?

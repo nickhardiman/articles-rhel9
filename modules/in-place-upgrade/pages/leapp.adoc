@@ -6,6 +6,7 @@ Nick Hardiman
 
 7 > 8
 
+[source,shell]
 ----
 ----
 
@@ -25,6 +26,7 @@ yum versionlock clear
 ----
 
 install
+
 ----
 yum install leapp-upgrade
 # and maybe
@@ -37,16 +39,19 @@ reboot
 ----
 
 pre upgrade report
+
 ----
 leapp preupgrade --target 8.10
 ----
 
 fix
+
 ----
 leapp answer --section remove_pam_pkcs11_module_check.confirm=True
 ----
 
 upgrade
+
 ----
 leapp upgrade --target 8.10
 ----
