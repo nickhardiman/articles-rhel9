@@ -7,3 +7,56 @@ Nick Hardiman
 These chain-loaded programs are firmware - low-level device management software. 
 BIOS starts GRUB, then GRUB starts the kernel.
 
+The grub2-reboot command can tell GRUB which kernel to use on the next reboot. 
+
+Check the current release, list options and choose an earlier kernel release.
+
+[source,shell]
+----
+[nick@guest1 ~]$ uname -r
+4.18.0-193.13.2.el8_2.x86_64
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ sudo grubby --info=ALL | grep title
+title="Red Hat Enterprise Linux (4.18.0-193.el8.x86_64) 8.2 (Ootpa)"
+title="Red Hat Enterprise Linux (0-rescue-92b1f5dc7a31458b86b8af1f768ef406) 8.2 (Ootpa)"
+title="Red Hat Enterprise Linux (4.18.0-193.13.2.el8_2.x86_64) 8.2 (Ootpa)"
+title="Red Hat Enterprise Linux (4.18.0-193.6.3.el8_2.x86_64) 8.2 (Ootpa)"
+title="Red Hat Enterprise Linux (0-rescue-5b3bf4e5791e42a283a85f36070e5fcc) 8.2 (Ootpa)"
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ sudo grub2-reboot "Red Hat Enterprise Linux (4.18.0-193.6.3.el8_2.x86_64) 8.2 (Ootpa)"
+[nick@guest1 ~]$ 
+----
+
+Use that kernel. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ sudo systemctl reboot 
+Connection to guest1.lab.example.com closed by remote host.
+Connection to guest1.lab.example.com closed.
+[nick@host1 ~]$ 
+[nick@host1 ~]$ ssh nick@guest1.lab.example.com
+...
+[nick@guest1 ~]$ uname -r
+4.18.0-193.6.3.el8_2.x86_64
+[nick@guest1 ~]$ 
+----
+
+Return to the default. 
+
+[source,shell]
+----
+[nick@guest1 ~]$ sudo grub2-reboot "Red Hat Enterprise Linux (4.18.0-193.13.2.el8_2.x86_64) 8.2 (Ootpa)"
+[sudo] password for nick: 
+[nick@guest1 ~]$ 
+[nick@guest1 ~]$ sudo systemctl reboot
+Connection to guest1.lab.example.com closed by remote host.
+Connection to guest1.lab.example.com closed.
+[nick@host1 ~]$ 
+[nick@host1 ~]$ ssh nick@guest1.lab.example.com
+...
+[nick@guest1 ~]$ uname -r
+4.18.0-193.13.2.el8_2.x86_64
+[nick@guest1 ~]$ 
+----
+

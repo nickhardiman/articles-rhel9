@@ -35,7 +35,7 @@ Cheat sheets summarize Bash commands. There are many on the web.
 
 == RTFM (Read the Fucking Manual)
 
-For variations on these initials, see [RTFM].
+For variations on these initials, see https://en.wikipedia.org/wiki/RTFM[RTFM].
 
 If you have already learned how to do something but can't quite remember the syntax, run `man bash`. This displays a long dense page, crammed with brief descriptions. 
 

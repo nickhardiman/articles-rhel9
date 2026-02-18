@@ -5,6 +5,9 @@ Nick Hardiman
 
 When a user turns on a computer - a physical computer - there is plenty of hardware and software action in the few seconds before Linux starts. The software that controls these early stages is called firmware. 
 
+After firmware comes the OS. 
+The OS provides the platform for applications to run. 
+
 == firmware 
 
 A boot loader is a collection of programs to get a system ready. Boot loaders are split into two groups.

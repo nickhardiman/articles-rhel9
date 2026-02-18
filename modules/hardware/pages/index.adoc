@@ -29,6 +29,7 @@ A home lab contains a workstation for the hacker and at least one server for pla
 == some hardware adjectives
 
 Here are some other marketing adjectives for describing hardware.
+
 * virtual. Virtual usually means a PC that is virtualized on the organization's hypervisor platform, or on a cloud compute platform.
 * on-premise. On-premise hardware resides in on the premises of your organization.  
 * off-premise, the opposite of "on-premise". This means, more or less, on the premises of a different organization. An off-premise PC could be in an ISP's rack, a government equipment room or in a cloud provider's data center. 

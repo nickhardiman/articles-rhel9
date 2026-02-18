@@ -79,13 +79,12 @@ https://www.gnu.org/software/grub/manual/grub/html_node/Images.html[boot.img] fi
 
 === OS - the kernel takes over
 
-The /boot/ directory contains the current kernel and a few older ones, in case the new kernel has issues. 
+GRUB starts the kernel. 
+There are usually three versions stored in /boot/. 
+Grub configuration defines a default kernel to run, if the user doesn't choose during the start-up process.
+The default kernel is usually the latest one.
 
-Each kernel version has a few files. 
-* https://en.wikipedia.org/wiki/Vmlinux[vmlinuz], the kernel.
-* https://en.wikipedia.org/wiki/Initial_ramdisk[initrd (initial ramdisk)]. This contains drivers and other files the kernel needs.
-* https://en.wikipedia.org/wiki/System.map[System.map], a look-up table that maps symbols to memory locations.
-* config, the configuration file used to build the kernel. 
+The kernel sets up many devices, using its library of driver files stored in the initramfs.
 
 
 

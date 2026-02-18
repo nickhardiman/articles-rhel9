@@ -35,6 +35,7 @@ Don't throttle /dev/vda.
 Severely throttling Apache's access to the primary disk will break it. 
 Apache won't be able to start.
 
+----
 [root@guest1 ~]# ls -l /dev/vd*
 brw-rw----. 1 root disk 253,  0 Jun 30 10:34 /dev/vda
 brw-rw----. 1 root disk 253,  1 Jun 30 10:34 /dev/vda1
@@ -43,6 +44,7 @@ brw-rw----. 1 root disk 253,  3 Jun 30 10:34 /dev/vda3
 brw-rw----. 1 root disk 253, 16 Jun 30 10:34 /dev/vdb
 brw-rw----. 1 root disk 253, 17 Jun 30 10:34 /dev/vdb1
 [root@guest1 ~]# 
+----
 
 
 == The host machine can throttle VM storage 
@@ -93,7 +95,6 @@ set DefaultBlockIOAccounting to yes
 
 [source,shell]
 ----
-set DefaultBlockIOAccounting to yes 
 [root@guest1 ~]# grep Account /etc/systemd/system.conf
 #DefaultCPUAccounting=no
 #DefaultIOAccounting=no
